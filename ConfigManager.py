@@ -53,12 +53,12 @@ class Config():
         for line in lines:
             if line.startswith("#"):
                 pass
+            elif line.startswith(""):
+                pass
             else:
                 try:
                     uuid, chip_type = line.replace('\n', '').split(" ")
                 except ValueError:
-                    f.close()
-                    self._flock.release()
                     print "Too many spaces in config file, please check", fpath
                     exit()
                 u_types[uuid] = chip_type
@@ -98,21 +98,26 @@ class Config():
         self._modified = True
         f = open(self._fpath, "r+")
         lines = f.readlines()
+        new_lines = []
         for i in range(len(lines)):
             if (lines[i].startswith("#")):
+                new_lines.append(lines[i])
+            elif (lines[i].startswith("\n")):
                 pass
             else:
                 uuid, chip_type = lines[i].replace('\n', '').split(" ")
                 if data.has_key(uuid):
-                    lines[i] = uuid + " " + data[uuid] + "\n"
+                    new_lines.append(uuid + " " + data[uuid] + "\n")
                     data.pop(uuid)
+                else:
+                    new_lines.append(lines[i])
         if len(data) > 0:
             f.close()
             self._flock.release()
             return False
 
         f.seek(0)
-        f.writelines(lines)
+        f.writelines(new_lines)
         f.close()
         self._flock.release()
         return True
