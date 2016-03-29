@@ -11,23 +11,39 @@ app = Flask(__name__)
 
 SND_PASSWD = ""
 
+@app.route('/register')
+def register_sensor():
+    """API call to register a sensor.
+    The UUID and IP should be provided in json format
+    as a variable "payload"
+    :returns: TODO
+    """
+
+    str_payload = request.args.get('payload')
+    json_payload = json.loads(str_payload)
+    uuid = json_payload["UUID"]
+    ip = json_payload["IP"]
+    return uuid + " " + ip
+
 @app.route('/')
 def sensor_recv():
-    """Webpage that takes parameter 'data' from a 
-    sensor in json format. 
-    Current emails the data out. Eventually will update webpage
-    or queue up data.
+    """Webpage that takes parameter 'payload' from a 
+    sensor in json format. It uses UUID and IP from the
+    json to register the sensor as available.
     """
-    str_data = request.args.get('data')
+    str_data = request.args.get('payload')
     json_data = json.loads(str_data)
-    send_email(json.dumps(json_data,
-                          sort_keys = True,
-                          indent = 2,
-                          separators=(',', ':')
-                         ),
-              "Sensor Data",
-              snd_psswd = SND_PASSWD
-              )
+    uuid = json_data["UUID"]
+    ip = json_data["IP"]
+
+#    send_email(json.dumps(json_data,
+#                          sort_keys = True,
+#                          indent = 2,
+#                          separators=(',', ':')
+#                         ),
+#              "Sensor Data",
+#              snd_psswd = SND_PASSWD
+#              )
     return "Message sent"
 
 if __name__ == '__main__':
