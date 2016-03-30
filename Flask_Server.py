@@ -5,6 +5,9 @@ from Gmail_Send import send_email
 from ConfigManager import Config
 import flask
 import sys
+import time
+import urllib2
+import thread
 from flask import Flask
 from flask import request
 from flask import json
@@ -14,7 +17,32 @@ app = Flask(__name__)
 SND_PASSWD = ""
 
 nodes = {}
+nlock = thread.allocate_lock()
 conf = Config()
+
+def data_collector(uuid, ip, chiptype):
+    global nodes
+    while(True):
+        # load the json from the chip
+        try:
+            response = urllib2.urlopen("http://" + ip, timeout=3)
+        except urllib2.URLError:
+            with nlock:
+                if (ip == nodes[uuid]["ip"]):
+                    print "ERROR: Lost Connection to "\
+                            + uuid + ". Thread exiting..."
+                    if nodes.has_key(uuid):
+                        nodes.pop(uuid)
+            thread.exit()
+        str_payload = response.read()
+        json_payload = json.loads(str_payload)
+        if (uuid != json_payload["UUID"]):
+            # TODO: Make a get request on the chip telling it to reconnect
+            pass
+        
+
+        time.sleep(1)
+    pass
 
 @app.route('/activate')
 def activate_sensor():
@@ -30,9 +58,16 @@ def activate_sensor():
     uuid = json_payload["UUID"]
     ip = json_payload["IP"]
     conf_data = conf.read_data()
-    if uuid in conf_data:
-        nodes[ip] = conf_data[uuid]
-    return uuid + " " + ip
+    if uuid in conf_data.keys():
+        chiptype = conf_data[uuid]
+        with nlock:
+            nodes[uuid] = {
+                    "ip": ip,
+                    "type": chiptype
+            }
+        thread.start_new_thread(data_collector, (uuid, ip, chiptype))
+        return str(nodes)
+    return str(nodes)
 
 @app.route('/register',methods=['GET', 'POST'])
 def register_sensor():

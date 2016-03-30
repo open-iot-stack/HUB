@@ -53,7 +53,7 @@ class Config():
         for line in lines:
             if line.startswith("#"):
                 pass
-            elif line.startswith(""):
+            elif line.startswith("\n"):
                 pass
             else:
                 try:
@@ -141,17 +141,18 @@ def dict_shared(dict1, dict2):
 
 if __name__ == '__main__':
     config = Config()
-    print config.add_data({"21513": "Cam"})
     print str(config.read_data())
-    print config.add_data({"21141": "Cam"})
+    print config.add_data({"21513": "cam"})
+    print str(config.read_data())
+    print config.add_data({"21141": "cam"})
     print str(config.read_data())
     print str(config.read_data())
-    print config.add_data({"21141": "Temp"})
+    print config.add_data({"21141": "temp"})
     print str(config.read_data())
-    print config.add_data({"13513": "Time"})
+    print config.add_data({"13513": "time"})
     print str(config.read_data())
-    print config.update_data({"21513": "Temp"})
+    print config.update_data({"21513": "temp"})
     print str(config.read_data())
-    print config.add_data({"21212": "Cam"})
-    print config.update_data({"21212": "Temp"})
+    print config.add_data({"21212": "cam"})
+    print config.update_data({"21212": "temp"})
     print str(config.read_data())
