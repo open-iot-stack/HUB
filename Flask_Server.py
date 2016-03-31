@@ -8,6 +8,8 @@ import sys
 import time
 import urllib2
 import thread
+from message_generator import MessageGenerator
+from channel import Channel
 from flask import Flask
 from flask import request
 from flask import json
@@ -19,6 +21,7 @@ SND_PASSWD = ""
 nodes = {}
 nlock = thread.allocate_lock()
 conf = Config()
+send_channel, recv_channel = Channel()
 
 def data_collector(uuid, ip, chiptype):
     global nodes
@@ -39,10 +42,13 @@ def data_collector(uuid, ip, chiptype):
         if (uuid != json_payload["UUID"]):
             # TODO: Make a get request on the chip telling it to reconnect
             pass
-        
-
+        send_channel.send(json_payload)
         time.sleep(1)
-    pass
+
+def data_receiver():
+    for message in MessageGenerator(recv_channel):
+        print message
+    #pass
 
 @app.route('/activate')
 def activate_sensor():
