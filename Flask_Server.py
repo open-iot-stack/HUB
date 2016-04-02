@@ -14,6 +14,7 @@ from flask import Flask
 from flask import request
 from flask import json
 from flask import render_template
+from flask import url_for
 app = Flask(__name__)
 
 SND_PASSWD = ""
@@ -49,6 +50,25 @@ def data_receiver():
     for message in MessageGenerator(recv_channel):
         print message
     #pass
+
+@app.route('/printers/<int:uuid>/<action>',methods=['POST'])
+def print_action(uuid, action):
+    """Post request to do a print action. UUID must match a printer
+    type in the config file
+    """
+    if action == "start":
+        pass
+    elif action == "pause":
+        pass
+    elif action == "cancel":
+        pass
+    elif action == "status":
+        pass
+    return action
+
+@app.route('/sensors/<int:uuid>/data', methods=['GET'])
+def sensor_data(uuid):
+    return str(uuid)
 
 @app.route('/activate')
 def activate_sensor():
@@ -94,17 +114,18 @@ def register_sensor():
             success = conf.add_data({uuid: chiptype})
             return str(success)
 
-@app.route('/')
-def sensor_recv():
-    """Webpage that takes parameter 'payload' from a 
-    sensor in json format. It uses UUID and IP from the
-    json to register the sensor as available.
-    """
-    str_data = request.args.get('payload')
-    json_data = json.loads(str_data)
-    uuid = json_data["UUID"]
-    ip = json_data["IP"]
 
+@app.route('/')
+def index():
+    uuid=0
+    return "0 represents the UUID" + '<br>'\
+         + url_for('register_sensor') + '<br>'\
+         + url_for('activate_sensor') + '<br>'\
+         + url_for('print_action' ,uuid=uuid, action='start') + '<br>'\
+         + url_for('print_action' ,uuid=uuid, action='cancel') + '<br>'\
+         + url_for('print_action' ,uuid=uuid, action='pause') + '<br>'\
+         + url_for('print_action' ,uuid=uuid, action='status') + '<br>'\
+         + url_for('sensor_data'  ,uuid=uuid) + '<br>'
 #    send_email(json.dumps(json_data,
 #                          sort_keys = True,
 #                          indent = 2,
