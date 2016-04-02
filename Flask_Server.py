@@ -28,7 +28,7 @@ plock = thread.allocate_lock()
 conf = Config()
 send_channel, recv_channel = Channel()
 
-def data_collector(uuid, ip, chiptype):
+def data_collector(uuid, ip, pertype):
     global nodes
     while(True):
         # load the json from the chip
@@ -89,20 +89,20 @@ def activate_sensor():
     ip = json_payload["IP"]
     conf_data = conf.read_data()
     if uuid in conf_data.keys():
-        chiptype = conf_data[uuid]
-        if chiptype == "printer":
+        pertype = conf_data[uuid]
+        if pertype == "printer":
             with plock:
                 printers[uuid] = {
                         "ip": ip,
-                        "type": chiptype
+                        "type": pertype
                 }
         else:
             with nlock:
                 nodes[uuid] = {
                         "ip": ip,
-                        "type": chiptype
+                        "type": pertype
                 }
-        thread.start_new_thread(data_collector, (uuid, ip, chiptype))
+        thread.start_new_thread(data_collector, (uuid, ip, pertype))
     return str(nodes)
 
 @app.route('/register',methods=['GET', 'POST'])
@@ -116,12 +116,12 @@ def register_sensor():
         return render_template("register.html")
     if request.method == "POST":
         uuid = request.form['uuid']
-        chiptype = request.form['chiptype']
+        pertype = request.form['pertype']
         if request.form.get('is_update'):
-            success = conf.update_data({uuid: chiptype})
+            success = conf.update_data({uuid: pertype})
             return str(success)
         else:
-            success = conf.add_data({uuid: chiptype})
+            success = conf.add_data({uuid: pertype})
             return str(success)
 
 
