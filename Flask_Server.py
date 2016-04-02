@@ -21,6 +21,10 @@ SND_PASSWD = ""
 
 nodes = {}
 nlock = thread.allocate_lock()
+
+printers = {}
+plock = thread.allocate_lock()
+
 conf = Config()
 send_channel, recv_channel = Channel()
 
@@ -86,13 +90,19 @@ def activate_sensor():
     conf_data = conf.read_data()
     if uuid in conf_data.keys():
         chiptype = conf_data[uuid]
-        with nlock:
-            nodes[uuid] = {
-                    "ip": ip,
-                    "type": chiptype
-            }
+        if chiptype == "printer":
+            with plock:
+                printers[uuid] = {
+                        "ip": ip,
+                        "type": chiptype
+                }
+        else:
+            with nlock:
+                nodes[uuid] = {
+                        "ip": ip,
+                        "type": chiptype
+                }
         thread.start_new_thread(data_collector, (uuid, ip, chiptype))
-        return str(nodes)
     return str(nodes)
 
 @app.route('/register',methods=['GET', 'POST'])
