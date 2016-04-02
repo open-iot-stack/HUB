@@ -2,14 +2,16 @@
 <html lang="en">
     <body>
         <form action="" method="POST">
-            <input type="text" name="uuid">
-            <input type="submit" name="reg_form" value="send"><br>
-            <select name="chiptype" id="chiptype" multiple onchange="" size="8">
-                <option value="temp">Temperature</option>
-                <option value="hum">Humidity</option>
-                <option value="cam">Camera</option>
-            </select>
-            <input type="checkbox" name="is_update" value="update">
+            <input type="text" name="uuid" size="10" placeholder="UUID"><br>
+            <select name="chiptype" id="chiptype" multiple onchange="" size="5">
+                <option value="temperature">Temperature</option>
+                <option value="humidity">Humidity</option>
+                <option value="camera">Camera</option>
+                <option value="printer">Printer</option>
+                <option value="infrared">Infrared</option>
+            </select><br>
+            Update<input type="checkbox" name="is_update" value="update"><br>
+            <input type="submit" name="reg_form" value="register"><br>
         </form>
     </body>
 </html>
