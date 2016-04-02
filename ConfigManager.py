@@ -3,7 +3,7 @@
 
 import os
 import sys
-import threading
+import thread
 
 class Config():
     """Config is a class that will be able to interact with 
@@ -11,19 +11,21 @@ class Config():
     config implementation"""
 
     _fpath = "config/test.config" # file path of the config file
-    _flock = threading.Lock() # file lock to in case shared across threads
+    _flock = thread.allocate_lock() # file lock to in case shared across threads
     _modified = True
     _cache = {}
 
-    def __init__(self):
+    def __init__(self, fpath=""):
         """TODO: to be defined1. """
+        if fpath != "":
+            self._fpath = fpath
 
     def set_config(self, fpath):
-        """Creates a new Config object with fpath as it's config file
-
+        """Clears the cache and sets a new file for the config
         :fpath: new filepath for the new Config object
         :returns: new Config object
         """
+        self._fpath = fpath
 
         assert(type(fpath) == str)
         new_config = Config()
@@ -38,18 +40,16 @@ class Config():
         :returns: dictionary of uuid and types
         """
         u_types = {}
-        self._flock.acquire()
-        f = open(self._fpath, "r")
-        last_modified = os.path.getmtime(self._fpath)
-        if  self._modified == False:
-            f.close()
-            self._flock.release()
-            return self._cache
-        lines = f.readlines()
-        self._modified = False
-        self._cache = u_types
-        f.close()
-        self._flock.release()
+        with self._flock:
+            if not os.path.isfile(self._fpath):
+                return {}
+            with open(self._fpath, 'r') as f:
+                last_modified = os.path.getmtime(self._fpath)
+                if  self._modified == False:
+                    return self._cache
+                lines = f.readlines()
+                self._modified = False
+                self._cache = u_types
         for line in lines:
             if line.startswith("#"):
                 pass
@@ -77,13 +77,11 @@ class Config():
         # if there are multiple keys, fail
         if (len(dict_shared(prev_data, data)) != 0):
             return False
-        self._flock.acquire()
-        self._modified = True
-        f = open(self._fpath, "a")
-        for key,value in data.items():
-            f.write(key + " " + value + "\n")
-        f.close()
-        self._flock.release()
+        with self._flock:
+            self._modified = True
+            with open(self._fpath, "a+") as f:
+                for key,value in data.items():
+                    f.write(key + " " + value + "\n")
         return True
 
     def update_data(self, data):
@@ -94,32 +92,28 @@ class Config():
         :returns: TODO
         """
 
-        self._flock.acquire()
-        self._modified = True
-        f = open(self._fpath, "r+")
-        lines = f.readlines()
-        new_lines = []
-        for i in range(len(lines)):
-            if (lines[i].startswith("#")):
-                new_lines.append(lines[i])
-            elif (lines[i].startswith("\n")):
-                pass
-            else:
-                uuid, chip_type = lines[i].replace('\n', '').split(" ")
-                if data.has_key(uuid):
-                    new_lines.append(uuid + " " + data[uuid] + "\n")
-                    data.pop(uuid)
-                else:
+        with self._flock:
+            self._modified = True
+            with open(self._fpath, "r") as f:
+                lines = f.readlines()
+            new_lines = []
+            for i in range(len(lines)):
+                if (lines[i].startswith("#")):
                     new_lines.append(lines[i])
-        if len(data) > 0:
-            f.close()
-            self._flock.release()
-            return False
+                elif (lines[i].startswith("\n")):
+                    pass
+                else:
+                    uuid, chip_type = lines[i].replace('\n', '').split(" ")
+                    if data.has_key(uuid):
+                        new_lines.append(uuid + " " + data[uuid] + "\n")
+                        data.pop(uuid)
+                    else:
+                        new_lines.append(lines[i])
+            if len(data) > 0:
+                return False
 
-        f.seek(0)
-        f.writelines(new_lines)
-        f.close()
-        self._flock.release()
+            with open(self._fpath, "w") as f:
+                f.writelines(new_lines)
         return True
 
 def dict_shared(dict1, dict2):
@@ -141,18 +135,18 @@ def dict_shared(dict1, dict2):
 
 if __name__ == '__main__':
     config = Config()
+    #print str(config.read_data())
+    print config.add_data({"21513": "camera"})
     print str(config.read_data())
-    print config.add_data({"21513": "cam"})
-    print str(config.read_data())
-    print config.add_data({"21141": "cam"})
+    print config.add_data({"21141": "camera"})
     print str(config.read_data())
     print str(config.read_data())
-    print config.add_data({"21141": "temp"})
+    print config.add_data({"21141": "temperature"})
     print str(config.read_data())
     print config.add_data({"13513": "time"})
     print str(config.read_data())
-    print config.update_data({"21513": "temp"})
+    print config.update_data({"21513": "temperature"})
     print str(config.read_data())
-    print config.add_data({"21212": "cam"})
-    print config.update_data({"21212": "temp"})
+    print config.add_data({"21212": "camera"})
+    print config.update_data({"21212": "temperature"})
     print str(config.read_data())
