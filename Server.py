@@ -193,21 +193,23 @@ def index():
 
 def main(argv):
     debug = False
-    port  = 5000
+    port  = None
+    host  = None
     try:
         opts, args = getopt.getopt(argv, "p:hda:",
-                ["apikey=","pass=","help","port=","debug"])
+                ["apikey=","pass=","help","port=","debug","host="])
     except getopt.GetoptError, err:
         # Print debug info
         print str(err)
         sys.exit(2)
-    
+
     for opt, arg in opts:
         if opt in ["-h", "--help"]:
             print "Usage: Server.py"\
             + "\n    -a/--apikey <apikey>"\
-            + "\n    -p/--port <port>"\
-            + "\n       --pass <password>"\
+            + "\n    -p/--port   <port>"\
+            + "\n       --pass   <password>"\
+            + "\n       --host   <ip address>"\
             + "\n    -d/--debug"\
             + "\n    -h/--help"
             sys.exit(0)
@@ -221,8 +223,9 @@ def main(argv):
             port = int(arg)
         elif opt in ["-d", "--debug"]:
             debug = True
-    #app.run(host="192.168.0.1") #need to test this
-    app.run(debug=debug, port=port)
+        elif opt in ["--host"]:
+            host = arg
+    app.run(host=host, debug=debug, port=port)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
