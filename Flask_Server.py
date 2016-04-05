@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-from Gmail_Send import send_email
+from Gmail import send_email
 from ConfigManager import Config
 import flask
 import sys
@@ -20,7 +20,6 @@ app = Flask(__name__)
 
 SND_PASSWD = ""
 API_KEY = ""
-
 
 nodes = {}
 nlock = thread.allocate_lock()
@@ -53,18 +52,20 @@ def data_collector(uuid, ip, pertype):
             thread.exit()
         if response.status_code != requests.codes.ok:
             print "ERROR: Response from "\
-                    + uuid + " returned status code " + response.status_code
+                    + uuid + " returned status code "\
+                    + response.status_code
         else:
             if r.headers.get('content-type') != 'application/json':
                 print "ERROR: Response from "\
                         + uuid + " was not in json format"
             r_json = response.json()
-            if (uuid != r_json["UUID"]):
-                # TODO: Make a get request on the chip telling it to reconnect
+            if (uuid != r_json.get("uuid")):
+                # TODO: Make a get request on the chip
+                # telling it to reconnect
                 thread.exit()
             send_channel.send({
                 uuid: {
-                    pertype : r_json["DATA"]
+                    pertype : r_json.get("data")
                 } 
             })
         time.sleep(1)
@@ -79,7 +80,7 @@ def data_receiver():
         print message
     #pass
 
-@app.route('/printers/<int:uuid>/<action>',methods=['POST'])
+@app.route('/printers/<int:uuid>/<action>',methods=['GET','POST'])
 def print_action(uuid, action):
     """Post request to do a print action. UUID must match a printer
     type in the config file
@@ -95,42 +96,62 @@ def print_action(uuid, action):
         pass
     return action
 
+@app.route('/printers/activate', methods=['GET'])
+def activate_printer(payload = None):
+    """API call to activate a printer on the hub.
+    The printer should provide a parameter 'payload' in
+    json format that contains it's IP address as "ip",
+    uuid as "uuid", and port as "port"
+    :returns: TODO
+    """
+
+    global printers
+    if payload != None:
+        return 0
+    str_payload = request.args.get("payload")
+    json_payload = json.loads(str_payload)
+    uuid = json_payload.get("uuid")
+    ip = json_payload.get("ip")
+    port = json_payload.get("port", "80")
+    with plock:
+        printers[uuid] = {
+                "ip": ip,
+                "port": port
+        }
+    return str(printers)
+
 @app.route('/sensors/<int:uuid>/data', methods=['GET'])
 def sensor_data(uuid):
     return str(uuid)
 
-@app.route('/activate', methods=['GET'])
-def activate_peripheral():
-    """API call to register a sensor.
-    The UUID and IP should be provided in json format
-    as a variable "payload"
+@app.route('/sensors/activate', methods=['GET'])
+def activate_sensor(payload = None):
+    """API call to activate a sensor on the hub.
+    The sensor should provide a parameter 'payload' in
+    json format that contains it's IP address as "ip",
+    uuid as "uuid", and port as "port"
     :returns: TODO
     """
 
     global nodes
-    global printers
+    if payload != None:
+        return 0
     str_payload = request.args.get('payload')
     json_payload = json.loads(str_payload)
-    uuid = json_payload["UUID"]
-    ip = json_payload["IP"]
+    uuid = json_payload.get("uuid")
+    ip = json_payload.get("ip")
+    port = json_payload.get("port", "80")
     conf_data = conf.read_data()
     if uuid in conf_data.keys():
-        pertype = conf_data[uuid]
-        if pertype == "printer":
-            with plock:
-                printers[uuid] = {
-                        "ip": ip,
-                        "type": pertype
-                }
-            return str(printers)
-        else:
-            with nlock:
-                nodes[uuid] = {
-                        "ip": ip,
-                        "type": pertype
-                }
-            thread.start_new_thread(data_collector, (uuid, ip, pertype))
-            return str(nodes)
+        pertype = conf_data.get(uuid)
+        with nlock:
+            nodes[uuid] = {
+                    "ip": ip,
+                    "type": pertype,
+                    "port": port
+            }
+        thread.start_new_thread(data_collector, (uuid, ip, pertype))
+        return str(True)
     return str(False)
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -143,8 +164,8 @@ def register_peripheral():
     if request.method == "GET":
         return render_template("register.html")
     if request.method == "POST":
-        uuid = request.form['uuid']
-        pertype = request.form['pertype']
+        uuid = request.form.get('uuid')
+        pertype = request.form.get('pertype')
         if request.form.get('is_update'):
             success = conf.update_data({uuid: pertype})
             return str(success)
@@ -152,13 +173,12 @@ def register_peripheral():
             success = conf.add_data({uuid: pertype})
             return str(success)
 
-
 @app.route('/')
 def index():
     uuid=0
     return "0 represents the UUID" + '<br>'\
          + url_for('register_peripheral') + '<br>'\
-         + url_for('activate_peripheral') + '<br>'\
+         + url_for('activate_sensor') + '<br>'\
          + url_for('print_action' ,uuid=uuid, action='start') + '<br>'\
          + url_for('print_action' ,uuid=uuid, action='cancel') + '<br>'\
          + url_for('print_action' ,uuid=uuid, action='pause') + '<br>'\
@@ -176,7 +196,8 @@ def index():
 
 def main(argv):
     try:
-        opts, args = getopt.getopt(argv, "ha:p:", ["apikey","pass","help"])
+        opts, args = getopt.getopt(argv, "ha:p:",
+                ["apikey","pass","help"])
     except getopt.GetoptError, err:
         # Print debug info
         print str(err)
@@ -184,7 +205,7 @@ def main(argv):
     
     for opt, arg in opts:
         if opt in ("-h", "--help"):
-            print "Usage: run.py -a <apikey> -p <gmail pass>"
+            print "Usage: Server.py -a <apikey> -p <gmail pass>"
             sys.exit(0)
         elif opt in ("-a", "--apikey"):
             global API_KEY
