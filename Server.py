@@ -106,13 +106,12 @@ def activate_printer(payload = None):
     """
 
     global printers
-    if payload != None:
-        return 0
-    str_payload = request.args.get("payload")
-    json_payload = json.loads(str_payload)
-    uuid = json_payload.get("uuid")
-    ip = json_payload.get("ip")
-    port = json_payload.get("port", "80")
+    if payload == None:
+        str_payload = request.args.get("payload")
+        payload     = json.loads(str_payload)
+    uuid = payload.get("uuid")
+    ip   = payload.get("ip")
+    port = payload.get("port", "80")
     with plock:
         printers[uuid] = {
                 "ip": ip,
@@ -134,13 +133,12 @@ def activate_sensor(payload = None):
     """
 
     global nodes
-    if payload != None:
-        return 0
-    str_payload = request.args.get('payload')
-    json_payload = json.loads(str_payload)
-    uuid = json_payload.get("uuid")
-    ip = json_payload.get("ip")
-    port = json_payload.get("port", "80")
+    if payload == None:
+        str_payload = request.args.get('payload')
+        payload     = json.loads(str_payload)
+    uuid = payload.get("uuid")
+    ip   = payload.get("ip")
+    port = payload.get("port", "80")
     conf_data = conf.read_data()
     if uuid in conf_data.keys():
         pertype = conf_data.get(uuid)
@@ -168,10 +166,9 @@ def register_peripheral():
         pertype = request.form.get('pertype')
         if request.form.get('is_update'):
             success = conf.update_data({uuid: pertype})
-            return str(success)
         else:
             success = conf.add_data({uuid: pertype})
-            return str(success)
+        return str(success)
 
 @app.route('/')
 def index():
@@ -195,26 +192,37 @@ def index():
     return "Message sent"
 
 def main(argv):
+    debug = False
+    port  = 5000
     try:
-        opts, args = getopt.getopt(argv, "ha:p:",
-                ["apikey","pass","help"])
+        opts, args = getopt.getopt(argv, "p:hda:",
+                ["apikey=","pass=","help","port=","debug"])
     except getopt.GetoptError, err:
         # Print debug info
         print str(err)
         sys.exit(2)
     
     for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            print "Usage: Server.py -a <apikey> -p <gmail pass>"
+        if opt in ["-h", "--help"]:
+            print "Usage: Server.py"\
+            + "\n    -a/--apikey <apikey>"\
+            + "\n    -p/--port <port>"\
+            + "\n       --pass <password>"\
+            + "\n    -d/--debug"\
+            + "\n    -h/--help"
             sys.exit(0)
-        elif opt in ("-a", "--apikey"):
+        elif opt in ["-a", "--apikey"]:
             global API_KEY
             API_KEY = arg
-        elif opt in ("-p", "--pass"):
+        elif opt in ["--pass"]:
             global SND_PASSWD
             SND_PASSWD = arg
+        elif opt in ["-p", "--port"]:
+            port = int(arg)
+        elif opt in ["-d", "--debug"]:
+            debug = True
     #app.run(host="192.168.0.1") #need to test this
-    app.run(debug=True)
+    app.run(debug=debug, port=port)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
