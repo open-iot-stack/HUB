@@ -9,6 +9,7 @@ import getopt
 import time
 import thread
 import requests
+import octopifunctions as octopi
 from message_generator import MessageGenerator
 from channel import Channel
 from flask import Flask
@@ -37,6 +38,7 @@ def data_collector(uuid, ip, pertype):
     """
 
     global nodes
+    global send_channel
     url = "http://" + ip + "/GPIO/2"
     while(True):
         # load the json from the chip
@@ -75,6 +77,7 @@ def data_receiver():
     is collected by the sensors and send it to the Web API.
     Also is in charge of logging data based on UUID.
     """
+    global recv_channel
 
     for message in MessageGenerator(recv_channel):
         print message
@@ -86,14 +89,25 @@ def print_action(uuid, action):
     type in the config file
     """
 
+    global printers
+    if not printers.has_key(uuid):
+        return str(False)
+    printer = printers.get(uuid)
+
+    ip   = printer.get("ip")
+    port = printer.get("port")
+    key  = printer.get("key")
+    url  = ip + ":" + port
+
     if action == "start":
-        pass
+        if (request.method != 'POST'): abort(405)
+        r = octopi.StartCommand(url, key)
     elif action == "pause":
-        pass
+        r = octopi.PauseUnpauseCommand(url, key)
     elif action == "cancel":
-        pass
+        r = octopi.CancelCommand(url, key)
     elif action == "status":
-        pass
+        r = octopi.GetJobInfo(url, key)
     return action
 
 @app.route('/printers/activate', methods=['GET'])
@@ -101,7 +115,7 @@ def activate_printer(payload = None):
     """API call to activate a printer on the hub.
     The printer should provide a parameter 'payload' in
     json format that contains it's IP address as "ip",
-    uuid as "uuid", and port as "port"
+    uuid as "uuid", port as "port", and apikey as "key"
     :returns: TODO
     """
 
@@ -112,16 +126,19 @@ def activate_printer(payload = None):
     uuid = payload.get("uuid")
     ip   = payload.get("ip")
     port = payload.get("port", "80")
+    key  = payload.get("key", "0")
     with plock:
         printers[uuid] = {
                 "ip": ip,
-                "port": port
+                "port": port,
+                "key": key
         }
     return str(printers)
 
 @app.route('/sensors/<int:uuid>/data', methods=['GET'])
 def sensor_data(uuid):
-    return str(uuid)
+    global nodes
+    return str(nodes)
 
 @app.route('/sensors/activate', methods=['GET'])
 def activate_sensor(payload = None):
@@ -189,7 +206,6 @@ def index():
 #              "Sensor Data",
 #              snd_psswd = SND_PASSWD
 #              )
-    return "Message sent"
 
 def main(argv):
     debug = False
@@ -225,6 +241,8 @@ def main(argv):
             debug = True
         elif opt in ["--host"]:
             host = arg
+    
+    thread.start_new_thread(data_receiver, ())
     app.run(host=host, debug=debug, port=port)
 
 if __name__ == '__main__':
