@@ -415,15 +415,15 @@ def GetJobInfo(url, apiKey):
 
 
 
-
+if __name__ == "__main__":
 ##################################### DELETE THESE, ONLY USED FOR TESTING #####################################
 
-print '\n'
+    print '\n'
 #this is an stl file that will be used to test printing through the octopi
-pathToFile = 'C:\\Users\\aaron\\Projects\\octopi\\rpi2-bottom_8020_netfabb.stl'
+    pathToFile = 'C:\\Users\\aaron\\Projects\\octopi\\rpi2-bottom_8020_netfabb.stl'
 #print 'Valid filepath? -' + str(os.path.isfile(pathToFile))
-dumbPathFile = 'pathto/here/filename.c'
-pathToSampleStl = local + '/rpi2-bottom_8020_netfabb.stl'
+    dumbPathFile = 'pathto/here/filename.c'
+    pathToSampleStl = local + '/rpi2-bottom_8020_netfabb.stl'
 
 ############################ TESTING FILE OPERATIONS #################################
 
@@ -439,14 +439,14 @@ pathToSampleStl = local + '/rpi2-bottom_8020_netfabb.stl'
 #print '\n'
 
 ##################### RECIEVING 400 : bad request
-print 'testing UploadFile:'
-print UploadFile(testingOctopiUrl, testingApiKey, pathToFile)
-print '\n'
+    print 'testing UploadFile:'
+    print UploadFile(testingOctopiUrl, testingApiKey, pathToFile)
+    print '\n'
 
 ##################### RECIEVING 400 : bad request
-print 'testing UploadFileAndPrint:'
-print UploadFileAndPrint(testingOctopiUrl, testingApiKey, pathToFile, local)
-print '\n'
+    print 'testing UploadFileAndPrint:'
+    print UploadFileAndPrint(testingOctopiUrl, testingApiKey, pathToFile, local)
+    print '\n'
 
 ###################### THIS IS WORKING 
 #print 'testing GetonOneFileInfo:'
@@ -469,33 +469,33 @@ print '\n'
 #print '\n'
     
 ##################### NEEDS FUTHER TESTING ############# May need a slicer? getting 405, method not allowed
-print 'testing CommandSlice:'
-print CommandSlice(testingOctopiUrl, testingApiKey, pathToSampleStl)
-print '\n'
+    print 'testing CommandSlice:'
+    print CommandSlice(testingOctopiUrl, testingApiKey, pathToSampleStl)
+    print '\n'
 
 
 ############################ TESTING JOB OPERATIONS #################################
 
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-print 'testing Start Command:'
-print StartCommand(testingOctopiUrl, testingApiKey)
-print '\n'
+    print 'testing Start Command:'
+    print StartCommand(testingOctopiUrl, testingApiKey)
+    print '\n'
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-print 'testing Pause Command:'
-print PauseCommand(testingOctopiUrl, testingApiKey)
-print '\n'
+    print 'testing Pause Command:'
+    print PauseCommand(testingOctopiUrl, testingApiKey)
+    print '\n'
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-print 'testing Restart Command:'
-print RestartCommand(testingOctopiUrl, testingApiKey)
-print '\n'
+    print 'testing Restart Command:'
+    print RestartCommand(testingOctopiUrl, testingApiKey)
+    print '\n'
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-print 'testing Cancel Command:'
-print CancelCommand(testingOctopiUrl, testingApiKey)
-print '\n'
+    print 'testing Cancel Command:'
+    print CancelCommand(testingOctopiUrl, testingApiKey)
+    print '\n'
 
 ###################### THIS IS WORKING 
 #print 'testing Get Job Info:'
