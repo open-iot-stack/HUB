@@ -17,6 +17,7 @@ from flask import request
 from flask import json
 from flask import render_template
 from flask import url_for
+from flask import abort
 app = Flask(__name__)
 
 SND_PASSWD = ""
@@ -31,15 +32,18 @@ plock = thread.allocate_lock()
 conf = Config()
 send_channel, recv_channel = Channel()
 
-def data_collector(uuid, ip, pertype):
+def sensor_data_collector(uuid, ip, pertype):
     """Should spawn as its own thread for each sensor
     that calls activate. Collects data from the sensor every
     second and dumps it into the send channel.
     """
 
     global nodes
+    global nlock
     global send_channel
+    #TODO fix url to be the correct call based on type
     url = "http://" + ip + "/GPIO/2"
+    #TODO a lot of this code is fulling working/tested but general idea is there
     while(True):
         # load the json from the chip
         try:
@@ -49,6 +53,7 @@ def data_collector(uuid, ip, pertype):
                 if (ip == nodes[uuid]["ip"]):
                     print "ERROR: Lost Connection to "\
                             + uuid + ". Thread exiting..."
+
                     if nodes.has_key(uuid):
                         nodes.pop(uuid)
             thread.exit()
@@ -57,9 +62,10 @@ def data_collector(uuid, ip, pertype):
                     + uuid + " returned status code "\
                     + response.status_code
         else:
-            if r.headers.get('content-type') != 'application/json':
+            if response.headers.get('content-type') != 'application/json':
                 print "ERROR: Response from "\
                         + uuid + " was not in json format"
+
             r_json = response.json()
             if (uuid != r_json.get("uuid")):
                 # TODO: Make a get request on the chip
@@ -78,20 +84,39 @@ def data_receiver():
     Also is in charge of logging data based on UUID.
     """
     global recv_channel
-
     for message in MessageGenerator(recv_channel):
         print message
     #pass
 
-@app.route('/printers/<int:uuid>/<action>',methods=['GET','POST'])
+def printer_data_receiver(uuid, ip, port, key):
+    global printers
+    global plock
+    url = ip + ":" + port
+    while(True):
+        response = octopi.GetJobInfo(url, key)
+        #TODO Add data into send channel. Talk to Aaron about change
+        # changing responses from jobs to just be the pure response
+        sleep(1)
+
+@app.route('/printers/list')
+def printers_list():
+    """Returns a json of currently active printers
+    :returns: TODO
+    """
+
+    global printers
+    return json.jsonify(printers)
+
+@app.route('/printers/<int:uuid>/<action>',methods=['POST', 'GET'])
 def print_action(uuid, action):
     """Post request to do a print action. UUID must match a printer
     type in the config file
     """
 
     global printers
+    uuid = str(uuid)
     if not printers.has_key(uuid):
-        return str(False)
+        abort(400)
     printer = printers.get(uuid)
 
     ip   = printer.get("ip")
@@ -99,16 +124,40 @@ def print_action(uuid, action):
     key  = printer.get("key")
     url  = ip + ":" + port
 
+    #TODO make helper function for actions to respond the web api
+    # with the actual success as the command. For now just spawn command
+    # as new thread
     if action == "start":
-        if (request.method != 'POST'): abort(405)
-        r = octopi.StartCommand(url, key)
+        #response = octopi.StartCommand(url, key)
+        start_new_thread(octopi.StartCommand, (url, key))
+        pass
     elif action == "pause":
-        r = octopi.PauseUnpauseCommand(url, key)
+        #response = octopi.PauseUnpauseCommand(url, key)
+        start_new_thread(octopi.PauseUnpauseCommand, (url, key))
+        pass
     elif action == "cancel":
-        r = octopi.CancelCommand(url, key)
-    elif action == "status":
-        r = octopi.GetJobInfo(url, key)
-    return action
+        #response = octopi.CancelCommand(url, key)
+        start_new_thread(octopi.CancelCommand, (url, key))
+        pass
+    return json.jsonify({"message": action + " successfully sent to the printer."})
+
+@app.route('/printers/<int:uuid>/status', methods=['GET'])
+def print_status(uuid):
+    global printers
+    uuid = str(uuid)
+    if not printers.has_key(uuid):
+        abort(400)
+    printer = printers.get(uuid)
+
+    ip   = printer.get("ip")
+    port = printer.get("port")
+    key  = printer.get("key")
+    url  = ip + ":" + port
+
+    response = octopi.GetJobInfo(url, key)
+    #TODO return the actual data that's useful for the web api
+    return response
+
 
 @app.route('/printers/activate', methods=['GET'])
 def activate_printer(payload = None):
@@ -120,24 +169,30 @@ def activate_printer(payload = None):
     """
 
     global printers
+    global plock
     if payload == None:
         str_payload = request.args.get("payload")
         payload     = json.loads(str_payload)
+
     uuid = payload.get("uuid")
     ip   = payload.get("ip")
     port = payload.get("port", "80")
     key  = payload.get("key", "0")
+
     with plock:
         printers[uuid] = {
                 "ip": ip,
                 "port": port,
                 "key": key
         }
-    return str(printers)
+
+    return json.jsonify(printers)
 
 @app.route('/sensors/<int:uuid>/data', methods=['GET'])
 def sensor_data(uuid):
     global nodes
+    global nlock
+    uuid = str(uuid)
     return str(nodes)
 
 @app.route('/sensors/activate', methods=['GET'])
@@ -150,13 +205,18 @@ def activate_sensor(payload = None):
     """
 
     global nodes
+    global nlock
     if payload == None:
         str_payload = request.args.get('payload')
         payload     = json.loads(str_payload)
+
     uuid = payload.get("uuid")
     ip   = payload.get("ip")
     port = payload.get("port", "80")
     conf_data = conf.read_data()
+
+    #TODO make dynamic registering by going through different GPIO
+    # ports and when you get a response that's the type
     if uuid in conf_data.keys():
         pertype = conf_data.get(uuid)
         with nlock:
@@ -165,9 +225,11 @@ def activate_sensor(payload = None):
                     "type": pertype,
                     "port": port
             }
-        thread.start_new_thread(data_collector, (uuid, ip, pertype))
-        return str(True)
-    return str(False)
+        thread.start_new_thread(sensor_data_collector, (uuid, ip, pertype))
+        return json.jsonify(nodes)
+
+    #TODO Log the fact that the sensor must be registered.
+    abort(400)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register_peripheral():
@@ -178,6 +240,7 @@ def register_peripheral():
 
     if request.method == "GET":
         return render_template("register.html")
+
     if request.method == "POST":
         uuid = request.form.get('uuid')
         pertype = request.form.get('pertype')
@@ -185,7 +248,13 @@ def register_peripheral():
             success = conf.update_data({uuid: pertype})
         else:
             success = conf.add_data({uuid: pertype})
-        return str(success)
+
+        if success:
+            return json.jsonify({"message": uuid + " has been registered as " + pertype})
+        else:
+            return json.jsonify({"message": uuid + " was not registered, are you updating?"})
+
+    abort(405)
 
 @app.route('/')
 def index():
@@ -241,7 +310,7 @@ def main(argv):
             debug = True
         elif opt in ["--host"]:
             host = arg
-    
+
     thread.start_new_thread(data_receiver, ())
     app.run(host=host, debug=debug, port=port)
 
