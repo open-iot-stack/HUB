@@ -277,12 +277,13 @@ def index():
 #              )
 
 def main(argv):
-    debug = False
-    port  = None
-    host  = None
+    debug    = False
+    port     = None
+    host     = None
+    threaded = False
     try:
-        opts, args = getopt.getopt(argv, "p:hda:",
-                ["apikey=","pass=","help","port=","debug","host="])
+        opts, args = getopt.getopt(argv, "hdtp:a:",
+                ["apikey=","pass=","help","port=","debug","host=","threaded"])
     except getopt.GetoptError, err:
         # Print debug info
         print str(err)
@@ -296,7 +297,8 @@ def main(argv):
             + "\n       --pass   <password>"\
             + "\n       --host   <ip address>"\
             + "\n    -d/--debug"\
-            + "\n    -h/--help"
+            + "\n    -h/--help"\
+            + "\n    -t/--threaded"
             sys.exit(0)
         elif opt in ["-a", "--apikey"]:
             global API_KEY
@@ -310,9 +312,11 @@ def main(argv):
             debug = True
         elif opt in ["--host"]:
             host = arg
+        elif opt in ["-t", "--threaded"]:
+            threaded = True
 
     thread.start_new_thread(data_receiver, ())
-    app.run(host=host, debug=debug, port=port)
+    app.run(host=host, debug=debug, port=port,threaded=threaded)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
