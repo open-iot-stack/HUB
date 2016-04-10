@@ -21,7 +21,7 @@ from flask import abort
 app = Flask(__name__)
 
 SND_PASSWD = ""
-API_KEY = ""
+API_KEY = octopi.testingApiKey
 
 nodes = {}
 nlock = thread.allocate_lock()
