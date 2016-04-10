@@ -10,6 +10,7 @@
 
 import json
 import os
+import httplib
 
 
 ##################################### TESTING CODE (DELETE FOR RELEASE) #####################################
@@ -115,6 +116,7 @@ def HttpRequest(urlAddress, apiExtension, params, httpMethod, header):
     conn = httplib.HTTPConnection(urlAddress)
     conn.request(httpMethod, apiExtension, str(params), header)
     response = conn.getresponse()
+    return response
     if(200 <=  response.status and response.status < 300):
         if response.status is 204: #delete returns no content and crashes 
             return response.status

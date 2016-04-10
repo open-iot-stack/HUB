@@ -156,7 +156,7 @@ def print_status(uuid):
 
     response = octopi.GetJobInfo(url, key)
     #TODO return the actual data that's useful for the web api
-    return response
+    return response.read()
 
 
 @app.route('/printers/activate', methods=['GET'])
