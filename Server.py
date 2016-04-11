@@ -26,7 +26,7 @@ from json import dumps
 app = Flask(__name__)
 
 SND_PASSWD = ""
-API_KEY = octopi.testingApiKey
+API_KEY = ""
 
 nodes = {}
 nlock = thread.allocate_lock()
@@ -325,10 +325,8 @@ def main(argv):
             + "\n    -v/--verbose"
             sys.exit(0)
         elif opt in ["-a", "--apikey"]:
-            global API_KEY
             API_KEY = arg
         elif opt in ["--pass"]:
-            global SND_PASSWD
             SND_PASSWD = arg
         elif opt in ["-p", "--port"]:
             port = int(arg)
