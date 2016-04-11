@@ -38,7 +38,7 @@ conf = Config()
 send_channel, recv_channel = Channel()
 
 def get_temp(node_ip, gpio):
-	"""Creates request to dht sensor for data"""
+        """Creates request to dht sensor for data"""
     req = Request(node_ip+"/"+gpio+"/dht")
     response_body = urlopen(req).read()
     data = json.loads(response_body)
@@ -65,8 +65,8 @@ def sensor_data_collector(uuid, ip, pertype):
         # load the json from the chip
         try:
             #response = requests.get(url, timeout=3)
-			#need to find how we're getting the node_ip and fill in.
-			response = get_temp(node_ip, 1)
+                        #need to find how we're getting the node_ip and fill in.
+                        response = get_temp(node_ip, 1)
         except requests.RequestException:
             with nlock:
                 if (ip == nodes[uuid]["ip"]):
