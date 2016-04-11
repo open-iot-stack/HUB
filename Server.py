@@ -321,7 +321,8 @@ def main(argv):
             + "\n       --host   <ip address>"\
             + "\n    -d/--debug"\
             + "\n    -h/--help"\
-            + "\n    -t/--threaded"
+            + "\n    -t/--threaded"\
+            + "\n    -v/--verbose"
             sys.exit(0)
         elif opt in ["-a", "--apikey"]:
             global API_KEY
