@@ -38,14 +38,14 @@ conf = Config()
 send_channel, recv_channel = Channel()
 
 def get_temp(node_ip, gpio):
-        """Creates request to dht sensor for data"""
+    """Creates request to dht sensor for data"""
     req = Request(node_ip+"/"+gpio+"/dht")
     response_body = urlopen(req).read()
     data = json.loads(response_body)
     temp = data['data']['temp']
     humidity = data['data']['humi']
     print("temp: "+temp+" humidity: "+ humi)
-
+    
     return data
 
 def sensor_data_collector(uuid, ip, pertype):
