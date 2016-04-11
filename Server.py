@@ -19,6 +19,10 @@ from flask import json
 from flask import render_template
 from flask import url_for
 from flask import abort
+#import libs
+from urllib2 import Request, urlopen
+from json import dumps
+
 app = Flask(__name__)
 
 SND_PASSWD = ""
@@ -33,6 +37,17 @@ plock = thread.allocate_lock()
 conf = Config()
 send_channel, recv_channel = Channel()
 
+def get_temp(node_ip, gpio):
+	"""Creates request to dht sensor for data"""
+    req = Request(node_ip+"/"+gpio+"/dht")
+    response_body = urlopen(req).read()
+    data = json.loads(response_body)
+    temp = data['data']['temp']
+    humidity = data['data']['humi']
+    print("temp: "+temp+" humidity: "+ humi)
+
+    return data
+
 def sensor_data_collector(uuid, ip, pertype):
     """Should spawn as its own thread for each sensor
     that calls activate. Collects data from the sensor every
@@ -44,12 +59,14 @@ def sensor_data_collector(uuid, ip, pertype):
     global send_channel
     global log
     #TODO fix url to be the correct call based on type
-    url = "http://" + ip + "/GPIO/2"
+    #url = "http://" + ip + "/GPIO/2"
     #TODO a lot of this code is fulling working/tested but general idea is there
     while(True):
         # load the json from the chip
         try:
-            response = requests.get(url, timeout=3)
+            #response = requests.get(url, timeout=3)
+			#need to find how we're getting the node_ip and fill in.
+			response = get_temp(node_ip, 1)
         except requests.RequestException:
             with nlock:
                 if (ip == nodes[uuid]["ip"]):
