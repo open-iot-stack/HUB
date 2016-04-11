@@ -10,6 +10,7 @@ import time
 import thread
 import requests
 import octopifunctions as octopi
+from Logger import Log
 from message_generator import MessageGenerator
 from channel import Channel
 from flask import Flask
@@ -41,6 +42,7 @@ def sensor_data_collector(uuid, ip, pertype):
     global nodes
     global nlock
     global send_channel
+    global log
     #TODO fix url to be the correct call based on type
     url = "http://" + ip + "/GPIO/2"
     #TODO a lot of this code is fulling working/tested but general idea is there
@@ -51,20 +53,20 @@ def sensor_data_collector(uuid, ip, pertype):
         except requests.RequestException:
             with nlock:
                 if (ip == nodes[uuid]["ip"]):
-                    print "ERROR: Lost Connection to "\
-                            + uuid + ". Thread exiting..."
+                    log.log("ERROR: Lost Connection to "
+                            + uuid + ". Thread exiting...")
 
                     if nodes.has_key(uuid):
                         nodes.pop(uuid)
             thread.exit()
         if response.status_code != requests.codes.ok:
-            print "ERROR: Response from "\
-                    + uuid + " returned status code "\
-                    + response.status_code
+            log.log("ERROR: Response from "
+                    + uuid + " returned status code "
+                    + response.status_code)
         else:
             if response.headers.get('content-type') != 'application/json':
-                print "ERROR: Response from "\
-                        + uuid + " was not in json format"
+                log.log("ERROR: Response from "
+                        + uuid + " was not in json format")
 
             r_json = response.json()
             if (uuid != r_json.get("uuid")):
@@ -277,13 +279,17 @@ def index():
 #              )
 
 def main(argv):
-    debug    = False
-    port     = None
-    host     = None
-    threaded = False
+    debug         = False
+    port          = None
+    host          = None
+    threaded      = False
+    print_enabled = False
+    global API_KEY
+    global SND_PASSWD
+    global log
     try:
-        opts, args = getopt.getopt(argv, "hdtp:a:",
-                ["apikey=","pass=","help","port=","debug","host=","threaded"])
+        opts, args = getopt.getopt(argv, "hdtvp:a:",
+                ["apikey=","pass=","help","port=","debug","host=","threaded","verbose"])
     except getopt.GetoptError, err:
         # Print debug info
         print str(err)
@@ -314,6 +320,10 @@ def main(argv):
             host = arg
         elif opt in ["-t", "--threaded"]:
             threaded = True
+        elif opt in ["-v", "--verbose"]:
+            print_enabled = True
+
+    log = Log(print_enabled=print_enabled)
 
     thread.start_new_thread(data_receiver, ())
     app.run(host=host, debug=debug, port=port,threaded=threaded)
