@@ -2,6 +2,7 @@
 *.swp
 .log
 .uuid
+.config
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
