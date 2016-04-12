@@ -24,6 +24,7 @@ from urllib2 import Request, urlopen
 from json import dumps
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = "uploads/"
 
 SND_PASSWD = ""
 API_KEY = ""
@@ -126,7 +127,7 @@ def printers_list():
     global printers
     return json.jsonify(printers)
 
-@app.route('/printers/<int:uuid>/<action>',methods=['POST', 'GET'])
+@app.route('/printers/<int:uuid>/<action>',methods=['POST'])
 def print_action(uuid, action):
     """Post request to do a print action. UUID must match a printer
     type in the config file
@@ -157,6 +158,19 @@ def print_action(uuid, action):
     elif action == "cancel":
         #response = octopi.CancelCommand(url, key)
         start_new_thread(octopi.CancelCommand, (url, key))
+        pass
+    elif action == "upload":
+        # get file from the post request
+        # and place it in the upload folder
+        #TODO make sure there is enough space on the device
+        f = request.files.get('file', None)
+        if f:
+            f.save(os.path.join(app.config['UPLOAD_FOLDER'], f.filename))
+        start = request.args.get('start', None)
+        # check if start isn't none, then make sure it is equal to true
+        if start and start.lower() == "true":
+            #TODO Handle starting the print job imediately
+            pass
         pass
     return json.jsonify({"message": action + " successfully sent to the printer."})
 
