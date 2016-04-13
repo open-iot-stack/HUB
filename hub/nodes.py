@@ -44,7 +44,8 @@ def activate_sensor(payload = None):
         with nodes.lock:
             # THIS REQUIRES NODES THREADS TO REMOVE THEMSELVES
             if uuid in nodes.data:
-                return json.jsonify({"message": uuid + " was already activated"})
+                return json.jsonify({"message": uuid
+                                    + " was already activated"})
             nodes.data[uuid] = {
                     "ip": ip,
                     "type": pertype,
