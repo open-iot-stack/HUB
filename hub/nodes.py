@@ -7,7 +7,7 @@ from flask import request
 from flask import json
 from flask import abort
 from hub import app
-from hub.dealer import sensor_data_collector
+from dealer import sensor_data_collector
 
 nodes = {}
 nlock = thread.allocate_lock()

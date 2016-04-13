@@ -5,7 +5,7 @@ import thread
 from flask import request
 from flask import json
 from flask import abort
-import hub.octopifunctions as octopi
+import octopifunctions as octopi
 from hub import app
 
 printers = {}
