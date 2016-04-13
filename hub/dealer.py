@@ -53,6 +53,9 @@ def sensor_data_collector(uuid, ip, pertype):
         if failures > 20:
             log.log("ERROR: Have failed communication 20 times in a row. "
                    +"Closing connection with " + uuid)
+            with nlock:
+                if nodes.has_key(uuid):
+                    nodes.pop(uuid)
             thread.exit()
         try:
             #need to find how we're getting the node_ip and fill in.
@@ -71,8 +74,6 @@ def sensor_data_collector(uuid, ip, pertype):
                 if (ip == nodes[uuid]["ip"]):
                     log.log("ERROR: Lost Connection to "
                             + uuid + ".")#" Thread exiting...")
-                    if nodes.has_key(uuid):
-                        nodes.pop(uuid)
             continue
     # Start handling of data here.
 

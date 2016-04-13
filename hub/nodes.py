@@ -44,6 +44,9 @@ def activate_sensor(payload = None):
     if uuid in conf_data.keys():
         pertype = conf_data.get(uuid)
         with nlock:
+            # THIS REQUIRES NODES THREADS TO REMOVE THEMSELVES
+            if uuid in nodes:
+                return json.jsonify({"message": uuid + " was already activated"})
             nodes[uuid] = {
                     "ip": ip,
                     "type": pertype,
