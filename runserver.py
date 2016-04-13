@@ -1,12 +1,13 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
+
+import hub
 import sys
 import getopt
 import thread
 from hub import app
-from hub.Logger import Log
-from hub.Server import data_receiver
-
+from hub.dealer import data_receiver
+from hub.logger import Log
 
 debug         = False
 port          = None
@@ -37,9 +38,9 @@ for opt, arg in opts:
         + "\n    -v/--verbose"
         sys.exit(0)
     elif opt in ["-a", "--apikey"]:
-        API_KEY = arg
+        hub.API_KEY = arg
     elif opt in ["--pass"]:
-        SND_PASSWD = arg
+        hub.SND_PASSWD = arg
     elif opt in ["-p", "--port"]:
         port = int(arg)
     elif opt in ["-d", "--debug"]:
@@ -51,7 +52,7 @@ for opt, arg in opts:
     elif opt in ["-v", "--verbose"]:
         print_enabled = True
 
-log = Log(print_enabled=print_enabled)
+hub.log = Log(print_enabled=print_enabled)
 
 thread.start_new_thread(data_receiver, ())
 app.run(host=host, debug=debug, port=port,threaded=threaded)

@@ -8,7 +8,6 @@ from flask import abort
 import octopifunctions as octopi
 from hub import app
 
-
 printers = {}
 plock = thread.allocate_lock()
 
@@ -113,6 +112,5 @@ def activate_printer(payload = None):
                 "key": key
         }
 
-    return json.jsonify(printers)
-
+    return json.jsonify({"message": uuid + " has been activated."})
 
