@@ -3,21 +3,20 @@
 
 import thread
 import hub
+from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
 from hub import app
 from dealer import sensor_data_collector
 
-nodes = {}
-nlock = thread.allocate_lock()
+nodes = Chest()
 
 @app.route('/sensors/<int:uuid>/data', methods=['GET'])
 def sensor_data(uuid):
     global nodes
-    global nlock
     uuid = str(uuid)
-    return str(nodes)
+    return str(nodes.data)
 
 @app.route('/sensors/activate', methods=['GET'])
 def activate_sensor(payload = None):
@@ -29,7 +28,6 @@ def activate_sensor(payload = None):
     """
 
     global nodes
-    global nlock
     if payload == None:
         str_payload = request.args.get('payload')
         payload     = json.loads(str_payload)
@@ -43,11 +41,11 @@ def activate_sensor(payload = None):
     # ports and when you get a response that's the type
     if uuid in conf_data.keys():
         pertype = conf_data.get(uuid)
-        with nlock:
+        with nodes.lock:
             # THIS REQUIRES NODES THREADS TO REMOVE THEMSELVES
-            if uuid in nodes:
+            if uuid in nodes.data:
                 return json.jsonify({"message": uuid + " was already activated"})
-            nodes[uuid] = {
+            nodes.data[uuid] = {
                     "ip": ip,
                     "type": pertype,
                     "port": port
@@ -64,4 +62,4 @@ def sensors_list():
     :returns: TODO
     """
 
-    return json.jsonify(nodes)
+    return json.jsonify(nodes.data)

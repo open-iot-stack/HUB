@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import thread
+from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
 import octopifunctions as octopi
 from hub import app
 
-printers = {}
-plock = thread.allocate_lock()
+printers = Chest()
 
 @app.route('/printers/list')
 def printers_list():
@@ -18,7 +18,7 @@ def printers_list():
     """
 
     global printers
-    return json.jsonify(printers)
+    return json.jsonify(printers.data)
 
 @app.route('/printers/<int:uuid>/<action>',methods=['POST'])
 def print_action(uuid, action):
@@ -28,13 +28,14 @@ def print_action(uuid, action):
 
     global printers
     uuid = str(uuid)
-    if not printers.has_key(uuid):
-        abort(400)
-    printer = printers.get(uuid)
+    with printers.lock:
+        if not printers.data.has_key(uuid):
+            abort(400)
+        printer = printers.data.get(uuid)
+        ip   = printer.get("ip")
+        port = printer.get("port")
+        key  = printer.get("key")
 
-    ip   = printer.get("ip")
-    port = printer.get("port")
-    key  = printer.get("key")
     url  = ip + ":" + port
 
     #TODO make helper function for actions to respond the web api
@@ -71,13 +72,14 @@ def print_action(uuid, action):
 def print_status(uuid):
     global printers
     uuid = str(uuid)
-    if not printers.has_key(uuid):
-        abort(400)
-    printer = printers.get(uuid)
+    with printers.lock:
+        if not printers.data.has_key(uuid):
+            abort(400)
+        printer = printers.data.get(uuid)
+        ip   = printer.get("ip")
+        port = printer.get("port")
+        key  = printer.get("key")
 
-    ip   = printer.get("ip")
-    port = printer.get("port")
-    key  = printer.get("key")
     url  = ip + ":" + port
 
     response = octopi.GetJobInfo(url, key)
@@ -95,7 +97,6 @@ def activate_printer(payload = None):
     """
 
     global printers
-    global plock
     if payload == None:
         str_payload = request.args.get("payload")
         payload     = json.loads(str_payload)
@@ -105,8 +106,8 @@ def activate_printer(payload = None):
     port = payload.get("port", "80")
     key  = payload.get("key", "0")
 
-    with plock:
-        printers[uuid] = {
+    with printers.lock:
+        printers.data[uuid] = {
                 "ip": ip,
                 "port": port,
                 "key": key

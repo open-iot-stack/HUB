@@ -40,7 +40,6 @@ def sensor_data_collector(uuid, ip, pertype):
     """
 
     nodes        = hub.nodes.nodes
-    nlock        = hub.nodes.nlock
     send_channel = hub.send_channel
     log          = hub.log
     failures     = 0
@@ -53,9 +52,9 @@ def sensor_data_collector(uuid, ip, pertype):
         if failures > 20:
             log.log("ERROR: Have failed communication 20 times in a row. "
                    +"Closing connection with " + uuid)
-            with nlock:
-                if nodes.has_key(uuid):
-                    nodes.pop(uuid)
+            with nodes.lock:
+                if nodes.data.has_key(uuid):
+                    nodes.data.pop(uuid)
             thread.exit()
         try:
             #need to find how we're getting the node_ip and fill in.
@@ -70,8 +69,8 @@ def sensor_data_collector(uuid, ip, pertype):
             continue
         except requests.ConnectionError:
             failures += 1
-            with nlock:
-                if (ip == nodes[uuid]["ip"]):
+            with nodes.lock:
+                if (ip == nodes.data[uuid]["ip"]):
                     log.log("ERROR: Lost Connection to "
                             + uuid + ".")#" Thread exiting...")
             continue
