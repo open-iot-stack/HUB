@@ -8,11 +8,44 @@ import octopifunctions as octopi
 from message_generator import MessageGenerator
 
 def printer_data_collector(uuid, ip, port, key):
-    url = ip + ":" + port
+    printers     = hub.printers.printers
+    send_channel = hub.send_channel
+    log          = hub.log
+    failures     = 0
+    url          = "http://" + ip + ":" + port
+    prev_data    = {}
     while(True):
-        response = octopi.GetJobInfo(url, key)
-        #TODO Add data into send channel. Talk to Aaron about change
-        # changing responses from jobs to just be the pure response
+        if failures > 20:
+            log.log("ERROR: Have failed communication 20 times in a row."
+                  + " Closing connection with " + uuid)
+            with printers.lock:
+                if printers.data.has_key(uuid):
+                    printers.data.pop(uuid)
+            thread.exit()
+        try:
+            response = octopi.GetJobInfo(url, key)
+            failures = 0
+        except:
+            # Just catch all for now
+            #TODO make sure catching right things
+            failures += 1
+            log.log("ERROR: Could not collect data from printer")
+            continue
+        if response.status_code != requests.codes.ok:
+            log.log("ERROR: Response from "
+                    + uuid + " returned status code "
+                    + response.status_code)
+        else:
+            data = response.json()
+            # Check to see if data is the same as last collected
+            # if so, do not send it
+            if cmp(prev_data, data):
+                prev_data = data.copy()
+                send_channel.send({
+                    uuid: {
+                        "printer": data
+                    } 
+                })
         sleep(1)
 
 def get_temp(node_ip, gpio):
@@ -50,8 +83,8 @@ def sensor_data_collector(uuid, ip, pertype):
     while(True):
         # load the json from the chip
         if failures > 20:
-            log.log("ERROR: Have failed communication 20 times in a row. "
-                   +"Closing connection with " + uuid)
+            log.log("ERROR: Have failed communication 20 times in a row."
+                  + " Closing connection with " + uuid)
             with nodes.lock:
                 if nodes.data.has_key(uuid):
                     nodes.data.pop(uuid)
@@ -82,15 +115,7 @@ def sensor_data_collector(uuid, ip, pertype):
                     + response.status_code)
 
         else:
-            if response.headers.get('content-type') != 'application/json':
-                log.log("ERROR: Response from "
-                        + uuid + " was not in json format")
-
             r_json = response.json()
-            if (uuid != r_json.get("uuid")):
-                # TODO: Make a get request on the chip
-                # telling it to reconnect
-                thread.exit()
             send_channel.send({
                 uuid: {
                     pertype : r_json.get("data")

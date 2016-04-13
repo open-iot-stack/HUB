@@ -6,6 +6,7 @@ from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
+from dealer import printer_data_collector
 import octopifunctions as octopi
 from hub import app
 
@@ -107,11 +108,16 @@ def activate_printer(payload = None):
     key  = payload.get("key", "0")
 
     with printers.lock:
+        if uuid in printers.data:
+            return json.jsonify({"message": uuid
+                                + " was already activated."})
         printers.data[uuid] = {
                 "ip": ip,
                 "port": port,
                 "key": key
         }
+    thread.start_new_thread(printer_data_collector,
+                            (uuid, ip, port, key))
 
     return json.jsonify({"message": uuid + " has been activated."})
 
