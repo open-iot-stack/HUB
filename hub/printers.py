@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import thread
+from jobs import Jobs
 from chest import Chest
 from flask import request
 from flask import json
@@ -67,7 +68,8 @@ def print_action(uuid, action):
             #TODO Handle starting the print job imediately
             pass
         pass
-    return json.jsonify({"message": action + " successfully sent to the printer."})
+    return json.jsonify({"message": action
+                        + " successfully sent to the printer."})
 
 @app.route('/printers/<int:uuid>/status', methods=['GET'])
 def print_status(uuid):
@@ -81,7 +83,7 @@ def print_status(uuid):
         port = printer.get("port")
         key  = printer.get("key")
 
-    url  = ip + ":" + port
+    url  = "http://" + ip + ":" + port
 
     response = octopi.GetJobInfo(url, key)
     #TODO return the actual data that's useful for the web api
@@ -102,22 +104,72 @@ def activate_printer(payload = None):
         str_payload = request.args.get("payload")
         payload     = json.loads(str_payload)
 
-    uuid = payload.get("uuid")
-    ip   = payload.get("ip")
-    port = payload.get("port", "80")
-    key  = payload.get("key", "0")
+    uuid      = payload.get("uuid")
+    ip        = payload.get("ip")
+    port      = payload.get("port", "80")
+    key       = payload.get("key", "0")
+    jobs      = Jobs()
 
     with printers.lock:
         if uuid in printers.data:
             return json.jsonify({"message": uuid
                                 + " was already activated."})
         printers.data[uuid] = {
-                "ip": ip,
+                "ip":   ip,
                 "port": port,
-                "key": key
+                "key":  key,
+                "jobs": jobs
         }
     thread.start_new_thread(printer_data_collector,
                             (uuid, ip, port, key))
 
     return json.jsonify({"message": uuid + " has been activated."})
+
+@app.route('/printers/<int:uuid>/jobs/list')
+def jobs_list(uuid):
+    """Returns a json of queued up jobs
+    :returns: TODO
+    """
+
+    uuid = str(uuid)
+    try:
+        jobs = printers.data.get(uuid).get("jobs").list()
+    except KeyError:
+        #TODO how to handle printer not existing
+        jobs = {}
+    return json.jsonify(jobs)
+
+@app.route('/printers/<int:uuid>/jobs/next')
+def jobs_next(uuid):
+    """Returns a json of the next job to be 
+    processed by the printer
+    """
+
+    uuid = str(uuid)
+    with printers.lock:
+        if uuid in printers.data:
+            job = printers.data.get(uuid).get("jobs").next(remove=False)
+        else:
+            #TODO if printer doesn't exists
+            return json.jsonify({})
+    if job:
+        return json.jsonify(job)
+    else:
+        #TODO if job didn't exist
+        return json.jsonify({})
+
+@app.route('/printers/<int:uuid>/jobs/<int:job_id>', methods=["GET","DELETE"])
+def job_action(uuid, job_id):
+    """Will do the specified action on the job.
+    """
+
+    uuid   = str(uuid)
+    job_id = str(job_id)
+
+    if request.method == "GET":
+        pass
+    elif request.method == "DELETE":
+        pass
+    pass
+
 
