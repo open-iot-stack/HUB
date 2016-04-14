@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import thread
-from collections import OrderedDict
+#from collections import OrderedDict
+from datetime import datetime
 from chest import Chest
 from flask import request
 from flask import json
@@ -27,11 +28,12 @@ class Jobs(object):
         """
 
         uuid = str(Uuid.generate())
+        dt   = datetime.utcnow().isoformat()[:-3] + 'Z'
         self._jobs.append(
                     {
                       "id": uuid,
-                      "created_at": "2016-04-10T21:00:15.790Z",
-                      "updated_at": "2016-04-10T21:00:15.791Z",
+                      "created_at": dt,
+                      "updated_at": dt,
                       "data": {
                         "status": "pending",
                         "file": {
