@@ -104,21 +104,23 @@ def activate_printer(payload = None):
         str_payload = request.args.get("payload")
         payload     = json.loads(str_payload)
 
-    uuid      = payload.get("uuid")
-    ip        = payload.get("ip")
-    port      = payload.get("port", "80")
-    key       = payload.get("key", "0")
-    jobs      = Jobs()
+    uuid        = payload.get("uuid")
+    ip          = payload.get("ip")
+    port        = payload.get("port", "80")
+    key         = payload.get("key", "0")
+    jobs        = Jobs()
+    current_job = {}
 
     with printers.lock:
         if uuid in printers.data:
             return json.jsonify({"message": uuid
                                 + " was already activated."})
         printers.data[uuid] = {
-                "ip":   ip,
-                "port": port,
-                "key":  key,
-                "jobs": jobs
+                "ip"         : ip,
+                "port"       : port,
+                "key"        : key,
+                "jobs"       : jobs,
+                "current_job": current_job
         }
     thread.start_new_thread(printer_data_collector,
                             (uuid, ip, port, key))
@@ -158,7 +160,8 @@ def jobs_next(uuid):
         #TODO if job didn't exist
         return json.jsonify({})
 
-@app.route('/printers/<int:uuid>/jobs/<int:job_id>', methods=["GET","DELETE"])
+@app.route('/printers/<int:uuid>/jobs/<int:job_id>',
+                                    methods=["GET","DELETE"])
 def job_action(uuid, job_id):
     """Will do the specified action on the job.
     """
@@ -171,5 +174,3 @@ def job_action(uuid, job_id):
     elif request.method == "DELETE":
         pass
     pass
-
-
