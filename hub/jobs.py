@@ -8,7 +8,7 @@ from flask import request
 from flask import json
 from flask import abort
 import octopifunctions as octopi
-from hub import app
+#from hub import app
 
 class Jobs(object):
     """Jobs is a class that will hold
@@ -18,18 +18,30 @@ class Jobs(object):
     def __init__(self):
         """TODO: to be defined1. """
 
-        self._jobs = OrderedDict()
+        self._jobs = []
         
-    def add(self, fname):
+    def add(self, fname, origin="remote"):
         """Add a job to the queue
         :fname: file to be added to the queue
         :returns: the id of the job
         """
 
         uuid = str(Uuid.generate())
-        self._jobs[uuid] = {
-                "file": fname
-        }
+        self._jobs.append(
+                    {
+                      "id": uuid,
+                      "created_at": "2016-04-10T21:00:15.790Z",
+                      "updated_at": "2016-04-10T21:00:15.791Z",
+                      "data": {
+                        "status": "pending",
+                        "file": {
+                          "name": fname,
+                          "origin": origin,
+                          "size": 0,
+                          "date": 0
+                        }
+                      }
+                    })
         return uuid
 
     def remove(self, job_id):
@@ -38,19 +50,21 @@ class Jobs(object):
         :returns: true if removed, false if unable or doesn't exist
         """
 
-        try:
-            job = self._jobs.pop(job_id)
-        except KeyError:
-            return False
-        return True
+        job_id = str(job_id)
+        if len(self._jobs):
+            for job in self._jobs:
+                if job.get("id") == job_id:
+                    self._jobs.remove(job)
+                    return True
+        return False
 
     def list(self):
-        """Return a dictionary list of jobs.
+        """Return a list of dictionary jobs.
         Jobs will be in order of print queue
-        :returns: OrderedDict of jobs
+        :returns: List of jobs
         """
 
-        return self._jobs.copy()
+        return list(self._jobs)
 
     def next(self, remove=True):
         """Get the next job to be printed.
@@ -59,15 +73,12 @@ class Jobs(object):
         :returns: dictionary of job id and file, None if no jobs
         """
 
-        if remove:
-            jobs = self._jobs
-        else:
-            jobs = self._jobs.copy()
-        try:
-            job_id, job = jobs.popitem()
-        except KeyError:
-            return None
-        return {job_id: job}
+        if len(self._jobs):
+            if remove:
+                return self._jobs.pop(0)
+            else:
+                return self._jobs[0].copy()
+        return None
 
 class Uuid(object):
     uuid = 0
@@ -75,3 +86,17 @@ class Uuid(object):
     def generate():
         Uuid.uuid += 1
         return Uuid.uuid
+
+if __name__ == "__main__":
+    j = Jobs()
+    t1 = j.add('test1')
+    t2 = j.add('test2')
+    t3 = j.add('test3')
+    print str(j.list())
+    t = j.next(remove=False)
+    t["moose"] = "bit my sister"
+    print json.dumps(str(j.list()))
+    print str(j.next())
+    j.remove(t2)
+    print str(j.next(remove=False))
+    print str(j.next())
