@@ -20,7 +20,7 @@ def parse_jobstatus(json_job, cjob, status="NOT_IMPLEMENTED"):
     njob = {}
     job = json.loads(json_job)
     jf = job.get("job").get("file")
-    if cmp(jf["data"], cjob["data"]):
+    if jf.get("data").get("name") != cjob.get("data").get("name")):
         log.log("ERROR: Current Job and New Job are not the same. "
                 + "Current Job: " + str(cjob.get("data").get("name"))
                 + " New Job: " + str(jf.get("data").get("name")))
