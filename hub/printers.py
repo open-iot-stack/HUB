@@ -88,6 +88,10 @@ def print_action(uuid, action):
             thread.start_new_thread(octopi.UploadFileAndPrint, (url, key, fpath))
             # TODO Make sure nothing else is printing
             # TODO remove job from jobs
+            printer.jobs.remove(job_id)
+            printer["cjob"] = {
+                    "id": job_id
+            }
             thread.start_new_thread(job_data_collector, (printer,))
             #TODO Handle starting the print job imediately
             pass
