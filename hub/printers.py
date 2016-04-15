@@ -59,18 +59,18 @@ def print_action(uuid, action):
     # as new thread
     if action == "start":
         #response = octopi.StartCommand(url, key)
-        start_new_thread(octopi.StartCommand, (url, key))
-        start_new_thread(job_data_collector, (printer,))
+        thread.start_new_thread(octopi.StartCommand, (url, key))
+        thread.start_new_thread(job_data_collector, (printer,))
         pass
 
     elif action == "pause":
         #response = octopi.PauseUnpauseCommand(url, key)
-        start_new_thread(octopi.PauseUnpauseCommand, (url, key))
+        thread.start_new_thread(octopi.PauseUnpauseCommand, (url, key))
         pass
 
     elif action == "cancel":
         #response = octopi.CancelCommand(url, key)
-        start_new_thread(octopi.CancelCommand, (url, key))
+        thread.start_new_thread(octopi.CancelCommand, (url, key))
         pass
 
     elif action == "upload":
@@ -85,10 +85,10 @@ def print_action(uuid, action):
         start = request.args.get('start', None)
         # check if start isn't none, then make sure it is equal to true
         if start and start.lower() == "true":
-            start_new_thread(octopi.UploadFileAndPrint, (url, key, fpath))
+            thread.start_new_thread(octopi.UploadFileAndPrint, (url, key, fpath))
             # TODO Make sure nothing else is printing
             # TODO remove job from jobs
-            start_new_thread(job_data_collector, (printer,))
+            thread.start_new_thread(job_data_collector, (printer,))
             #TODO Handle starting the print job imediately
             pass
         pass
