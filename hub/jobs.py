@@ -3,13 +3,51 @@
 
 import thread
 #from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime as dt
 from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
 import octopifunctions as octopi
 #from hub import app
+
+def parse_jobstatus(json_job, cjob, status="NOT_IMPLEMENTED"):
+    """Parses the passed in json file
+    Set to match specifications
+    :returns: the information for the web api.
+    """
+
+    njob = {}
+    job = json.loads(json_job)
+    jf = job.get("job").get("file")
+    if cmp(jf["data"], cjob["data"]):
+        log.log("ERROR: Current Job and New Job are not the same. "
+                + "Current Job: " + str(cjob.get("data").get("name")))
+                + " New Job: " + str(jf.get("data").get("name"))
+    njob["id"] = cjob.get("id")
+    njob["created_at"] = cjob.get("created_at", dt)
+    njob["updated_at"] = dt
+    njob["data"] = {
+        "status": status,
+        "file": {
+            "name": jf.get("name"),
+            "origin": jf.get("origin"),
+            "size": jf.get("size"),
+            "date": dt.fromtimestamp(jf.get("date")).isoformat()[:-3]+'Z'
+            },
+        "estimated_print_time": job.get("estimatedPrintTime"),
+        "filament": {
+            "length": job.get("job").get("filament").get("length"),
+            "volume": job.get("job").get("filament").get("volume")
+            },
+        "progress": {
+            "completion": job.get("completion"),
+            "file_position": job.get("filepos"),
+            "print_time": job.get("printTime"),
+            "print_time_left": job.get("printTimeLeft")
+            }
+    }
+    return njob
 
 class Jobs(object):
     """Jobs is a class that will hold
@@ -27,13 +65,13 @@ class Jobs(object):
         :returns: the id of the job
         """
 
-        uuid = str(Uuid.generate())
-        dt   = datetime.utcnow().isoformat()[:-3] + 'Z'
+        uuid = Uuid.generate()
+        current_time   = dt.utcnow().isoformat()[:-3] + 'Z'
         self._jobs.append(
                     {
                       "id": uuid,
-                      "created_at": dt,
-                      "updated_at": dt,
+                      "created_at": current_time,
+                      "updated_at": current_time,
                       "data": {
                         "status": "pending",
                         "file": {
@@ -48,7 +86,7 @@ class Jobs(object):
 
     def remove(self, job_id):
         """Remove a job from the queue
-        :job_id: job to be removed from the queue
+        :job_id: id of job to be removed from the queue
         :returns: true if removed, false if unable or doesn't exist
         """
 
