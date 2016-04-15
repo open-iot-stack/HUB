@@ -11,14 +11,14 @@ from flask import abort
 import octopifunctions as octopi
 #from hub import app
 
-def parse_jobstatus(json_job, cjob, status="NOT_IMPLEMENTED"):
+def parse_jobstatus(job, cjob, status="NOT_IMPLEMENTED"):
     """Parses the passed in json file
     Set to match specifications
     :returns: the information for the web api.
     """
 
     njob = {}
-    job = json.loads(json_job)
+    #job = json.loads(json_job)
     jf = job.get("job").get("file")
     if jf.get("data").get("name") != cjob.get("data").get("name"):
         log.log("ERROR: Current Job and New Job are not the same. "
