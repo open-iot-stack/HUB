@@ -210,10 +210,10 @@ def job_action(uuid, job_id):
                         if job_id == job.get("id"):
                             return json.jsonify(job.copy())
                 else:
-                    return json.jsonify({"ERROR": "ERROR"})
+                    return json.jsonify({"ERROR": "Printer did not exist"})
             except KeyError:
                 log.log("ERROR: Jobs are corrupted")
-        return json.jsonify({"ERROR": "ERROR"})
+        return json.jsonify({"ERROR": "Could not find job"})
     elif request.method == "DELETE":
         with printers.lock:
             cjob = printer.get("cjob")
