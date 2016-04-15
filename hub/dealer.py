@@ -15,12 +15,13 @@ def job_data_collector(printer):
     port = printer.get("port")
     key  = printer.get("key")
     jobs = printer.get("jobs")
-    #cjob = printer.get("cjob")
+    cjob = printer.get("cjob")
     printers     = hub.printers.printers
     send_channel = hub.send_channel
     log          = hub.log
     failures     = 0
-    url          = "http://" + ip + ":" + port
+    #url          = "http://" + ip + ":" + port
+    url          - ip + ":" + port
     prev_data    = {}
     while(True):
         if failures > 20:
