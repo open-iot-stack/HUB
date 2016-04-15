@@ -205,7 +205,7 @@ def job_action(uuid, job_id):
                     return json.jsonify(cjob.copy())
                 # if not current job, find it in the jobs queue
                 jobs = printer.get("jobs")
-                for job in jobs:
+                for job in jobs.list():
                     if job_id == job.get("id"):
                         return json.jsonify(job.copy())
             except KeyError:
