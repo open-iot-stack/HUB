@@ -21,7 +21,7 @@ def job_data_collector(printer):
     log          = hub.log
     failures     = 0
     #url          = "http://" + ip + ":" + port
-    url          - ip + ":" + port
+    url          = ip + ":" + port
     prev_data    = {}
     while(True):
         if failures > 20:
