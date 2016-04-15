@@ -30,8 +30,8 @@ def parse_jobstatus(job, cjob, status="NOT_IMPLEMENTED"):
         unix_date = 0
     fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
     njob["id"] = cjob.get("id", 0)
-    njob["created_at"] = cjob.get("created_at", dt)
-    njob["updated_at"] = dt
+    njob["created_at"] = cjob.get("created_at", fdate)
+    njob["updated_at"] = fdate
     njob["data"] = {
         "status": status,
         "file": {
