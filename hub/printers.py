@@ -166,7 +166,7 @@ def jobs_list(uuid):
     except AttributeError:
         #TODO how to handle printer not existing
         jobs = []
-    return json.jsonify({"jobs": jobs})
+    return json.jsonify(jobs)
 
 @app.route('/printers/<int:uuid>/jobs/next')
 def jobs_next(uuid):
@@ -182,10 +182,10 @@ def jobs_next(uuid):
             #TODO if printer doesn't exists
             return json.jsonify({})
     if job:
-        return json.jsonify({"job": job})
+        return json.jsonify(job)
     else:
         #TODO if job didn't exist
-        return json.jsonify({"job": {}})
+        return json.jsonify({})
 
 @app.route('/printers/<int:uuid>/jobs/<int:job_id>',
                                     methods=["GET","DELETE"])
