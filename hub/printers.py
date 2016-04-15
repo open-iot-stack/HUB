@@ -21,8 +21,7 @@ def printers_list():
     """
 
     global printers
-    ret = {"printers": {}}
-    data = ret.get("printers")
+    data = {}
     with printers.lock:
         for uuid, printer in printers.data.iteritems():
             data[uuid] = {
@@ -33,7 +32,7 @@ def printers_list():
                     "cjob": printer.get("cjob")
             }
 
-    return json.jsonify(ret)
+    return json.jsonify(data)
 
 @app.route('/printers/<int:uuid>/<action>',methods=['POST'])
 def print_action(uuid, action):
