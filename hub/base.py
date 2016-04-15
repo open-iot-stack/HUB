@@ -9,6 +9,12 @@ from flask import abort
 from flask import request
 from hub import app
 
+@app.route('/list', methods=['GET'])
+def list_peripherals():
+    """Returns a json list of the peripherals curerntly registered"""
+
+    return json.jsonify(hub.conf.read_data())
+
 @app.route('/register', methods=['GET', 'POST'])
 def register_peripheral():
     """Webpage to register the type of a given sensor
