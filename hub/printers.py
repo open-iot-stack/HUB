@@ -200,14 +200,17 @@ def job_action(uuid, job_id):
             try:
                 printer = printers.data.get(uuid)
                 # if current job, return current job data
-                cjob = printer.get("cjob")
-                if job_id == cjob.get("id"):
-                    return json.jsonify(cjob.copy())
-                # if not current job, find it in the jobs queue
-                jobs = printer.get("jobs")
-                for job in jobs.list():
-                    if job_id == job.get("id"):
-                        return json.jsonify(job.copy())
+                if printer:
+                    cjob = printer.get("cjob")
+                    if job_id == cjob.get("id"):
+                        return json.jsonify(cjob.copy())
+                    # if not current job, find it in the jobs queue
+                    jobs = printer.get("jobs")
+                    for job in jobs.list():
+                        if job_id == job.get("id"):
+                            return json.jsonify(job.copy())
+                else:
+                    return json.jsonify({"ERROR": "ERROR"})
             except KeyError:
                 log.log("ERROR: Jobs are corrupted")
         return json.jsonify({"ERROR": "ERROR"})
