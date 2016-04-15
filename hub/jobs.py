@@ -34,7 +34,7 @@ def parse_jobstatus(job, cjob, status="NOT_IMPLEMENTED"):
             "name": jf.get("name"),
             "origin": jf.get("origin"),
             "size": jf.get("size"),
-            "date": dt.fromtimestamp(float(jf.get("date"))).isoformat()[:-3]+'Z'
+            "date": dt.fromtimestamp(float(jf.get("date", 0))).isoformat()[:-3]+'Z'
             },
         "estimated_print_time": job.get("estimatedPrintTime"),
         "filament": {
