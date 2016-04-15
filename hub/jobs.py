@@ -28,7 +28,7 @@ def parse_jobstatus(job, cjob, status="NOT_IMPLEMENTED"):
     unix_date = jf.get("date")
     if not unix_date:
         unix_date = 0
-    fdate = dt.fromtimestamp(unix_date).isoformat()[:-3]+'Z'
+    fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
     njob["id"] = cjob.get("id", 0)
     njob["created_at"] = cjob.get("created_at", dt)
     njob["updated_at"] = dt
