@@ -6,8 +6,16 @@ import thread
 import requests
 import octopifunctions as octopi
 from message_generator import MessageGenerator
+from jobs import parse_jobstatus
+from time import sleep
 
-def printer_data_collector(uuid, ip, port, key):
+def job_data_collector(printer):
+    uuid = printer.get("uuid")
+    ip   = printer.get("ip")
+    port = printer.get("port")
+    key  = printer.get("key")
+    jobs = printer.get("jobs")
+    #cjob = printer.get("cjob")
     printers     = hub.printers.printers
     send_channel = hub.send_channel
     log          = hub.log
@@ -28,6 +36,7 @@ def printer_data_collector(uuid, ip, port, key):
         except:
             # Just catch all for now
             #TODO make sure catching right things
+            sleep(1)
             failures += 1
             log.log("ERROR: Could not collect data from printer")
             continue
@@ -36,14 +45,16 @@ def printer_data_collector(uuid, ip, port, key):
                     + uuid + " returned status code "
                     + response.status_code)
         else:
-            data = response.json()
+            #data = response.json()
+            data = parse_jobstatus(response.json(), cjob.copy())
             # Check to see if data is the same as last collected
             # if so, do not send it
             if cmp(prev_data, data):
+                printer["cjob"] = data
                 prev_data = data.copy()
                 send_channel.send({
                     uuid: {
-                        "printer": data
+                        "job": data
                     } 
                 })
         sleep(1)
