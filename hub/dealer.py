@@ -105,8 +105,8 @@ def sensor_data_collector(uuid, ip, pertype):
             #need to find how we're getting the node_ip and fill in.
             temp, humidity = get_temp(ip, 1)
             failures = 0
-        #TODO Talk to Nolan about how to handle these exceptions. Can either
-        # be node or server side
+        #TODO Talk to Nolan about how to handle these exceptions.
+        #Can either be node or server side
         except requests.Timeout:
             failures += 1
             log.log("ERROR: Timeout occured when communicating with "

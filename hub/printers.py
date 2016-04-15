@@ -85,7 +85,8 @@ def print_action(uuid, action):
         start = request.args.get('start', None)
         # check if start isn't none, then make sure it is equal to true
         if start and start.lower() == "true":
-            thread.start_new_thread(octopi.UploadFileAndPrint, (url, key, fpath))
+            thread.start_new_thread(octopi.UploadFileAndPrint,
+                                            (url, key, fpath))
             # TODO Make sure nothing else is printing
             # TODO remove job from jobs
             printer["jobs"].remove(job_id)
