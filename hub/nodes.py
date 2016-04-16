@@ -15,7 +15,7 @@ nodes = Chest()
 @app.route('/sensors/<int:uuid>/data', methods=['GET'])
 def sensor_data(uuid):
     global nodes
-    uuid = str(uuid)
+    #uuid = str(uuid)
     return str(nodes.data)
 
 @app.route('/sensors/activate', methods=['GET'])
@@ -52,7 +52,7 @@ def activate_sensor(payload = None):
                     "port": port
             }
         thread.start_new_thread(sensor_data_collector, (uuid, ip, pertype))
-        return json.jsonify({"message": uuid + " has been activated."})
+        return json.jsonify({"message": str(uuid) + " has been activated."})
 
     #TODO Log the fact that the sensor must be registered.
     abort(400)

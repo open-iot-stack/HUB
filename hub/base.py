@@ -26,7 +26,7 @@ def register_peripheral():
         return render_template("register.html")
 
     if request.method == "POST":
-        uuid = request.form.get('uuid')
+        uuid = int(request.form.get('uuid'))
         pertype = request.form.get('pertype')
         if request.form.get('is_update'):
             success = hub.conf.update_data({uuid: pertype})
@@ -36,12 +36,12 @@ def register_peripheral():
         if success:
             return json.jsonify(
                     {
-                        "message": uuid + " has been registered as " + pertype
+                        "message": str(uuid) + " has been registered as " + pertype
                     })
         else:
             return json.jsonify(
                     {
-                        "message": uuid + " was not registered, are you updating?"
+                        "message": str(uuid) + " was not registered, are you updating?"
                     })
 
     abort(405)

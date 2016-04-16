@@ -25,7 +25,7 @@ def job_data_collector(printer):
     while(True):
         if failures > 20:
             log.log("ERROR: Have failed communication 20 times in a row."
-                  + " Closing connection with " + uuid)
+                  + " Closing connection with " + str(uuid))
             with printers.lock:
                 if printers.data.has_key(uuid):
                     printers.data.pop(uuid)
@@ -42,7 +42,7 @@ def job_data_collector(printer):
             continue
         if response.status_code != requests.codes.ok:
             log.log("ERROR: Response from "
-                    + uuid + " returned status code "
+                    + str(uuid) + " returned status code "
                     + response.status_code)
         else:
             #data = response.json()
@@ -95,7 +95,7 @@ def sensor_data_collector(uuid, ip, pertype):
         # load the json from the chip
         if failures > 20:
             log.log("ERROR: Have failed communication 20 times in a row."
-                  + " Closing connection with " + uuid)
+                  + " Closing connection with " + str(uuid))
             with nodes.lock:
                 if nodes.data.has_key(uuid):
                     nodes.data.pop(uuid)
@@ -109,20 +109,20 @@ def sensor_data_collector(uuid, ip, pertype):
         except requests.Timeout:
             failures += 1
             log.log("ERROR: Timeout occured when communicating with "
-                    + uuid + ".")
+                    + str(uuid) + ".")
             continue
         except requests.ConnectionError:
             failures += 1
             with nodes.lock:
                 if (ip == nodes.data[uuid]["ip"]):
                     log.log("ERROR: Lost Connection to "
-                            + uuid + ".")#" Thread exiting...")
+                            + str(uuid) + ".")#" Thread exiting...")
             continue
     # Start handling of data here.
 
         if response.status_code != requests.codes.ok:
             log.log("ERROR: Response from "
-                    + uuid + " returned status code "
+                    + str(uuid) + " returned status code "
                     + response.status_code)
 
         else:

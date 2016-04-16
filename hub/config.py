@@ -55,6 +55,7 @@ class Config():
                 except ValueError:
                     print "Too many spaces in config file, please check", fpath
                     exit()
+                uuid = int(uuid)
                 u_types[uuid] = chip_type
         self._cache = u_types
         self._modified = False
@@ -86,6 +87,7 @@ class Config():
                 except ValueError:
                     print "Too many spaces in config file, please check", fpath
                     exit()
+                uuid = int(uuid)
                 u_types[uuid] = chip_type
         self._cache = u_types
         self._modified = False
@@ -108,7 +110,7 @@ class Config():
             self._modified = True
             with open(self._fpath, "a+") as f:
                 for key,value in data.items():
-                    f.write(key + " " + value + "\n")
+                    f.write(str(key) + " " + value + "\n")
         return True
 
     def update_data(self, data):
@@ -131,8 +133,9 @@ class Config():
                     pass
                 else:
                     uuid, chip_type = lines[i].replace('\n', '').split(" ")
+                    uuid = int(uuid)
                     if data.has_key(uuid):
-                        new_lines.append(uuid + " " + data[uuid] + "\n")
+                        new_lines.append(str(uuid) + " " + data[uuid] + "\n")
                         data.pop(uuid)
                     else:
                         new_lines.append(lines[i])

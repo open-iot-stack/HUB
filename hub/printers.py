@@ -42,7 +42,7 @@ def print_action(uuid, action):
     """
 
     global printers
-    uuid = str(uuid)
+    #uuid = str(uuid)
     with printers.lock:
         if not uuid in printers.data:
             abort(400)
@@ -53,7 +53,7 @@ def print_action(uuid, action):
         jobs = printer.get("jobs")
         cjob = printer.get("cjob")
 
-    url = "http://" + ip + ":" + port
+    url = "http://" + ip + ":" + str(port)
 
     #TODO make helper function for actions to respond the web api
     # with the actual success as the command. For now just spawn command
@@ -98,8 +98,8 @@ def print_action(uuid, action):
 
 @app.route('/printers/<int:uuid>/status', methods=['GET'])
 def print_status(uuid):
-    global printers
-    uuid = str(uuid)
+
+    #uuid = str(uuid)
     with printers.lock:
         if not uuid in printers.data:
             abort(400)
@@ -110,7 +110,7 @@ def print_status(uuid):
         jobs = printer.get("jobs")
         cjob = printer.get("cjob")
 
-    #url  = "http://" + ip + ":" + port
+    #url  = "http://" + ip + ":" + str(port)
 
     #response = octopi.GetJobInfo(url, key)
     #TODO return the actual data that's useful for the web api
@@ -131,16 +131,16 @@ def activate_printer(payload = None):
         str_payload = request.args.get("payload")
         payload     = json.loads(str_payload)
 
-    uuid = str(payload.get("uuid"))
+    uuid = int(payload.get("uuid"))
     ip   = payload.get("ip")
-    port = str(payload.get("port", "80"))
-    key  = str(payload.get("key", "0"))
+    port = int(payload.get("port", 80))
+    key  = payload.get("key", "0")
     jobs = Jobs()
     cjob = {}
 
     with printers.lock:
         if uuid in printers.data:
-            return json.jsonify({"message": uuid
+            return json.jsonify({"message": str(uuid)
                                 + " was already activated."})
         printers.data[uuid] = {
                 "uuid": uuid,
@@ -153,7 +153,7 @@ def activate_printer(payload = None):
     #thread.start_new_thread(printer_data_collector,
     #                        (uuid, ip, port, key))
 
-    return json.jsonify({"message": uuid + " has been activated."})
+    return json.jsonify({"message": str(uuid) + " has been activated."})
 
 @app.route('/printers/<int:uuid>/jobs/list')
 def jobs_list(uuid):
@@ -161,7 +161,7 @@ def jobs_list(uuid):
     :returns: TODO
     """
 
-    uuid = str(uuid)
+    #uuid = str(uuid)
     try:
         jobs = printers.data.get(uuid).get("jobs").list()
     except AttributeError:
@@ -175,7 +175,7 @@ def jobs_next(uuid):
     processed by the printer
     """
 
-    uuid = str(uuid)
+    #uuid = str(uuid)
     with printers.lock:
         if uuid in printers.data:
             job = printers.data.get(uuid).get("jobs").next(remove=False)
@@ -194,7 +194,7 @@ def job_action(uuid, job_id):
     """Will do the specified action on the job.
     """
 
-    uuid   = str(uuid)
+    #uuid   = str(uuid)
 
     if request.method == "GET":
         with printers.lock:
