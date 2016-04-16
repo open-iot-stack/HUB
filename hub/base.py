@@ -36,14 +36,15 @@ def register_peripheral():
         if success:
             return json.jsonify(
                     {
-                        "message": str(uuid) + " has been registered as " + pertype
+                        "message": str(uuid)
+                        + " has been registered as " + pertype
                     })
         else:
             return json.jsonify(
                     {
-                        "message": str(uuid) + " was not registered, are you updating?"
+                        "message": str(uuid)
+                        + " was not registered, are you updating?"
                     })
-
     abort(405)
 
 @app.route('/')
