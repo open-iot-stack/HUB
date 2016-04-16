@@ -84,6 +84,7 @@ def print_action(uuid, action):
             job_id = jobs.add(f.filename)
         else:
             abort(400)
+
         start = request.args.get('start', None)
         # check if start isn't none, then make sure it is equal to true
         if start and start.lower() == "true":
@@ -95,7 +96,7 @@ def print_action(uuid, action):
             printer["cjob"] = {
                     "id": job_id
             }
-            thread.start_new_thread(job_data_collector, (printer,))
+            #thread.start_new_thread(job_data_collector, (printer,))
             #TODO Handle starting the print job imediately
             pass
         pass
@@ -156,8 +157,10 @@ def activate_printer(payload = None):
                 "jobs": jobs,
                 "cjob": cjob
         }
-    #thread.start_new_thread(printer_data_collector,
-    #                        (uuid, ip, port, key))
+        printer = printers.data[uuid]
+    thread.start_new_thread(job_data_collector, (printer,))
+#    thread.start_new_thread(printer_data_collector,
+#                            (uuid, ip, port, key))
 
     return json.jsonify({"message": str(uuid) + " has been activated."})
 
@@ -173,7 +176,7 @@ def jobs_list(uuid):
     except AttributeError:
         #TODO how to handle printer not existing
         jobs = []
-    return json.jsonify(jobs)
+    return json.jsonify(jobs.list())
 
 @app.route('/printers/<int:uuid>/jobs/next')
 def jobs_next(uuid):
@@ -193,6 +196,20 @@ def jobs_next(uuid):
     else:
         #TODO if job didn't exist
         return json.jsonify({})
+
+@app.route('/printers/<int:uuid>/jobs/current', methods=["GET"])
+def jobs_current(uuid):
+    """Returns a json of the current job
+    :uuid: id of printer to get the job from
+    :returns: current status of the job
+    """
+
+    with printers.lock:
+        if not uuid in printers.data:
+            abort(400)
+        cjob = printers.data[uuid]["cjob"].copy()
+    return  json.jsonify(cjob)
+
 
 @app.route('/printers/<int:uuid>/jobs/<int:job_id>',
                                     methods=["GET","DELETE"])
