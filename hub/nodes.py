@@ -44,7 +44,7 @@ def activate_sensor(payload = None):
         with nodes.lock:
             # THIS REQUIRES NODES THREADS TO REMOVE THEMSELVES
             if uuid in nodes.data:
-                return json.jsonify({"message": uuid
+                return json.jsonify({"message": str(uuid)
                                     + " was already activated"})
             nodes.data[uuid] = {
                     "uuid": uuid,
@@ -64,4 +64,5 @@ def sensors_list():
     :returns: TODO
     """
 
+    global nodes
     return json.jsonify(nodes.data)
