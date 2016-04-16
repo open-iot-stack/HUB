@@ -10,15 +10,15 @@ class Config():
     the configuration. This is to add an API layer for the
     config implementation"""
 
-    _fpath = ".config" # file path of the config file
-    _flock = thread.allocate_lock() # file lock in case shared across threads
-    _modified = True
-    _cache = {}
 
     def __init__(self, fpath=None):
         """TODO: to be defined1. """
         if fpath:
             self._fpath = fpath
+        self._fpath = ".config" # file path of the config file
+        self._flock = thread.allocate_lock() # file lock in case shared across threads
+        self._modified = True
+        self._cache = {}
 
     def set_path(self, fpath):
         """Clears the cache and sets a new file for the config
