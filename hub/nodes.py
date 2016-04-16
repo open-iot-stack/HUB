@@ -32,9 +32,9 @@ def activate_sensor(payload = None):
         str_payload = request.args.get('payload')
         payload     = json.loads(str_payload)
 
-    uuid = payload.get("uuid")
+    uuid = int(payload.get("uuid"))
     ip   = payload.get("ip")
-    port = payload.get("port", "80")
+    port = int(payload.get("port", 80))
     conf_data = hub.conf.read_data()
 
     #TODO make dynamic registering by going through different GPIO
@@ -47,7 +47,8 @@ def activate_sensor(payload = None):
                 return json.jsonify({"message": uuid
                                     + " was already activated"})
             nodes.data[uuid] = {
-                    "ip": ip,
+                    "uuid": uuid,
+                    "ip"  : ip,
                     "type": pertype,
                     "port": port
             }

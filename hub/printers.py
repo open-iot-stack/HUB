@@ -82,6 +82,8 @@ def print_action(uuid, action):
             fpath = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
             f.save(fpath)
             job_id = jobs.add(f.filename)
+        else:
+            abort(400)
         start = request.args.get('start', None)
         # check if start isn't none, then make sure it is equal to true
         if start and start.lower() == "true":
