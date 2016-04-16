@@ -12,7 +12,7 @@ import octopifunctions as octopi
 #from hub import app
 
 def parse_jobstatus(job, cjob, status="NOT_IMPLEMENTED"):
-    """Parses the passed in json file
+    """Parses the passed in dictionary file
     Set to match specifications
     :returns: the information for the web api.
     """
@@ -113,7 +113,7 @@ class Jobs(object):
 
     def next(self, remove=True):
         """Get the next job to be printed.
-        Removes job from queue
+        Removes job from queue unless specified with remove=False
         :remove: will remove the data unless set to false
         :returns: dictionary of job id and file, None if no jobs
         """
