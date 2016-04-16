@@ -8,5 +8,6 @@ class Chest(object):
     with the data
     """
 
-    data = {}
-    lock = thread.allocate_lock()
+    def __init__(self):
+        self.data = {}
+        self.lock = thread.allocate_lock()
