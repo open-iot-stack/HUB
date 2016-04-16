@@ -11,6 +11,7 @@
 import json
 import os
 import httplib
+import requests
 
 
 ##################################### TESTING CODE (DELETE FOR RELEASE) #####################################
@@ -112,7 +113,12 @@ slicerProfileExtension = '/api/slicing/cura/profiles' #Note: normally, slicer pr
 #   retVal: if successful request, then the response body (Exception: status 204, which has no content)
 #           if unsuccessful request, then the response code and response reason
  #########################################################################
-def HttpRequest(urlAddress, apiExtension, params, httpMethod, header):
+def HttpRequest(urlAddress, apiExtension, params, httpMethod, headers):
+    url = "http://" + urlAddress + apiExtension
+    if httpMethod == "GET":
+        response = requests.get(url, headers=headers, params=params)
+    return response
+
     conn = httplib.HTTPConnection(urlAddress)
     conn.request(httpMethod, apiExtension, str(params), header)
     response = conn.getresponse()

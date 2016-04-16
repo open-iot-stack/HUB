@@ -21,8 +21,7 @@ def printers_list():
     """
 
     global printers
-    ret = {"printers": {}}
-    data = ret.get("printers")
+    data = {}
     with printers.lock:
         for uuid, printer in printers.data.iteritems():
             data[uuid] = {
@@ -33,7 +32,7 @@ def printers_list():
                     "cjob": printer.get("cjob")
             }
 
-    return json.jsonify(ret)
+    return json.jsonify(data)
 
 @app.route('/printers/<int:uuid>/<action>',methods=['POST'])
 def print_action(uuid, action):
@@ -60,18 +59,18 @@ def print_action(uuid, action):
     # as new thread
     if action == "start":
         #response = octopi.StartCommand(url, key)
-        start_new_thread(octopi.StartCommand, (url, key))
-        start_new_thread(job_data_collector, (printer,))
+        thread.start_new_thread(octopi.StartCommand, (url, key))
+        thread.start_new_thread(job_data_collector, (printer,))
         pass
 
     elif action == "pause":
         #response = octopi.PauseUnpauseCommand(url, key)
-        start_new_thread(octopi.PauseUnpauseCommand, (url, key))
+        thread.start_new_thread(octopi.PauseUnpauseCommand, (url, key))
         pass
 
     elif action == "cancel":
         #response = octopi.CancelCommand(url, key)
-        start_new_thread(octopi.CancelCommand, (url, key))
+        thread.start_new_thread(octopi.CancelCommand, (url, key))
         pass
 
     elif action == "upload":
@@ -86,10 +85,15 @@ def print_action(uuid, action):
         start = request.args.get('start', None)
         # check if start isn't none, then make sure it is equal to true
         if start and start.lower() == "true":
-            start_new_thread(octopi.UploadFileAndPrint, (url, key, fpath))
+            thread.start_new_thread(octopi.UploadFileAndPrint,
+                                            (url, key, fpath))
             # TODO Make sure nothing else is printing
             # TODO remove job from jobs
-            start_new_thread(job_data_collector, (printer,))
+            printer["jobs"].remove(job_id)
+            printer["cjob"] = {
+                    "id": job_id
+            }
+            thread.start_new_thread(job_data_collector, (printer,))
             #TODO Handle starting the print job imediately
             pass
         pass
@@ -167,7 +171,7 @@ def jobs_list(uuid):
     except AttributeError:
         #TODO how to handle printer not existing
         jobs = []
-    return json.jsonify({"jobs": jobs})
+    return json.jsonify(jobs)
 
 @app.route('/printers/<int:uuid>/jobs/next')
 def jobs_next(uuid):
@@ -183,10 +187,10 @@ def jobs_next(uuid):
             #TODO if printer doesn't exists
             return json.jsonify({})
     if job:
-        return json.jsonify({"job": job})
+        return json.jsonify(job)
     else:
         #TODO if job didn't exist
-        return json.jsonify({"job": {}})
+        return json.jsonify({})
 
 @app.route('/printers/<int:uuid>/jobs/<int:job_id>',
                                     methods=["GET","DELETE"])
@@ -201,17 +205,20 @@ def job_action(uuid, job_id):
             try:
                 printer = printers.data.get(uuid)
                 # if current job, return current job data
-                cjob = printer.get("cjob")
-                if job_id == cjob.get("id"):
-                    return json.jsonify(cjob.copy())
-                # if not current job, find it in the jobs queue
-                jobs = printer.get("jobs")
-                for job in jobs:
-                    if job_id == job.get("id"):
-                        return json.jsonify(job.copy())
+                if printer:
+                    cjob = printer.get("cjob")
+                    if job_id == cjob.get("id"):
+                        return json.jsonify(cjob.copy())
+                    # if not current job, find it in the jobs queue
+                    jobs = printer.get("jobs")
+                    for job in jobs.list():
+                        if job_id == job.get("id"):
+                            return json.jsonify(job.copy())
+                else:
+                    return json.jsonify({"ERROR": "Printer did not exist"})
             except KeyError:
                 log.log("ERROR: Jobs are corrupted")
-        return json.jsonify({"ERROR": "ERROR"})
+        return json.jsonify({"ERROR": "Could not find job"})
     elif request.method == "DELETE":
         with printers.lock:
             cjob = printer.get("cjob")

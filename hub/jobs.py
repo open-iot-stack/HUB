@@ -11,29 +11,34 @@ from flask import abort
 import octopifunctions as octopi
 #from hub import app
 
-def parse_jobstatus(json_job, cjob, status="NOT_IMPLEMENTED"):
+def parse_jobstatus(job, cjob, status="NOT_IMPLEMENTED"):
     """Parses the passed in json file
     Set to match specifications
     :returns: the information for the web api.
     """
 
     njob = {}
-    job = json.loads(json_job)
+    #job = json.loads(json_job)
     jf = job.get("job").get("file")
-    if cmp(jf["data"], cjob["data"]):
+    """if jf.get("data").get("name") != cjob.get("data").get("name"):
         log.log("ERROR: Current Job and New Job are not the same. "
                 + "Current Job: " + str(cjob.get("data").get("name"))
                 + " New Job: " + str(jf.get("data").get("name")))
-    njob["id"] = cjob.get("id")
-    njob["created_at"] = cjob.get("created_at", dt)
-    njob["updated_at"] = dt
+    """
+    unix_date = jf.get("date")
+    if not unix_date:
+        unix_date = 0
+    fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
+    njob["id"] = cjob.get("id", 0)
+    njob["created_at"] = cjob.get("created_at", fdate)
+    njob["updated_at"] = fdate
     njob["data"] = {
         "status": status,
         "file": {
             "name": jf.get("name"),
             "origin": jf.get("origin"),
             "size": jf.get("size"),
-            "date": dt.fromtimestamp(jf.get("date")).isoformat()[:-3]+'Z'
+            "date": fdate
             },
         "estimated_print_time": job.get("estimatedPrintTime"),
         "filament": {
