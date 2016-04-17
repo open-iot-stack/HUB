@@ -7,6 +7,7 @@ from flask import json
 from flask import render_template
 from flask import abort
 from flask import request
+from jobs import Jobs
 from hub import app
 from hub.database import db_session
 
@@ -60,14 +61,13 @@ def register_peripheral():
 def index():
     p = {
         "uuid": 1234,
-        "jobs": [],
-        "cjob": {
-            "id": 1212
-        }
+        "jobs": Jobs()
     }
+    p["jobs"].add("test2")
+    p["jobs"].add("test1")
     hub.printers_wrapper.add(p)
     p = hub.printers_wrapper.get(1234)
-    return str(p)
+    return json.jsonify(p)
     exit()
     fdate = str(dt.utcnow().isoformat()[:-3])+'Z'
     j = Job(uuid=3121, created_at=fdate, updated_at=fdate,status="ERROR")

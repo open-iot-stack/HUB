@@ -39,10 +39,14 @@ class Printers(object):
                         if data:
                             file = data.get("file")
                             status = data.get("status")
-                            f = File(name=file.get("name"),origin=file.get("origin"),
-                                    size=file.get("size"),date=file.get("date"))
-                        j = Job(uuid=job.get("id"),created_at=job.get("created_at"),
-                                updated_at=job.get("updated_at"),status=status,
+                            f = File(name=file.get("name"),
+                                    origin=file.get("origin"),
+                                    size=file.get("size"),
+                                    date=file.get("date"))
+                        j = Job(uuid=job.get("id"),
+                                created_at=job.get("created_at"),
+                                updated_at=job.get("updated_at"),
+                                status=status,
                                 order=i)
                         if file:
                             j.file = [f]
@@ -79,10 +83,14 @@ class Printers(object):
                         if data:
                             file = data.get("file")
                             status = data.get("status")
-                            f = File(name=file.get("name"),origin=file.get("origin"),
-                                    size=file.get("size"),date=file.get("date"))
-                        j = Job(uuid=job.get("id"),created_at=job.get("created_at"),
-                                updated_at=job.get("updated_at"),status=status,
+                            f = File(name=file.get("name"),
+                                    origin=file.get("origin"),
+                                    size=file.get("size"),
+                                    date=file.get("date"))
+                        j = Job(uuid=job.get("id"),
+                                created_at=job.get("created_at"),
+                                updated_at=job.get("updated_at"),
+                                status=status,
                                 order=i)
                         if file:
                             j.file = [f]
@@ -96,10 +104,14 @@ class Printers(object):
                     if data:
                         file = data.get("file")
                         status = data.get("status")
-                        f = File(name=file.get("name"),origin=file.get("origin"),
-                                size=file.get("size"),date=file.get("date"))
-                    j = Job(uuid=job.get("id"),created_at=job.get("created_at"),
-                            updated_at=job.get("updated_at"),status=status,
+                        f = File(name=file.get("name"),
+                                origin=file.get("origin"),
+                                size=file.get("size"),
+                                date=file.get("date"))
+                    j = Job(uuid=job.get("id"),
+                            created_at=job.get("created_at"),
+                            updated_at=job.get("updated_at"),
+                            status=status,
                             order=0)
                     if file:
                         j.file = [f]
@@ -125,10 +137,10 @@ class Printers(object):
             file = None
             if job.file:
                 file = {
-                    "name":   job.file.name,
-                    "origin": job.file.origin,
-                    "size": job.file.size,
-                    "date": job.file.date
+                    "name":   job.file[0].name,
+                    "origin": job.file[0].origin,
+                    "size": job.file[0].size,
+                    "date": job.file[0].date
                 }
             ret["jobs"].append({
                 "id" :        job.uuid,
@@ -145,10 +157,10 @@ class Printers(object):
             file = None
             if job.file:
                 file = {
-                    "name":   job.file.name,
-                    "origin": job.file.origin,
-                    "size": job.file.size,
-                    "date": job.file.date
+                    "name":   job.file[0].name,
+                    "origin": job.file[0].origin,
+                    "size": job.file[0].size,
+                    "date": job.file[0].date
                 }
             ret["cjob"] = {
                 "id":         job.uuid,

@@ -59,10 +59,10 @@ class Jobs(object):
     jobs for an individual printer
     """
 
-    def __init__(self):
+    def __init__(self, jobs = []):
         """TODO: to be defined1. """
 
-        self._jobs = []
+        self._jobs = jobs
         
     def add(self, fname, origin="remote"):
         """Add a job to the queue
