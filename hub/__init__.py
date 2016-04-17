@@ -2,6 +2,7 @@ from flask import Flask
 from hub.config import Config
 from hub.channel import Channel
 from hub.logger import Log
+from hub.db_wrapper import Printers
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = "uploads/"
@@ -10,6 +11,7 @@ import hub.printers
 import hub.nodes
 import hub.base
 
+printers_wrapper = Printers()
 conf = Config()
 send_channel, recv_channel = Channel()
 

@@ -75,8 +75,8 @@ class Jobs(object):
         self._jobs.append(
                     {
                       "id": uuid,
-                      "created_at": current_time,
-                      "updated_at": current_time,
+                      "created_at": str(current_time),
+                      "updated_at": str(current_time),
                       "data": {
                         "status": "pending",
                         "file": {

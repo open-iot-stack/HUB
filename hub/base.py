@@ -8,6 +8,15 @@ from flask import render_template
 from flask import abort
 from flask import request
 from hub import app
+from hub.database import db_session
+
+from models import Printer
+from models import Job
+from models import File
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db_session.remove
 
 @app.route('/list', methods=['GET'])
 def list_peripherals():
@@ -49,6 +58,30 @@ def register_peripheral():
 
 @app.route('/')
 def index():
+    p = {
+        "uuid": 1234,
+        "jobs": [],
+        "cjob": {
+            "id": 1212
+        }
+    }
+    hub.printers_wrapper.add(p)
+    p = hub.printers_wrapper.get(1234)
+    return str(p)
+    exit()
+    fdate = str(dt.utcnow().isoformat()[:-3])+'Z'
+    j = Job(uuid=3121, created_at=fdate, updated_at=fdate,status="ERROR")
+    j.file += [File(name="Holder.st",origin="remote",size=9123)]
+    p.cjob = []
+    p.jobs += [j]
+    j2 = Job(uuid=3221,created_at=fdate,updated_at=fdate,status="ERROR")
+    p.jobs+=[j2]
+    db_session.add(p)
+    db_session.commit()
+    db_session.remove()
+    #print Printer.query.all()
+    return str(p)
+    #print j
     uuid=0
     return "0 represents the UUID" + '<br>'\
          + url_for('register_peripheral') + '<br>'\
