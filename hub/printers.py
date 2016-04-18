@@ -61,7 +61,6 @@ def print_action(uuid, action):
     # with the actual success as the command. For now just spawn command
     # as new thread
     if action == "start":
-        #response = octopi.StartCommand(url, key)
         job = jobs.current()
         if job:
             fpath = os.path.join(app.config['UPLOAD_FOLDER'],
@@ -72,13 +71,11 @@ def print_action(uuid, action):
         pass
 
     elif action == "pause":
-        #response = octopi.PauseUnpauseCommand(url, key)
-        thread.start_new_thread(octopi.PauseUnpauseCommand, (url, key))
+        thread.start_new_thread(octopi.pause_unpause_command, (url, key))
         pass
 
     elif action == "cancel":
-        #response = octopi.CancelCommand(url, key)
-        thread.start_new_thread(octopi.CancelCommand, (url, key))
+        thread.start_new_thread(octopi.cancel_command, (url, key))
         pass
 
     elif action == "upload":
@@ -117,7 +114,6 @@ def print_status(uuid):
 
     #url  = "http://" + ip + ":" + str(port)
 
-    #response = octopi.GetJobInfo(url, key)
     #TODO return the actual data that's useful for the web api
     return json.jsonify(status.copy())
 
@@ -204,7 +200,7 @@ def jobs_list(uuid):
     except AttributeError:
         #TODO how to handle printer not existing
         jobs = []
-    return json.jsonify(jobs.list())
+    return json.jsonify(jobs)
 
 @app.route('/printers/<int:uuid>/jobs/next')
 def jobs_next(uuid):

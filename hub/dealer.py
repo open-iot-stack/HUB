@@ -39,7 +39,7 @@ def printer_data_collector(printer):
                     pass
             thread.exit()
         try:
-            response = octopi.GetPrinterInfo(url, key)
+            response = octopi.get_printer_info(url, key)
             failures = 0
         except:
             # Just catch all for now
@@ -91,7 +91,7 @@ def job_data_collector(printer):
                     status["data"]["state"]["text"] = "Offline"
             thread.exit()
         try:
-            response = octopi.GetJobInfo(url, key)
+            response = octopi.get_job_info(url, key)
             failures = 0
         except:
             # Just catch all for now
@@ -223,7 +223,7 @@ def upload_and_print(printer,job_id,fpath):
     if job_id != jobs.current().get("id"):
         return False
     printer["cjob"] = jobs.current()
-    octopi.UploadFileAndPrint(url, key, fpath)
+    octopi.upload_file_and_print(url, key, fpath)
 
 
 
