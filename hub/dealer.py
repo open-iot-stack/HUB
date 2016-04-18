@@ -1,24 +1,29 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+import os
 import hub
 import thread
 import requests
 import octopifunctions as octopi
 from message_generator import MessageGenerator
-from jobs import parse_jobstatus
+from jobs import parse_job_status, parse_printer_status
 from time import sleep
 
-def job_data_collector(printer):
-    uuid = printer.get("uuid")
-    ip   = printer.get("ip")
-    port = printer.get("port")
-    key  = printer.get("key")
-    jobs = printer.get("jobs")
-    cjob = printer.get("cjob")
+from hub import app
+
+def printer_data_collector(printer):
+    uuid   = printer.get("uuid")
+    ip     = printer.get("ip")
+    port   = printer.get("port")
+    key    = printer.get("key")
+    jobs   = printer.get("jobs")
+    cjob   = printer.get("cjob")
+    status = printer.get("status")
     printers     = hub.printers.printers
     send_channel = hub.send_channel
     log          = hub.log
+    log.log("printer_data_collector starting for printer " + str(uuid))
     failures     = 0
     #url          = "http://" + ip + ":" + port
     url          = ip + ":" + str(port)
@@ -29,7 +34,60 @@ def job_data_collector(printer):
                   + " Closing connection with " + str(uuid))
             with printers.lock:
                 if printers.data.has_key(uuid):
-                    printers.data.pop(uuid)
+                    # SET STATUS TO OFFLINE
+                    status["data"]["state"]["text"] = "Offline"
+                    pass
+            thread.exit()
+        try:
+            response = octopi.GetPrinterInfo(url, key)
+            failures = 0
+        except:
+            # Just catch all for now
+            #TODO make sure catching right things
+            sleep(1)
+            failures += 1
+            log.log("ERROR: Could not collect printer"
+                  + " data from printer "+str(uuid))
+            continue
+        if response.status_code != requests.codes.ok:
+            log.log("ERROR: Response from "
+                    + str(uuid) + " returned status code "
+                    + response.status_code + " on "
+                    + url)
+        else:
+            #data = response.json()
+            data = parse_printer_status(printer, response.json())
+            # Check to see if data is the same as last collected
+            # if so, do not send it
+            if cmp(prev_data, data):
+                printer["cjob"] = data
+                prev_data = data.copy()
+                send_channel.send({ "printer": data })
+        sleep(1)
+
+def job_data_collector(printer):
+    uuid = printer.get("uuid")
+    ip   = printer.get("ip")
+    port = printer.get("port")
+    key  = printer.get("key")
+    jobs = printer.get("jobs")
+    cjob = printer.get("cjob")
+    status = printer.get("status")
+    printers     = hub.printers.printers
+    send_channel = hub.send_channel
+    log          = hub.log
+    log.log("job_data_collector starting for printer " + str(uuid))
+    failures     = 0
+    #url          = "http://" + ip + ":" + port
+    url          = ip + ":" + str(port)
+    prev_data    = {}
+    while(True):
+        if failures > 20:
+            log.log("ERROR: Have failed communication 20 times in a row."
+                  + " Closing connection with " + str(uuid))
+            with printers.lock:
+                if printers.data.has_key(uuid):
+                    status["data"]["state"]["text"] = "Offline"
             thread.exit()
         try:
             response = octopi.GetJobInfo(url, key)
@@ -39,15 +97,15 @@ def job_data_collector(printer):
             #TODO make sure catching right things
             sleep(1)
             failures += 1
-            log.log("ERROR: Could not collect data from printer")
+            log.log("ERROR: Could not collect job data from printer "+str(uuid))
             continue
         if response.status_code != requests.codes.ok:
             log.log("ERROR: Response from "
                     + str(uuid) + " returned status code "
-                    + response.status_code)
+                    + response.status_code + " on "
+                    + url)
         else:
-            #data = response.json()
-            data = parse_jobstatus(response.json(), cjob.copy())
+            data = parse_job_status(response.json(), cjob.copy())
             # Check to see if data is the same as last collected
             # if so, do not send it
             if cmp(prev_data, data):
@@ -143,4 +201,30 @@ def data_receiver():
 
     for message in MessageGenerator(hub.recv_channel):
         print message
+
+def upload_and_print(printer,job_id,fpath):
+    """Function that will take care of everything
+    to print a file that exists on the hub.
+    If current job is not the job_id, returns false
+    :printer: printer object to get data from
+    :job_id: job id that use believes should be started
+    :fpath: filepath to the new file to start
+    :returns: TODO
+
+    """
+    uuid = printer.get("uuid")
+    ip   = printer.get("ip")
+    port = printer.get("port")
+    key  = printer.get("key")
+    jobs = printer.get("jobs")
+    cjob = printer.get("cjob")
+    url = "http://" + ip + ":" + str(port)
+    if job_id != jobs.current().get("id"):
+        return False
+    printer["cjob"] = jobs.current()
+    octopi.UploadFileAndPrint(url, key, fpath)
+
+
+
+
 
