@@ -3,15 +3,43 @@
 
 import thread
 #from collections import OrderedDict
+import os
 from datetime import datetime as dt
 from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
 import octopifunctions as octopi
-#from hub import app
 
-def parse_jobstatus(job, cjob, status="NOT_IMPLEMENTED"):
+from hub import app
+
+def parse_printer_status(printer, printer_state):
+    """Parses the passed in dictionary.
+    Set to match specifications
+    :printer: printer dictionary of the printer status was retrieved from
+    :printer_status: dictionary of status from the printer
+    :returns: the information for the web api
+    """
+    uuid = printer.get("uuid")
+    jobs = printer.get("jobs")
+    status = printer.get("status")
+    friendly_id = status.get("friendly_id")
+    manufacturer = status.get("manufacturer")
+    model = status.get("model")
+    description = status.get("description")
+    num_jobs = len(jobs.list())
+    s = {
+            "id": uuid,
+            "friendly_id": friendly_id,
+            "manufacturer": manufacturer,
+            "model": model,
+            "description": description,
+            "num_jobs": num_jobs,
+            "data": printer_state
+    }
+    return s
+
+def parse_job_status(job, cjob, status="NOT_IMPLEMENTED"):
     """Parses the passed in dictionary file
     Set to match specifications
     :returns: the information for the web api.
@@ -72,6 +100,8 @@ class Jobs(object):
 
         uuid = Uuid.generate()
         current_time   = dt.utcnow().isoformat()[:-3] + 'Z'
+        st = os.stat(os.path.join(app.config["UPLOAD_FOLDER"], fname))
+        fdate = str(dt.fromtimestamp(st.st_mtime).isoformat()[:-3])+'Z'
         self._jobs.append(
                     {
                       "id": uuid,
@@ -82,8 +112,8 @@ class Jobs(object):
                         "file": {
                           "name": fname,
                           "origin": origin,
-                          "size": 0,
-                          "date": 0
+                          "size": st.st_size,
+                          "date": fdate
                         }
                       }
                     })
@@ -111,18 +141,28 @@ class Jobs(object):
 
         return list(self._jobs)
 
-    def next(self, remove=True):
+    def next(self, remove=False):
         """Get the next job to be printed.
-        Removes job from queue unless specified with remove=False
-        :remove: will remove the data unless set to false
+        :remove: will remove the data if set to True
         :returns: dictionary of job id and file, None if no jobs
         """
 
-        if len(self._jobs):
+        if len(self._jobs) > 1:
             if remove:
-                return self._jobs.pop(0)
+                return self._jobs.pop(1)
             else:
-                return self._jobs[0].copy()
+                return self._jobs[1].copy()
+        return None
+
+    def current(self):
+        """Returns a dictionary of the current job printing.
+        Data in here is of local information, not from the
+        printer
+        :returns: dictionary of job
+        """
+
+        if len(self._jobs):
+            return self._jobs[0].copy()
         return None
 
 class Uuid(object):
