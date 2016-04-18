@@ -105,7 +105,7 @@ def job_data_collector(printer):
                     + response.status_code + " on "
                     + url)
         else:
-            data = parse_job_status(response.json(), cjob.copy())
+            data = parse_job_status(response.json(), printer["cjob"].copy())
             # Check to see if data is the same as last collected
             # if so, do not send it
             if cmp(printer["cjob"], data):
