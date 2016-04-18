@@ -9,6 +9,8 @@ from flask import request
 from flask import json
 from flask import abort
 from dealer import job_data_collector
+from dealer import upload_and_print
+from dealer import printer_data_collector
 import octopifunctions as octopi
 from hub import app
 
@@ -60,7 +62,7 @@ def print_action(uuid, action):
     if action == "start":
         #response = octopi.StartCommand(url, key)
         thread.start_new_thread(octopi.StartCommand, (url, key))
-        thread.start_new_thread(job_data_collector, (printer,))
+#        thread.start_new_thread(job_data_collector, (printer,))
         pass
 
     elif action == "pause":
@@ -84,22 +86,11 @@ def print_action(uuid, action):
             job_id = jobs.add(f.filename)
         else:
             abort(400)
-
-        start = request.args.get('start', None)
         # check if start isn't none, then make sure it is equal to true
-        if start and start.lower() == "true":
-            thread.start_new_thread(octopi.UploadFileAndPrint,
-                                            (url, key, fpath))
+        start = request.args.get('start', 'false')
+        if start.lower() == "true":
+            thread.start_new_thread(upload_and_print,(printer,job_id,fpath))
             # TODO Make sure nothing else is printing
-            # TODO remove job from jobs
-            printer["jobs"].remove(job_id)
-            printer["cjob"] = {
-                    "id": job_id
-            }
-            #thread.start_new_thread(job_data_collector, (printer,))
-            #TODO Handle starting the print job imediately
-            pass
-        pass
     return json.jsonify({"message": action
                         + " successfully sent to the printer."})
 
@@ -144,6 +135,32 @@ def activate_printer(payload = None):
     key  = payload.get("key", "0")
     jobs = Jobs()
     cjob = {}
+    status = {
+        "id": uuid,
+        "friendly_id": "NOT_IMPLEMENTED",
+        "model": "NOT_IMPLEMENTED",
+        "num_jobs": 0,
+        "description": "NOT_IMPLEMENTED",
+        "data" : {
+            "state": {
+                "text": "Operational",
+                "flags": {
+                    "operational": True,
+                    "paused": False,
+                    "printing": False,
+                    "sd_ready": False,
+                    "error": False,
+                    "ready": False,
+                    "closed_or_error": False
+                }
+            }
+        }
+    }
+    with printers.lock:
+        if uuid in printers.data:
+            jobs = printers.data.get("uuid").get("jobs")
+            cjob = printers.data.get("uuid").get("cjob")
+            status = printers.data.get("uuid").get("status")
 
     with printers.lock:
         if uuid in printers.data:
@@ -155,12 +172,12 @@ def activate_printer(payload = None):
                 "port": port,
                 "key" : key,
                 "jobs": jobs,
-                "cjob": cjob
+                "cjob": cjob,
+                "status": status
         }
         printer = printers.data[uuid]
     thread.start_new_thread(job_data_collector, (printer,))
-#    thread.start_new_thread(printer_data_collector,
-#                            (uuid, ip, port, key))
+    thread.start_new_thread(printer_data_collector, (printer,))
 
     return json.jsonify({"message": str(uuid) + " has been activated."})
 
