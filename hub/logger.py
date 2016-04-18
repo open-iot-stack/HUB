@@ -9,12 +9,12 @@ class Log(object):
     """Log is a class that allows easy logging and printing
     in a very easy fashion"""
 
-    _flock = thread.allocate_lock()
 
     def __init__(self, fname=".log", print_enabled=False):
 
         self._print = print_enabled
         self._fname = fname
+        self._flock = thread.allocate_lock()
         if not os.path.isfile(self._fname):
             try:
                 f = open(self._fname, "a")
@@ -33,10 +33,9 @@ class Log(object):
         """
 
         message = str(datetime.datetime.now()) + ": " + str(message)
-        if self._print:
-            print(message)
         with self._flock:
-
+            if self._print:
+                print(message)
             with open(self._fname, 'r') as f:
                 lines = f.readlines()
                 if len(lines) > 2000:
