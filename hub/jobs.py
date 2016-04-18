@@ -57,6 +57,7 @@ def parse_job_status(job, cjob, status="NOT_IMPLEMENTED"):
     filament = job.get("job").get("filament")
     progress = job.get("progress")
     if progress:
+        prog = {}
         prog["completion"] = progress.get("completion")
         prog["file_position"] = progress.get("filepos")
         prog["print_time"] = progress.get("printTime")
