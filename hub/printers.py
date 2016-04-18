@@ -31,7 +31,8 @@ def printers_list():
                     "ip"  : printer.get("ip"),
                     "port": printer.get("port"),
                     "jobs": printer.get("jobs").list(),
-                    "cjob": printer.get("cjob")
+                    "cjob": printer.get("cjob"),
+                    "status": printer.get("status")
             }
 
     return json.jsonify(data)
@@ -54,14 +55,19 @@ def print_action(uuid, action):
         jobs = printer.get("jobs")
         cjob = printer.get("cjob")
 
-    url = "http://" + ip + ":" + str(port)
+    url = ip + ":" + str(port)
 
     #TODO make helper function for actions to respond the web api
     # with the actual success as the command. For now just spawn command
     # as new thread
     if action == "start":
         #response = octopi.StartCommand(url, key)
-        thread.start_new_thread(octopi.StartCommand, (url, key))
+        job = jobs.current()
+        if job:
+            fpath = os.path.join(app.config['UPLOAD_FOLDER'],
+                                    job["data"]["file"]["name"])
+            job_id = job["id"]
+        thread.start_new_thread(upload_and_print,(printer,job_id,fpath))
 #        thread.start_new_thread(job_data_collector, (printer,))
         pass
 
@@ -107,12 +113,13 @@ def print_status(uuid):
         key  = printer.get("key")
         jobs = printer.get("jobs")
         cjob = printer.get("cjob")
+        status = printer.get("status")
 
     #url  = "http://" + ip + ":" + str(port)
 
     #response = octopi.GetJobInfo(url, key)
     #TODO return the actual data that's useful for the web api
-    return json.jsonify(cjob)
+    return json.jsonify(status.copy())
 
 
 @app.route('/printers/activate', methods=['GET'])
@@ -158,14 +165,18 @@ def activate_printer(payload = None):
     }
     with printers.lock:
         if uuid in printers.data:
-            jobs = printers.data.get("uuid").get("jobs")
-            cjob = printers.data.get("uuid").get("cjob")
-            status = printers.data.get("uuid").get("status")
-
-    with printers.lock:
-        if uuid in printers.data:
-            return json.jsonify({"message": str(uuid)
-                                + " was already activated."})
+            edit = False
+            printer = printers.data.get(uuid)
+            jobs = printer.get("jobs")
+            cjob = printer.get("cjob")
+            status = printer.get("status")
+            if ip != printer.get("ip") or \
+                   port != printer.get("port") or \
+                   key != printer.get("key"):
+                edit = True
+            if not edit and status['data']['state']['text'] != "Offline":
+                return json.jsonify({"message": str(uuid)
+                                        + " was already activated."})
         printers.data[uuid] = {
                 "uuid": uuid,
                 "ip"  : ip,
