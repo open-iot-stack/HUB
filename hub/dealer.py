@@ -108,7 +108,7 @@ def job_data_collector(printer):
             data = parse_job_status(response.json(), cjob.copy())
             # Check to see if data is the same as last collected
             # if so, do not send it
-            if cmp(prev_data, data):
+            if cmp(printer["cjob"], data):
                 printer["cjob"] = data
                 prev_data = data.copy()
                 send_channel.send({
