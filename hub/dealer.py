@@ -38,12 +38,10 @@ def printer_data_collector(printer):
                     status["data"]["state"]["text"] = "Offline"
                     pass
             thread.exit()
-        try:
-            response = octopi.get_printer_info(url, key)
+        response = octopi.get_printer_info(url, key)
+        if response:
             failures = 0
-        except:
-            # Just catch all for now
-            #TODO make sure catching right things
+        else:
             sleep(1)
             failures += 1
             log.log("ERROR: Could not collect printer"
@@ -90,15 +88,14 @@ def job_data_collector(printer):
                 if printers.data.has_key(uuid):
                     status["data"]["state"]["text"] = "Offline"
             thread.exit()
-        try:
-            response = octopi.get_job_info(url, key)
+        response = octopi.get_job_info(url, key)
+        if response:
             failures = 0
-        except:
-            # Just catch all for now
-            #TODO make sure catching right things
+        else:
             sleep(1)
             failures += 1
-            log.log("ERROR: Could not collect job data from printer "+str(uuid))
+            log.log("ERROR: Could not collect"
+                   + " job data from printer " + str(uuid))
             continue
         if response.status_code != requests.codes.ok:
             log.log("ERROR: Response from "

@@ -32,7 +32,7 @@ testingWebcamStreamURL = '/webcam/?action=stream'
 
 # Constants:
 type_get = 'GET'
-typePut = 'PUT'
+type_put = 'PUT'
 type_post = 'POST'
 type_delete = 'DELETE'
 files_local_extension = '/api/files/local'
@@ -113,12 +113,21 @@ slicer_profile_extension = '/api/slicing/cura/profiles' #Note: normally, slicer 
 #   retVal: if successful request, then the response body (Exception: status 204, which has no content)
 #           if unsuccessful request, then the response code and response reason
  #########################################################################
-def http_request(url_address, api_extension, params, method, headers, files=None):
+def http_request(url_address, api_extension,
+        params, method, headers, files=None, json=None):
     url = "http://" + url_address + api_extension
-    if http_method == type_get:
-        response = requests.get(url, headers=headers, params=params)
-    elif http_method == type_post:
-        response = requests.post(url, headers=headers, params=params, files=files)
+    try:
+        if http_method == type_get:
+            response = requests.get(url, headers=headers, params=params)
+        elif http_method == type_post:
+            response = requests.post(url, headers=headers, params=params,
+                                        files=files, json=json)
+    except requests.ConnectionError:
+        hub.log.log("ERROR: Could not connect to " + url)
+        return None
+    except requests.exceptions.Timeout:
+        hub.log.log("ERROR: Timeout occured on " + url)
+        return None
     return response
 
 ########################
@@ -195,8 +204,17 @@ def upload_file(url, api_key, file_path, path_to_store = local):
     file_to_upload =  open(file_path, 'rb')
     files = {'file': file_to_upload}
     params = {'print':false}
-    return http_request(url, files_extension + path_to_store, params, type_post, header, files=files) 
+    return http_request(url, files_extension + path_to_store, params,
+                            type_post, header, files=files) 
     
+def upload_file_and_select(url, api_key, file_path, path_to_store = local):
+    """uploads a file to the octopi and selects it"""
+    header = {'Host': 'example.com', 'X-Api-Key': api_key}
+    data   = {'select': 'true'}
+    file_to_upload = open(file_path, 'rb')
+    files  = {'file': file_to_upload}
+    return http_request(url, files_extension + path_to_store, None,
+                            type_post, header, files=files)
     
  #########################################################################
 #   Function Name: upload_file_and_print
@@ -218,7 +236,8 @@ def upload_file_and_print(url, api_key, file_path, path_to_store = local):
     file_to_upload =  open(file_path, 'rb')
     files = {'file': file_to_upload}
     params = {'print':True}
-    return http_request(url, files_extension +path_to_store, params, type_post, header, files=files) 
+    return http_request(url, files_extension +path_to_store, params,
+                            type_post, header, files=files) 
     
  #########################################################################
 #   Function Name: get_one_file_info
@@ -270,7 +289,11 @@ def delete_file(url, api_key, path):
 #       On fail, it returns the response code and response reason
  #########################################################################  
 def command_select(url, api_key, path):
-    header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
+    header = { 
+            'Host': 'example.com',
+            'X-Api-Key': api_key,
+            'Content-Type': 'application/json'
+    }
     data = {}
     data ['command'] = 'select'
     data ['print'] = False
@@ -292,10 +315,15 @@ def command_select(url, api_key, path):
 #       On fail, it returns the response code and response reason
  #########################################################################  
 def command_select_and_print(url, api_key, path):
-    header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
-    data = {}
-    data ['command'] = 'select'
-    data ['print'] = True
+    header = {
+        'Host': 'example.com',
+        'X-Api-Key': api_key,
+        'Content-Type': 'application/json'
+    }
+    data = {
+        'command': 'select',
+        'print': True
+    }
     params = json.dumps(data)
     return http_request(url, files_extension + path, params, type_post, header)
     
@@ -420,6 +448,20 @@ def get_job_info(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}
     return http_request(url, jobs_extension, None, type_get, header) 
     
+def get_printer_info(url, api_key):
+    header = { 'Host': 'example.com', 'X-Api-Key': api_key}
+    params = {"exclude": "temperature,sd"}
+    return http_request(url, printer_extension, params, type_get, header)
+
+def slice_and_print(url, api_key, path, path_to_store = local):
+    header = { 'Host': 'example.com', 'X-Api-Key': api_key}
+    file_name = os.path.basename(path).split(".")[0]
+    payload = {
+            'command': 'slice',
+            'print': 'true'
+    }
+    return http_request(url, files_extension, params,
+                            type_post, header, json=payload)
 
 
 
