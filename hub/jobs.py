@@ -56,6 +56,12 @@ def parse_job_status(job, cjob, status="NOT_IMPLEMENTED"):
     unix_date = jf.get("date")
     filament = job.get("job").get("filament")
     progress = job.get("progress")
+    if progress:
+        prog["completion"] = progress.get("completion")
+        prog["file_position"] = progress.get("filepos")
+        prog["print_time"] = progress.get("printTime")
+        prog["print_time_left"] = progress.get("printTimeLeft")
+        progress = prog
     if not unix_date:
         unix_date = 0
     fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
