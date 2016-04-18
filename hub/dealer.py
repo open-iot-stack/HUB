@@ -65,6 +65,7 @@ def printer_data_collector(printer):
                 send_channel.send({ "printer": data })
         sleep(1)
 
+
 def job_data_collector(printer):
     uuid = printer.get("uuid")
     ip   = printer.get("ip")
