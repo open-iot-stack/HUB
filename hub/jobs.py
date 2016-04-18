@@ -54,6 +54,8 @@ def parse_job_status(job, cjob, status="NOT_IMPLEMENTED"):
                 + " New Job: " + str(jf.get("data").get("name")))
     """
     unix_date = jf.get("date")
+    filament = job.get("job").get("filament")
+    progress = job.get("progress")
     if not unix_date:
         unix_date = 0
     fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
@@ -69,17 +71,9 @@ def parse_job_status(job, cjob, status="NOT_IMPLEMENTED"):
             "date": fdate
             },
         "estimated_print_time": job.get("estimatedPrintTime"),
-        "filament": {
-            "length": job.get("job").get("filament").get("length"),
-            "volume": job.get("job").get("filament").get("volume")
-            },
-        "progress": {
-            "completion": job.get("completion"),
-            "file_position": job.get("filepos"),
-            "print_time": job.get("printTime"),
-            "print_time_left": job.get("printTimeLeft")
-            }
-    }
+        "filament": filament,
+        "progress": progress
+        }
     return njob
 
 class Jobs(object):
