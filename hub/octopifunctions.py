@@ -348,28 +348,29 @@ def command_select_and_print(url, api_key, path):
 #   retVal: result of the http_request, On success, returns response status 202 
 #       On fail, it returns the response code and response reason
  #########################################################################  
-def command_slice(url, api_key, path):
+def command_slice(url, api_key, file_name, path_to_store = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
-    fileName = os.path.basename(path)
-    fileNameNoExt = os.path.splitext(fileName)[0]
-    data = {}
-    data ['command'] = 'slice'
-    data ['slicer'] = 'cura'
-    data ['gcode'] = fileNameNoExt + '.gcode'
-    data ['printerProfile'] = '<printer profile name>'
-    data ['profile'] = '<profile name>'
-    data ['profile.infill'] = 75
-    data ['profile.density'] = 15
-    data ['position'] = {'x':100, 'y':100}
-    #[OPTIONAL]
-    data ['select'] = False
-    #[OPTIONAL]
-    data ['print'] = False
+    #fileName = os.path.basename(path)
+    #fileNameNoExt = os.path.splitext(fileName)[0]
+    endpoint = files_extension + path_to_store + "/" + file_name
+    payload = {
+        'command': 'slice'
+    }
+    #data ['command'] = 'slice'
+    #data ['slicer'] = 'cura'
+    #data ['gcode'] = fileNameNoExt + '.gcode'
+    #data ['printerProfile'] = '<printer profile name>'
+    #data ['profile'] = '<profile name>'
+    #data ['profile.infill'] = 75
+    #data ['profile.density'] = 15
+    #data ['position'] = {'x':100, 'y':100}
+    ##[OPTIONAL]
+    #data ['select'] = False
+    ##[OPTIONAL]
+    #data ['print'] = False
     
-    params = json.dumps(data)
-    #TODO this needs to be fixed
-    return http_request(url, files_extension, type_post, header,
-                            params=params)
+    return http_request(url, endpoint, type_post, header,
+                            json=payload)
 
 ############################ JOB OPERATIONS #################################
 
@@ -466,9 +467,9 @@ def get_printer_info(url, api_key):
     return http_request(url, printer_extension, type_get, header,
                             params=params)
 
-def slice_and_print(url, api_key, path, path_to_store = local):
+def slice_and_print(url, api_key, file_name, path_to_store = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}
-    file_name = os.path.basename(path)
+    #file_name = os.path.basename(path)
     endpoint = files_extension + path_to_store + "/" + file_name
     payload = {
             'command': 'slice',
