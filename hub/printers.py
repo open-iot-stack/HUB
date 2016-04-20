@@ -86,7 +86,7 @@ def print_action(uuid, action):
         if f:
             fpath = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
             f.save(fpath)
-            job_id = jobs.add(f.filename)
+            job_id = jobs.add(f.filename, uuid)
         else:
             abort(400)
         # check if start isn't none, then make sure it is equal to true

@@ -67,6 +67,7 @@ def parse_job_status(job, cjob, status="NOT_IMPLEMENTED"):
         unix_date = 0
     fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
     njob["id"] = cjob.get("id", 0)
+    njob["printer"] = cjob.get("printer", 0)
     njob["created_at"] = cjob.get("created_at", fdate)
     njob["updated_at"] = fdate
     njob["data"] = {
@@ -93,7 +94,7 @@ class Jobs(object):
 
         self._jobs = []
         
-    def add(self, fname, origin="remote"):
+    def add(self, fname, printer_id, origin="remote"):
         """Add a job to the queue
         :fname: file to be added to the queue
         :returns: the id of the job
@@ -106,6 +107,7 @@ class Jobs(object):
         self._jobs.append(
                     {
                       "id": uuid,
+                      "printer": printer_id,
                       "created_at": current_time,
                       "updated_at": current_time,
                       "data": {

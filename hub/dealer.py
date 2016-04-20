@@ -194,9 +194,27 @@ def data_receiver():
     is collected by the sensors and send it to the Web API.
     Also is in charge of logging data based on UUID.
     """
-
+    
+    log = hub.log
     for message in MessageGenerator(hub.recv_channel):
+        # TODO headers should be filled in with correct info for
+        # communicating with web API
+        domain  = "www.stratusprint.com"
+        web_url = "http://" + domain
+        headers = {}
         print message
+        if message.has_key("job"):
+            job = message.get('job')
+            if job:
+                printer_id = job.get('printer')
+                url = web_url + "/printers/" + printer_id + "/jobs"
+                # TODO implement into requests api
+            else:
+                log.log("ERROR: Job to be sent was empty.")
+            pass
+        if message.has_key("printer"):
+            # TODO handle printers being updated
+            pass
 
 def upload_and_print(printer,job_id,fpath,loc=octopi.local):
     """Function that will take care of everything
