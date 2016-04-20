@@ -110,9 +110,7 @@ def job_data_collector(printer):
                 printer["cjob"] = data
                 prev_data = data.copy()
                 send_channel.send({
-                    uuid: {
-                        "job": data
-                    } 
+                    uuid: { "job": data } 
                 })
         sleep(1)
 
@@ -200,7 +198,7 @@ def data_receiver():
     for message in MessageGenerator(hub.recv_channel):
         print message
 
-def upload_and_print(printer,job_id,fpath):
+def upload_and_print(printer,job_id,fpath,loc=octopi.local):
     """Function that will take care of everything
     to print a file that exists on the hub.
     If current job is not the job_id, returns false
@@ -216,13 +214,31 @@ def upload_and_print(printer,job_id,fpath):
     key  = printer.get("key")
     jobs = printer.get("jobs")
     cjob = printer.get("cjob")
+    log  = hub.log
     url = "http://" + ip + ":" + str(port)
     if job_id != jobs.current().get("id"):
         return False
+    r = octopi.upload_file(url, key, fpath, loc)
+    if r == None:
+        log.log("ERROR: Did not have a response from " + str(uuid)
+                + ". File upload canceled for " + fpath + ".")
+        thread.exit()
+    if r.status_code != requests.codes.created:
+        log.log("ERROR: Could not upload file " + fpath
+                + ". Return code from printer " + str(r.status_code))
+        thread.exit()
+    data = r.json()
+    fname = data['files'][loc]['name']
+    #TODO fix this to work with gcode files as well
+    r = slice_and_print(url, key, fname, loc)
+    if r == None:
+        log.log("ERROR: Did not have a response from " + str(uuid)
+                + ". File slice canceled for " + fname + ".")
+        thread.exit()
+    if r.status_code != requests.codes.accepted:
+        log.log("ERROR: Slice and print did not work for " + str(uuid)
+                + ". Return code from printer " + str(r.status_code)
+                + ". Is the printer already printing?")
+        thread.exit()
     printer["cjob"] = jobs.current()
-    octopi.upload_file_and_print(url, key, fpath)
-
-
-
-
 
