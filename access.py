@@ -1,7 +1,7 @@
 import requests
 import json
 base_url = 'https://dev.api.stratusprint.com/v1/';
-api_key = '0209340d868f2d23b6cfeb032f6b7278';
+api_key = '';
 headers = []
 
 def hub_sign_in(): #uses api key to get headers for commands, and signs in
