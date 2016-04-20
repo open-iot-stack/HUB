@@ -12,6 +12,7 @@ import json
 import os
 import httplib
 import requests
+from requests_toolbelt import MultipartEncoder
 
 
 ##################################### TESTING CODE (DELETE FOR RELEASE) #####################################
@@ -39,7 +40,7 @@ files_local_extension = '/api/files/local'
 files_sd_extension = '/api/files/sdcard'
 local = '/local'
 files_extension = '/api/files'
-printer_extension = '/api/priner'
+printer_extension = '/api/printer'
 jobs_extension = '/api/job'
 printer_profile_extension = '/api/printerprofiles'
 slicer_profile_extension = '/api/slicing/cura/profiles' #Note: normally, slicer profiles are organized per Slicer but the octopi only has one Slicer (cura)
@@ -114,14 +115,14 @@ slicer_profile_extension = '/api/slicing/cura/profiles' #Note: normally, slicer 
 #           if unsuccessful request, then the response code and response reason
  #########################################################################
 def http_request(url_address, api_extension,
-        params, method, headers, files=None, json=None):
+        params, method, headers, files=None, json=None, data=None):
     url = "http://" + url_address + api_extension
     try:
-        if http_method == type_get:
+        if method == type_get:
             response = requests.get(url, headers=headers, params=params)
-        elif http_method == type_post:
+        elif method == type_post:
             response = requests.post(url, headers=headers, params=params,
-                                        files=files, json=json)
+                                        files=files, json=json, data=data)
     except requests.ConnectionError:
         hub.log.log("ERROR: Could not connect to " + url)
         return None
@@ -200,10 +201,13 @@ def get_all_files_from_location(url, api_key, path = local):
 #       On fail, it returns the response code and response reason
  #########################################################################
 def upload_file(url, api_key, file_path, path_to_store = local):
-    header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/vnd.ms-pkistl'}
+    fname = os.path.basename(file_path)
     file_to_upload =  open(file_path, 'rb')
-    files = {'file': file_to_upload}
-    params = {'print':false}
+    header = { 'Host': 'example.com', 'X-Api-Key': api_key}#, 'Content-Type': m.content_type}
+    files = {'file': (fname, file_to_upload, 'application/octet-stream')}
+    params = {
+        'print':'false',
+    }
     return http_request(url, files_extension + path_to_store, params,
                             type_post, header, files=files) 
     
@@ -455,14 +459,18 @@ def get_printer_info(url, api_key):
 
 def slice_and_print(url, api_key, path, path_to_store = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}
-    file_name = os.path.basename(path).split(".")[0]
+    file_name = os.path.basename(path)#.split(".")[0]
+    params = None
     payload = {
             'command': 'slice',
             'print': 'true'
     }
-    return http_request(url, files_extension, params,
+    return http_request(url, files_extension + path_to_store + "/" + file_name, params,
                             type_post, header, json=payload)
 
+def get_version(url, api_key):
+    headers = {'Host': 'example.com', 'X-Api-Key': api_key}
+    return http_request(url, "/api/version", None, type_get, headers)
 
 
 
