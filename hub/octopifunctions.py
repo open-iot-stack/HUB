@@ -479,7 +479,7 @@ def slice_and_print(url, api_key, path, path_to_store = local):
 
 def get_version(url, api_key):
     headers = {'Host': 'example.com', 'X-Api-Key': api_key}
-    return http_request(url, version_extenstion, type_get, headers)
+    return http_request(url, version_extension, type_get, headers)
 
 
 
