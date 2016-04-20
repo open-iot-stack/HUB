@@ -12,7 +12,6 @@ import json
 import os
 import httplib
 import requests
-from requests_toolbelt import MultipartEncoder
 
 
 ##################################### TESTING CODE (DELETE FOR RELEASE) #####################################
