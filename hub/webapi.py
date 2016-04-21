@@ -8,139 +8,123 @@ def add_job(web_url, headers, job):
     '''Will add a job to the WebAPI.
     Handles errors and logs.
     web_url: Base webaddress of server, or ip
-    :returns:None if Job failed and cannot be added,
-             False if Job was not created but is back in queue,
-             True if Job was added on server successfully.
+    :returns: Tuple of boolean of success and 
+              status code of response. Status code
+              is None if no response
 
     '''
-    url = web_url + '/printers' + str(job.get('printer'))
-    r = None
+    printer_id = job.get('printer')
+    job_id = job.get('id')
+    url = web_url + '/printers/' + str(printer_id) + '/jobs'
     try:
         r = requests.post(url, headers=headers,
                             json=job, timeout=3)
     except requests.ConnectionError:
-        log.log("ERROR: Could not connect to " + url 
-                + ". Readding to queue.")
-        try:
-            hub.send_channel.send_exn({'add_job', job})
-            return False
-        except channel.SendException:
-            log.log("MAXIMUM ERROR: Channel is full."
-                    + " Unable to add job " + str(job_id))
-            return None
+        log.log('ERROR: Could not connect to ' + url
+                + ' Unable to add job ' + str(job_id))
+        return False, None
     except requests.exceptions.Timeout:
-        log.log("ERROR: Connection timeout when contacting "
-                + url + ". Readding to queue.")
-        try:
-            hub.send_channel.send_exn({'add_job', job})
-        return False
-        except channel.SendException:
-            log.log("MAXIMUM ERROR: Channel is full."
-                    + " Unable to add job " + str(job_id))
-            return None
-    if r:
-        if r.status_code == requests.codes.unauthorized:
-            log.log("ERROR: Unauthorized on " + url
-                    + ". Readding to queue. Getting new headers.")
-            headers = access.get_headers(api_key, headers)
-            try:
-                hub.send_channel.send_exn({'add_job', job})
-                return False
-            except channel.SendException:
-                log.log("MAXIMUM ERROR: Channel is full."
-                        + " Unable to add job " + str(job_id))
-                return None
-        elif r.status_code != requests.codes.created:
-            log.log("ERROR: Job " + str(job_id) + " not created."
-                    + ". Readding to queue.")
-            headers = access.get_headers(api_key, headers)
-            try:
-                hub.send_channel.send_exn({'add_job', job})
-                return False
-            except channel.SendException:
-                log.log("MAXIMUM ERROR: Channel is full."
-                        + " Unable to add job " + str(job_id))
-                return None
-    log.log("Added job " + str(job_d) + " to " + url)
-    return True
+        log.log('ERROR: Timeout when contacting ' + url
+                + ' Unable to add job ' + str(job_id))
+        return False, None
+    if r.status_code != requests.codes.created:
+        log.log('ERROR: Job ' + str(job_id) + ' not created.'
+                + ' Server responded with ' + str(r.status_code)
+                + ' on ' + url)
+        return False, r.status_code
+    log.log('Added job ' + str(job_id) + ' to ' + url)
+    return True, r.status_code
 
-def patch_job(web_url, headers, job)
+def patch_job(web_url, headers, job):
     '''Will updated a job on the WebAPI.
     Handles errors and logs.
     web_url: Base webaddress of server, or ip
-    :returns:None if Job failed and cannot be updated
-             False if Job was not updated but is back in queue,
-             True if Job was update on server successfully.
+    :returns: Tuple of boolean of success and 
+              status code of response. Status code
+              is None if no response
 
     '''
     printer_id = job.get('printer')
-    job_id = job.get("id")
-    url = web_url + "/jobs/" + job_id
-    r = None
+    job_id = job.get('id')
+    url = web_url + '/jobs/' + str(job_id)
     try:
         r = requests.patch(url, headers=headers,
                             json = job, timeout=3)
     except requests.ConnectionError:
-        log.log("ERROR: Could not connect to " + url 
-                + ". Unable to update job.")
-        return None
+        log.log('ERROR: Could not connect to ' + url 
+                + '. Unable to update job' + str(job_id) + '.')
+        return False, None
     except requests.exceptions.Timeout:
-        log.log("ERROR: Connection timeout when contacting "
-                + url + ". Unable to update job.")
-        return None
-    if r:
-        if r.status_code == requests.codes.unauthorized:
-            log.log("ERROR: Unauthorized on " + url
-                    + ". Readding to queue. Getting new headers.")
-            try:
-                hub.send_channel.send_exn({'add_job', job})
-                return False
-            except channel.SendException:
-                log.log("MAXIMUM ERROR: Channel is full."
-                        + " Unable to add job " + str(job_id))
-                return None
-        elif r.status_code != requests.codes.ok:
-            log.log("ERROR: Job " + str(job_id) + " not updated.")
-            return False
-    log.log("Updated job " + str(job_id) + " on " + url)
-    return True
+        log.log('ERROR: Timeout when contacting ' + url
+                + ' Unable to update job' + str(job_id) + '.')
+        return False, None
+    if r.status_code == requests.codes.unauthorized:
+        log.log('ERROR: Job ' + str(job_id) + ' not updated.'
+                + ' Unauthorized on ' + url)
+        return False, r.status_code
+    elif r.status_code != requests.codes.ok:
+        log.log('ERROR: Job ' + str(job_id) + ' not updated.'
+                + ' Server responded with ' + str(r.status_code)
+                + ' on ' + url)
+        return False, r.status_code
+    log.log('Updated job ' + str(job_id) + ' on ' + url)
+    return True, r.status_code
 
 def add_printer(web_url, headers, printer):
     '''Add a printer on the web api
     web_url: Base webaddress of server, or ip
-    :returns:None if Printer failed and cannot be added,
-             False if Printer was not created but is back in queue,
-             True if Printer was added on server successfully.
+    :returns: Tuple of boolean of success and 
+              status code of response. Status code
+              is None if no response
 
     '''
+    hub_id = hub.ID
+    uuid = printer.get('uuid')
+    url = web_url + '/hubs/' + str(hub_id) + '/printers'
     try:
         r = requests.post(url, headers=headers,
                             json=printer, timeout=3)
     except requests.ConnectionError:
-        log.log("ERROR: Could not connect to " + url 
-                + ". Unable to add printer " + str(uuid)".")
+        log.log('ERROR: Could not connect to ' + url 
+                + '. Unable to add printer ' + str(uuid) + '.')
+        return False, None
     except requests.exceptions.Timeout:
-        log.log("ERROR: Connection timeout when contacting "
-                + url + ". Unable to add printer " + str(uuid)".")
-    log.log("Added printer " + str(uuid) + " to " + url )
+        log.log('ERROR: Timeout when contacting ' + url
+                + '. Unable to add printer ' + str(uuid) + '.')
+        return False, None
+    if r.status_code != requests.codes.created:
+        log.log('ERROR: Printer ' + str(uuid) + ' not added.'
+                + ' Server responded with ' + str(r.status_code) 
+                + ' on ' + url)
+        return False, r.status_code
+    log.log('Added printer ' + str(uuid) + ' to ' + url )
+    return True, r.status_code
 
 def patch_printer(web_url, headers, printer):
     '''Patch a printer on the web api
     web_url: Base webaddress of server, or ip
-    :returns:None if Printer failed and cannot be updated,
-             False if Printer was not updated but is back in queue,
-             True if Printer was updated on server successfully.
+    :returns: Tuple of boolean of success and 
+              status code of response. Status code
+              is None if no response
 
     '''
-    url = web_url + "/printers/" + str(hub.uuid) 
     uuid = printer.get('id')
+    url = web_url + '/printers/' + str(uuid) 
     try:
         r = requests.post(url, headers=headers,
                             json=printer, timeout=3)
     except requests.ConnectionError:
-        log.log("ERROR: Could not connect to " + url 
-                + ". Unable to update printer " + str(uuid)".")
+        log.log('ERROR: Could not connect to ' + url 
+                + '. Unable to update printer ' + str(uuid) + '.')
+        return False, None
     except requests.exceptions.Timeout:
-        log.log("ERROR: Connection timeout when contacting "
-                + url + ". Unable to update printer " + str(uuid)".")
-    log.log("Updated printer " + str(uuid) + " to " + url )
+        log.log('ERROR: Timeout when contacting ' + url
+                + '. Unable to update printer ' + str(uuid) + '.')
+        return False, None
+    if r.status_code != requests.codes.created:
+        log.log('ERROR: Printer ' + str(uuid) + ' not updated.'
+                + ' Server responded with ' + r.status_code 
+                + ' on ' + url)
+        return False, r.status_code
+    log.log('Updated printer ' + str(uuid) + ' on ' + url )
+    return True, r.status_code
