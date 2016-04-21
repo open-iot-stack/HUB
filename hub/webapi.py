@@ -147,7 +147,7 @@ def delete_printer(web_url, printer_id):
         ret = update_headers(web_url)
         return delete_printer(web_url, printer)
     if code == 404:
-        # Printer is not registered. Adding printer also updates
+        # Printer is not registered. Claim deleted internally
         log.log('ERROR: Printer ' + str(printer_id) + ' not deleted.'
                 + ' Server responded with ' + str(code) 
                 + ' on ' + url)
@@ -155,6 +155,7 @@ def delete_printer(web_url, printer_id):
                 + ', faking it deleted')
         return True
     if code != 204:
+        # Catch all if did not succeed and not handling
         log.log('ERROR: Printer ' + str(printer_id) + ' not deleted.'
                 + ' Server responded with ' + str(code) 
                 + ' on ' + url)
@@ -212,6 +213,7 @@ def add_job(web_url, job):
         else:
             return False
     if r.status_code != requests.codes.created:
+        # Catch all if did not succeed and not handling
         log.log('ERROR: Job ' + str(job_id) + ' not created.'
                 + ' Server responded with ' + str(r.status_code)
                 + ' on ' + url)
@@ -219,15 +221,12 @@ def add_job(web_url, job):
     log.log('Added job ' + str(job_id) + ' to ' + url)
     return True
 
-def patch_job(web_url, headers, job):
+def patch_job(web_url, job):
     '''Will updated a job on the WebAPI.
     Handles errors and logs.
     :web_url: Base webaddress of server, or ip
-    :headers: headers for request to use
     :job:     job to be updated on the web api
-    :returns: Tuple of boolean of success and 
-              status code of response. Status code
-              is None if no response
+    :returns: boolean of success
 
     '''
     printer_id = job.get('printer')
@@ -239,26 +238,38 @@ def patch_job(web_url, headers, job):
     except requests.ConnectionError:
         log.log('ERROR: Could not connect to ' + url 
                 + '. Unable to update job' + str(job_id) + '.')
-        return False, None
+        return False
     except requests.exceptions.Timeout:
         log.log('ERROR: Timeout when contacting ' + url
                 + ' Unable to update job' + str(job_id) + '.')
-        return False, None
-    if r.status_code == requests.codes.unauthorized:
+        return False
+    code = r.status_code
+    if code == 401:
+        # Not authorized. Fix headers and try again
         log.log('ERROR: Job ' + str(job_id) + ' not updated.'
-                + ' Unauthorized on ' + url)
-        return False, r.status_code
-    elif r.status_code != requests.codes.ok:
-        log.log('ERROR: Job ' + str(job_id) + ' not updated.'
-                + ' Server responded with ' + str(r.status_code)
+                + ' Server responded with ' + str(code)
                 + ' on ' + url)
-        return False, r.status_code
+        ret = update_headers(web_url)
+        if ret:
+            return patch_job(web_url, job)
+        else:
+            return False
+    if code == 404:
+        # Job not found. Add job instead 
+        log.log('ERROR: Job ' + str(job_id) + ' not updated.'
+                + ' Server responded with ' + str(code)
+                + ' on ' + url)
+        return add_job(web_url, job)
+    elif code != 200:
+        log.log('ERROR: Job ' + str(job_id) + ' not updated.'
+                + ' Server responded with ' + str(code)
+                + ' on ' + url)
+        return False
     log.log('Updated job ' + str(job_id) + ' on ' + url)
-    return True, r.status_code
+    return True
 
 def delete_job(web_url, headers, job):
     '''Will delete a job on the WebAPI
-
     :web_url: Base webaddress of server, or ip
     :headers: headers for request to use
     :job:     job to be deleted to web api
@@ -276,22 +287,38 @@ def delete_job(web_url, headers, job):
     except requests.ConnectionError:
         log.log('ERROR: Could not connect to ' + url 
                 + '. Unable to delete job' + str(job_id) + '.')
-        return False, None
+        return False
     except requests.exceptions.Timeout:
         log.log('ERROR: Timeout when contacting ' + url
                 + ' Unable to delete job' + str(job_id) + '.')
-        return False, None
-    if r.status_code == requests.codes.unauthorized:
-        log.log('ERROR: Job ' + str(job_id) + ' not updated.'
-                + ' Unauthorized on ' + url)
-        return False, r.status_code
-    elif r.status_code != requests.codes.ok:
-        log.log('ERROR: Job ' + str(job_id) + ' not updated.'
-                + ' Server responded with ' + str(r.status_code)
+        return False
+    code = r.status_code
+    if code == 401:
+        # Not authorized. Fix headers and try again
+        log.log('ERROR: Job ' + str(job_id) + ' not deleted.'
+                + ' Server responded with ' + str(code)
                 + ' on ' + url)
-        return False, r.status_code
+        ret = update_headers(web_url)
+        if ret:
+            return delete_job(web_url, job)
+        else:
+            return False
+    if code == 404:
+        # Job not found. Claim deleted internally
+        log.log('ERROR: Job ' + str(job_id) + ' not deleted.'
+                + ' Server responded with ' + str(code)
+                + ' on ' + url)
+        log.log('Job wasn\'t found on server to delete'
+                + ', faking it deleted')
+        return True
+    if code != 204:
+        # Catch all if did not succeed and not handling
+        log.log('ERROR: Job ' + str(job_id) + ' not updated.'
+                + ' Server responded with ' + str(code)
+                + ' on ' + url)
+        return False
     log.log('Updated job ' + str(job_id) + ' on ' + url)
-    return True, r.status_code
+    return True
 
 def add_node(web_url, headers, node):
     '''Add a node to the web api
