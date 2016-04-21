@@ -1,14 +1,14 @@
 import sys
-#import hub
+import hub
 import logger
 import json
 import requests
 dev_url = 'https://dev.api.stratusprint.com/v1/'
 
-log = hub.log
 
 def hub_sign_in(api_key, base_url = dev_url):
     #uses api key to get headers for commands, and signs in
+    log = hub.log
     url =  base_url + 'hub_auth/sign_in'
     header = { 'Content-Type' : 'application/json',
             'Accept': 'application/json' , 'Authorization': api_key }
@@ -44,6 +44,7 @@ def hub_sign_in(api_key, base_url = dev_url):
         
 def hub_sign_out(headers, base_url = dev_url):
     #signs out and invalidates tokens forever
+    log = hub.log
     url = base_url + 'hub_auth/sign_out'
     try:
             r = requests.delete(url, headers = headers, timeout=10)
@@ -63,6 +64,7 @@ def get_headers(api_key, headers=None, base_url = dev_url):
     #checks validation and signs in once again
     #return { 'Content-Type' : 'application/json',
     #        'Accept': 'application/json' , 'Authorization': api_key }
+    log = hub.log
     #TODO Make sure this doesn't make communication super slow.
     # Might need caching
     if headers == None:
