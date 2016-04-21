@@ -206,36 +206,43 @@ def data_receiver():
         if message.has_key("add_job"):
             job = message.get('add_job')
             if job:
-                ret = webapi.add_job(web_url, headers, job)
+                ret,code = webapi.add_job(web_url, headers, job)
                 if ret == False:
-                    headers = get_headers(api_key, base_url=base_url)
+                    if code == requests.codes.unauthorized:
+                        headers = get_headers(api_key, base_url=base_url)
+                    #TODO readd to queue
             else:
                 log.log("ERROR: Job to add was empty")
 
         if message.has_key("patch_job"):
             job = message.get("patch_job")
             if job:
-                ret = webapi.patch_job(web_url, headers, job)
+                ret,code = webapi.patch_job(web_url, headers, job)
                 if ret == False:
-                    headers = get_headers(api_key, base_url=base_url)
+                    if code == requests.codes.unauthorized:
+                        headers = get_headers(api_key, base_url=base_url)
             else:
                 log.log("ERROR: Job to update was empty")
 
         if message.has_key("add_printer"):
             printer = message.get("add_printer")
             if printer:
-                ret = webapi.add_printer(web_url, headers, printer)
+                ret,code = webapi.add_printer(web_url, headers,
+                                                    printer)
                 if ret == False:
-                    headers = get_headers(api_key, base_url=base_url)
+                    if code == requests.codes.unauthorized:
+                        headers = get_headers(api_key, base_url=base_url)
             else:
                 log.log("ERROR: Printer to add was empty")
 
         if message.has_key('patch_printer'):
             printer = message.get('patch_printer')
             if printer:
-                ret = webapi.patch_printer(web_url, headers, printer)
+                ret,code = webapi.patch_printer(web_url, headers,
+                                                    printer)
                 if ret == False:
-                    headers = get_headers(api_key, base_url=base_url)
+                    if code == requests.codes.unauthorized:
+                        headers = get_headers(api_key, base_url=base_url)
             else:
                 log.log("ERROR: Printer to printer was empty")
 
