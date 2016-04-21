@@ -4,12 +4,14 @@
 import os
 import hub
 import thread
+import channel
 import requests
+import webapi
 import octopifunctions as octopi
 from message_generator import MessageGenerator
 from jobs import parse_job_status, parse_printer_status
 from time import sleep
-
+import auth
 from hub import app
 
 def printer_data_collector(printer):
@@ -109,9 +111,7 @@ def job_data_collector(printer):
             if cmp(printer["cjob"], data):
                 printer["cjob"] = data
                 prev_data = data.copy()
-                send_channel.send({
-                    uuid: { "job": data } 
-                })
+                send_channel.send({"patch_job": data})
         sleep(1)
 
 def get_temp(node_ip, gpio):
@@ -136,8 +136,8 @@ def sensor_data_collector(uuid, ip, pertype):
     """Should spawn as its own thread for each sensor
     that calls activate. Collects data from the sensor every
     second and dumps it into the send channel.
-    """
 
+    """
     nodes        = hub.nodes.nodes
     send_channel = hub.send_channel
     log          = hub.log
@@ -193,28 +193,51 @@ def data_receiver():
     """Should spawn as its own thread. Will take data that
     is collected by the sensors and send it to the Web API.
     Also is in charge of logging data based on UUID.
+
     """
-    
     log = hub.log
+    domain  = "www.stratusprint.com"
+    web_url = "http://" + domain
+    api_key = hub.API_KEY
+    base_url = hub.webapi
+    #TODO set base_url from hub and commandline argument
     for message in MessageGenerator(hub.recv_channel):
-        # TODO headers should be filled in with correct info for
-        # communicating with web API
-        domain  = "www.stratusprint.com"
-        web_url = "http://" + domain
-        headers = {}
-        print message
-        if message.has_key("job"):
-            job = message.get('job')
+        headers = auth.get_headers(api_key, base_url=auth.dev_url)
+        if message.has_key("add_job"):
+            job = message.get('add_job')
             if job:
-                printer_id = job.get('printer')
-                url = web_url + "/printers/" + printer_id + "/jobs"
-                # TODO implement into requests api
+                ret = webapi.add_job(web_url, headers, job)
+                if ret == False:
+                    headers = get_headers(api_key, base_url=base_url)
             else:
-                log.log("ERROR: Job to be sent was empty.")
-            pass
-        if message.has_key("printer"):
-            # TODO handle printers being updated
-            pass
+                log.log("ERROR: Job to add was empty")
+
+        if message.has_key("patch_job"):
+            job = message.get("patch_job")
+            if job:
+                ret = webapi.patch_job(web_url, headers, job)
+                if ret == False:
+                    headers = get_headers(api_key, base_url=base_url)
+            else:
+                log.log("ERROR: Job to update was empty")
+
+        if message.has_key("add_printer"):
+            printer = message.get("add_printer")
+            if printer:
+                ret = webapi.add_printer(web_url, headers, printer)
+                if ret == False:
+                    headers = get_headers(api_key, base_url=base_url)
+            else:
+                log.log("ERROR: Printer to add was empty")
+
+        if message.has_key('patch_printer'):
+            printer = message.get('patch_printer')
+            if printer:
+                ret = webapi.patch_printer(web_url, headers, printer)
+                if ret == False:
+                    headers = get_headers(api_key, base_url=base_url)
+            else:
+                log.log("ERROR: Printer to printer was empty")
 
 def upload_and_print(printer,job_id,fpath,loc=octopi.local):
     """Function that will take care of everything
@@ -223,7 +246,7 @@ def upload_and_print(printer,job_id,fpath,loc=octopi.local):
     :printer: printer object to get data from
     :job_id: job id that use believes should be started
     :fpath: filepath to the new file to start
-    :returns: TODO
+    :returns: None
 
     """
     uuid = printer.get("uuid")
@@ -240,11 +263,11 @@ def upload_and_print(printer,job_id,fpath,loc=octopi.local):
     if r == None:
         log.log("ERROR: Did not have a response from " + str(uuid)
                 + ". File upload canceled for " + fpath + ".")
-        thread.exit()
+        return False
     if r.status_code != requests.codes.created:
         log.log("ERROR: Could not upload file " + fpath
                 + ". Return code from printer " + str(r.status_code))
-        thread.exit()
+        return False
     data = r.json()
     fname = data['files'][loc]['name']
     #TODO fix this to work with gcode files as well
@@ -252,11 +275,11 @@ def upload_and_print(printer,job_id,fpath,loc=octopi.local):
     if r == None:
         log.log("ERROR: Did not have a response from " + str(uuid)
                 + ". File slice canceled for " + fname + ".")
-        thread.exit()
+        return False
     if r.status_code != requests.codes.accepted:
         log.log("ERROR: Slice and print did not work for " + str(uuid)
                 + ". Return code from printer " + str(r.status_code)
                 + ". Is the printer already printing?")
-        thread.exit()
+        return False
     printer["cjob"] = jobs.current()
-
+    return True
