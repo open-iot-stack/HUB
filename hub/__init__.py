@@ -2,6 +2,7 @@ from flask import Flask
 from hub.config import Config
 from hub.channel import Channel
 from hub.logger import Log
+import hub.auth
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = "uploads/"
@@ -17,3 +18,4 @@ send_channel, recv_channel = Channel()
 log        = None
 SND_PASSWD = None
 API_KEY    = None
+WEB_API    = hub.auth.dev_url
