@@ -16,7 +16,7 @@ from hub import app
 
 printers = Chest()
 
-@app.route('/printers/list')
+@app.route('/printers', methods=['GET', 'POST'])
 def printers_list():
     """Returns a json of currently active printers
     :returns: TODO
