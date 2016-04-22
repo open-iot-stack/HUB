@@ -17,8 +17,8 @@ def list_peripherals():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register_peripheral():
-    """Webpage to register the type of a given sensor
-    This should be done before activating the sensor.
+    """Webpage to register the type of a given node
+    This should be done before activating the node.
     :returns: webpage of result
     """
 
@@ -52,12 +52,12 @@ def index():
     uuid=0
     return "0 represents the UUID" + '<br>'\
          + url_for('register_peripheral') + '<br>'\
-         + url_for('activate_sensor') + '<br>'\
+         + url_for('activate_node') + '<br>'\
          + url_for('print_action' ,uuid=uuid, action='start') + '<br>'\
          + url_for('print_action' ,uuid=uuid, action='cancel') + '<br>'\
          + url_for('print_action' ,uuid=uuid, action='pause') + '<br>'\
-         + url_for('print_action' ,uuid=uuid, action='status') + '<br>'\
-         + url_for('sensor_data'  ,uuid=uuid) + '<br>'
+         + url_for('print_status' ,uuid=uuid) + '<br>'\
+         + url_for('node_data'  ,uuid=uuid) + '<br>'
 #    send_email(json.dumps(json_data,
 #                          sort_keys = True,
 #                          indent = 2,
