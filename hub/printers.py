@@ -25,9 +25,9 @@ def printers_list():
     global printers
     data = {}
     with printers.lock:
-        for uuid, printer in printers.data.iteritems():
-            data[uuid] = {
-                    "uuid": printer.get("uuid"),
+    for id, printer in printers.data.iteritems():
+            data[id] = {
+                    "id": printer.get("id"),
                     "ip"  : printer.get("ip"),
                     "port": printer.get("port"),
                     "jobs": printer.get("jobs").list(),
@@ -37,18 +37,18 @@ def printers_list():
 
     return json.jsonify(data)
 
-@app.route('/printers/<int:uuid>/<action>',methods=['POST'])
-def print_action(uuid, action):
+@app.route('/printers/<int:id>/<action>',methods=['POST'])
+def print_action(id, action):
     """Post request to do a print action. UUID must match a printer
     type in the config file
     """
 
     global printers
-    #uuid = str(uuid)
+    #id = str(id)
     with printers.lock:
-        if not uuid in printers.data:
+        if not id in printers.data:
             abort(400)
-        printer = printers.data.get(uuid)
+        printer = printers.data.get(id)
         ip   = printer.get("ip")
         port = printer.get("port")
         key  = printer.get("key")
@@ -86,7 +86,8 @@ def print_action(uuid, action):
         if f:
             fpath = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
             f.save(fpath)
-            job_id = jobs.add(f.filename, uuid)
+            #TODO get job_id from request
+            job_id = jobs.add(f.filename, id)
         else:
             abort(400)
         # check if start isn't none, then make sure it is equal to true
@@ -97,14 +98,14 @@ def print_action(uuid, action):
     return json.jsonify({"message": action
                         + " successfully sent to the printer."})
 
-@app.route('/printers/<int:uuid>/status', methods=['GET'])
-def print_status(uuid):
+@app.route('/printers/<int:id>/status', methods=['GET'])
+def print_status(id):
 
-    #uuid = str(uuid)
+    #id = str(id)
     with printers.lock:
-        if not uuid in printers.data:
+        if not id in printers.data:
             abort(400)
-        printer = printers.data.get(uuid)
+        printer = printers.data.get(id)
         ip   = printer.get("ip")
         port = printer.get("port")
         key  = printer.get("key")
@@ -119,27 +120,25 @@ def print_status(uuid):
 
 
 @app.route('/printers/activate', methods=['GET'])
-def activate_printer(payload = None):
+def activate_printer():
     """API call to activate a printer on the hub.
     The printer should provide a parameter 'payload' in
     json format that contains it's IP address as "ip",
-    uuid as "uuid", port as "port", and apikey as "key"
+    id as "id", port as "port", and apikey as "key"
     :returns: TODO
     """
 
     global printers
-    if payload == None:
-        str_payload = request.args.get("payload")
-        payload     = json.loads(str_payload)
-
-    uuid = int(payload.get("uuid"))
-    ip   = payload.get("ip")
-    port = int(payload.get("port", 80))
-    key  = payload.get("key", "0")
+    #TODO make into post method on /printers
+    #TODO track thread that spawns for printer data
+    id = int(requests.args.get("id"))
+    ip   = requests.args.get("ip")
+    port = int(requests.args.get("port", 80))
+    key  = requests.args.get("key", "0")
     jobs = Jobs()
     cjob = {}
     status = {
-        "id": uuid,
+        "id": id,
         "friendly_id": "NOT_IMPLEMENTED",
         "model": "NOT_IMPLEMENTED",
         "num_jobs": 0,
@@ -160,9 +159,9 @@ def activate_printer(payload = None):
         }
     }
     with printers.lock:
-        if uuid in printers.data:
+        if id in printers.data:
             edit = False
-            printer = printers.data.get(uuid)
+            printer = printers.data.get(id)
             jobs = printer.get("jobs")
             cjob = printer.get("cjob")
             status = printer.get("status")
@@ -171,10 +170,10 @@ def activate_printer(payload = None):
                    key != printer.get("key"):
                 edit = True
             if not edit and status['data']['state']['text'] != "Offline":
-                return json.jsonify({"message": str(uuid)
+                return json.jsonify({"message": str(id)
                                         + " was already activated."})
-        printers.data[uuid] = {
-                "uuid": uuid,
+        printers.data[id] = {
+                "id": id,
                 "ip"  : ip,
                 "port": port,
                 "key" : key,
@@ -182,36 +181,34 @@ def activate_printer(payload = None):
                 "cjob": cjob,
                 "status": status
         }
-        printer = printers.data[uuid]
+        printer = printers.data[id]
+        #TODO Move job_data_collector to only start when a job is running
     thread.start_new_thread(job_data_collector, (printer,))
     thread.start_new_thread(printer_data_collector, (printer,))
 
-    return json.jsonify({"message": str(uuid) + " has been activated."})
+    return json.jsonify({"message": str(id) + " has been activated."})
 
-@app.route('/printers/<int:uuid>/jobs/list')
-def jobs_list(uuid):
+@app.route('/printers/<int:id>/jobs/list')
+def jobs_list(id):
     """Returns a json of queued up jobs
     :returns: TODO
     """
 
-    #uuid = str(uuid)
     try:
-        jobs = printers.data.get(uuid).get("jobs").list()
+        jobs = printers.data.get(id).get("jobs").list()
     except AttributeError:
-        #TODO how to handle printer not existing
-        jobs = []
+        abort(400)
     return json.jsonify(jobs)
 
-@app.route('/printers/<int:uuid>/jobs/next')
-def jobs_next(uuid):
+@app.route('/printers/<int:id>/jobs/next')
+def jobs_next(id):
     """Returns a json of the next job to be 
     processed by the printer
     """
 
-    #uuid = str(uuid)
     with printers.lock:
-        if uuid in printers.data:
-            job = printers.data.get(uuid).get("jobs").next(remove=False)
+        if id in printers.data:
+            job = printers.data.get(id).get("jobs").next(remove=False)
         else:
             #TODO if printer doesn't exists
             return json.jsonify({})
@@ -221,32 +218,30 @@ def jobs_next(uuid):
         #TODO if job didn't exist
         return json.jsonify({})
 
-@app.route('/printers/<int:uuid>/jobs/current', methods=["GET"])
-def jobs_current(uuid):
+@app.route('/printers/<int:id>/jobs/current', methods=["GET"])
+def jobs_current(id):
     """Returns a json of the current job
-    :uuid: id of printer to get the job from
+    :id: id of printer to get the job from
     :returns: current status of the job
     """
 
     with printers.lock:
-        if not uuid in printers.data:
+        if not id in printers.data:
             abort(400)
-        cjob = printers.data[uuid]["cjob"].copy()
+        cjob = printers.data[id]["cjob"].copy()
     return  json.jsonify(cjob)
 
 
-@app.route('/printers/<int:uuid>/jobs/<int:job_id>',
+@app.route('/printers/<int:id>/jobs/<int:job_id>',
                                     methods=["GET","DELETE"])
-def job_action(uuid, job_id):
-    """Will do the specified action on the job.
+def job_action(id, job_id):
+    """Will either add or delete a job
+
     """
-
-    #uuid   = str(uuid)
-
     if request.method == "GET":
         with printers.lock:
             try:
-                printer = printers.data.get(uuid)
+                printer = printers.data.get(id)
                 # if current job, return current job data
                 if printer:
                     cjob = printer.get("cjob")
