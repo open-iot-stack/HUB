@@ -56,14 +56,7 @@ def add_printer(web_url, printer):
                 + ' on ' + url)
         ret = update_headers(web_url)
         return add_printer(web_url, printer)
-    if code == 404:
-        # Hub is not registered. Updating headers should fix this.
-        log.log('ERROR: Printer ' + str(printer_id) + ' not added.'
-                + ' Server responded with ' + str(code) 
-                + ' on ' + url)
-        ret = update_headers(web_url)
-        return add_printer(web_url, printer)
-    if r.status_code != 201:
+    if code != 201:
         # Catch all for if bad status codes
         log.log('ERROR: Printer ' + str(printer_id) + ' not added.'
                 + ' Server responded with ' + str(code) 
@@ -75,7 +68,6 @@ def add_printer(web_url, printer):
 def patch_printer(web_url, printer):
     '''Patch a printer on the web api
     :web_url: Base webaddress of server, or ip
-    :headers: headers for request to use
     :printer: printer to be updated on the web api
     :returns: boolean of success
 
@@ -103,12 +95,6 @@ def patch_printer(web_url, printer):
                 + ' on ' + url)
         ret = update_headers(web_url)
         return patch_printer(web_url, printer)
-    if code == 404:
-        # Printer is not registered. Adding printer instead
-        log.log('ERROR: Printer ' + str(printer_id) + ' not updated.'
-                + ' Server responded with ' + str(code) 
-                + ' on ' + url)
-        return add_printer(web_url, printer)
     if code != 200:
         log.log('ERROR: Printer ' + str(printer_id) + ' not updated.'
                 + ' Server responded with ' + str(code) 
@@ -145,7 +131,7 @@ def delete_printer(web_url, printer_id):
                 + ' Server responded with ' + str(code) 
                 + ' on ' + url)
         ret = update_headers(web_url)
-        return delete_printer(web_url, printer)
+        return delete_printer(web_url, printer_id)
     if code == 404:
         # Printer is not registered. Claim deleted internally
         log.log('ERROR: Printer ' + str(printer_id) + ' not deleted.'
@@ -194,25 +180,7 @@ def add_job(web_url, job):
                 + ' on ' + url)
         ret = update_headers(web_url)
         return add_job(web_url, job)
-    if code == 404:
-        # Printer not found. Get printer and add printer, then add job
-        log.log('ERROR: Job ' + str(job_id) + ' not added.'
-                + ' Server responded with ' + str(code) 
-                + ' on ' + url)
-        with printers.printers.lock:
-            if printer_id in printers.printers.data:
-                printer = printers.printers.data.get('printer')
-            else:
-                log.log('ERROR: Printer ' + str(printer_id)
-                        + ' not found locally but ' + str(job_id)
-                        + ' is registered as its job')
-                return False
-        ret = add_printer(web_url, printer)
-        if ret:
-            return add_job(web_url, job)
-        else:
-            return False
-    if r.status_code != requests.codes.created:
+    if code != 201
         # Catch all if did not succeed and not handling
         log.log('ERROR: Job ' + str(job_id) + ' not created.'
                 + ' Server responded with ' + str(r.status_code)
@@ -255,11 +223,14 @@ def patch_job(web_url, job):
         else:
             return False
     if code == 404:
-        # Job not found. Add job instead 
+        # Job not found. Just let the job finish 
         log.log('ERROR: Job ' + str(job_id) + ' not updated.'
                 + ' Server responded with ' + str(code)
                 + ' on ' + url)
-        return add_job(web_url, job)
+        log.log("ERROR: Job " + str(job_id) + " was not found "
+                + "on " + str(url) + ". Something is really wrong.")
+        return True
+        #return add_job(web_url, job)
     elif code != 200:
         log.log('ERROR: Job ' + str(job_id) + ' not updated.'
                 + ' Server responded with ' + str(code)
@@ -268,14 +239,11 @@ def patch_job(web_url, job):
     log.log('Updated job ' + str(job_id) + ' on ' + url)
     return True
 
-def delete_job(web_url, headers, job):
+def delete_job(web_url, job):
     '''Will delete a job on the WebAPI
     :web_url: Base webaddress of server, or ip
-    :headers: headers for request to use
     :job:     job to be deleted to web api
-    :returns: Tuple of boolean of success and 
-              status code of response. Status code
-              is None if no response
+    :returns: boolean of success
 
     '''
     printer_id = job.get('printer')
@@ -320,14 +288,11 @@ def delete_job(web_url, headers, job):
     log.log('Updated job ' + str(job_id) + ' on ' + url)
     return True
 
-def add_node(web_url, headers, node):
+def add_node(web_url, node):
     '''Add a node to the web api
     :web_url: Base webaddress of server, or ip
-    :headers: headers for request to use
     :node: node to be added to web api
-    :returns: Tuple of boolean of success and 
-              status code of response. Status code
-              is None if no response
+    :returns: boolean of success
 
     '''
     hub_id = hub.ID
@@ -339,33 +304,41 @@ def add_node(web_url, headers, node):
     except requests.ConnectionError:
         log.log('ERROR: Could not connect to ' + url 
                 + '. Unable to add node ' + str(node_id) + '.')
-        return False, None
+        return False
     except requests.exceptions.Timeout:
         log.log('ERROR: Timeout when contacting ' + url
                 + '. Unable to add node ' + str(node_id) + '.')
-        return False, None
-    if r.status_code != requests.codes.created:
+        return False
+    code = r.status_code
+    if code == 401:
+        # Not authorized. Fix headers and try again
         log.log('ERROR: Node ' + str(node_id) + ' not added.'
-                + ' Server responded with ' + str(r.status_code) 
+                + ' Server responded with ' + str(code)
                 + ' on ' + url)
-        return False, r.status_code
+        ret = update_headers(web_url)
+        if ret:
+            return add_node(web_url, node)
+        else:
+            return False
+    if code != 201:
+        log.log('ERROR: Node ' + str(node_id) + ' not added.'
+                + ' Server responded with ' + str(code) 
+                + ' on ' + url)
+        return False
     log.log('Added Node ' + str(node_id) + ' to ' + url )
-    return True, r.status_code
+    return True
 
-def patch_node(web_url, headers, node):
+def patch_node(web_url, node):
     '''Patch a node on the web api
     :web_url: Base webaddress of server, or ip
-    :headers: headers for request to use
     :node: node to be updated on web api
-    :returns: Tuple of boolean of success and 
-              status code of response. Status code
-              is None if no response
+    :returns: boolean of success
 
     '''
     node_id = node.get('id')
     url = web_url + '/sensors/' + str(node_id)
     try:
-        r = requests.post(url, headers=headers,
+        r = requests.patch(url, headers=headers,
                             json=node, timeout=3)
     except requests.ConnectionError:
         log.log('ERROR: Could not connect to ' + url 
@@ -375,10 +348,108 @@ def patch_node(web_url, headers, node):
         log.log('ERROR: Timeout when contacting ' + url
                 + '. Unable to update node ' + str(node_id) + '.')
         return False, None
-    if r.status_code != requests.codes.created:
+    code = r.status_code
+    if code == 401:
+        # Not authorized. Fix headers and try again
         log.log('ERROR: Node ' + str(node_id) + ' not updated.'
-                + ' Server responded with ' + str(r.status_code) 
+                + ' Server responded with ' + str(code)
                 + ' on ' + url)
-        return False, r.status_code
+        ret = update_headers(web_url)
+        if ret:
+            return patch_node(web_url, node)
+        else:
+            return False
+    if code != 200:
+        log.log('ERROR: Node ' + str(node_id) + ' not updated.'
+                + ' Server responded with ' + str(code) 
+                + ' on ' + url)
+        return False
     log.log('Updated Node ' + str(node_id) + ' to ' + url )
-    return True, r.status_code
+    return True
+
+def delete_node(web_url, node_id):
+    '''Delete a node on the web api
+    :web_url: Base webaddress of server, or ip
+    :node_id: id of node to be deleted on web api
+    :returns: boolean of success
+
+    '''
+    url = web_url + '/sensors/' + str(node_id)
+    try:
+        r = requests.delete(url, headers=headers,
+                            timeout=3)
+    except requests.ConnectionError:
+        log.log('ERROR: Could not connect to ' + url 
+                + '. Unable to delete node ' + str(node_id) + '.')
+        return False
+    except requests.exceptions.Timeout:
+        log.log('ERROR: Timeout when contacting ' + url
+                + '. Unable to delete node ' + str(node_id) + '.')
+        return False
+    code = r.status_code
+    if code == 401:
+        # Not authorized. Fix headers and try again
+        log.log('ERROR: Node ' + str(node_id) + ' not deleted.'
+                + ' Server responded with ' + str(code)
+                + ' on ' + url)
+        ret = update_headers(web_url)
+        if ret:
+            return delete_node(web_url, node)
+        else:
+            return False
+    if code == 404:
+        # Node not found. Claim deleted internally
+        log.log('ERROR: Node ' + str(job_id) + ' not deleted.'
+                + ' Server responded with ' + str(code)
+                + ' on ' + url)
+        log.log('Node wasn\'t found on server to delete'
+                + ', faking it deleted')
+        return True
+    if code != 200:
+        log.log('ERROR: Node ' + str(node_id) + ' not deleted.'
+                + ' Server responded with ' + str(code) 
+                + ' on ' + url)
+        return False
+    log.log('Updated Node ' + str(node_id) + ' to ' + url )
+    return True
+
+def add_data(web_url, data, node_id):
+    """Adds data to web api
+    :web_url: Base webaddress of server, or ip
+    :node_id: id of node the data is from
+    :data: data to be added to the web api
+    :returns: boolean of success
+
+    """
+    #TODO sensor data parsing, category will be [temperature,humidity,door], for door send open or closed
+    url = web_url + '/sensors/' + node_id + '/data'
+    try:
+        r = requests.post(url, headers=headers,
+                            json=data, timeout=3)
+    except requests.ConnectionError:
+        log.log('ERROR: Could not connect to ' + url 
+                + '. Unable to add data from node ' 
+                + str(node_id) + '.')
+        return False
+    except requests.exceptions.Timeout:
+        log.log('ERROR: Timeout when contacting ' + url
+                + '. Unable to add data from node '
+                + str(node_id) + '.')
+        return False
+    code = r.status_code
+    # Handle error codes from web api
+    if code == 401:
+        # Not authorized. Fix headers and try again
+        log.log('ERROR: Data from node ' + str(node_id) + ' not added.'
+                + ' Server responded with ' + str(code) 
+                + ' on ' + url)
+        ret = update_headers(web_url)
+        return add_data(web_url, printer, node_id)
+    if code != 201:
+        # Catch all for if bad status codes
+        log.log('ERROR: Data from node ' + str(node_id) + ' not added.'
+                + ' Server responded with ' + str(code) 
+                + ' on ' + url)
+        return False
+    log.log('Added printer ' + str(node_id) + ' to ' + url )
+    return True
