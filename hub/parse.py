@@ -9,7 +9,7 @@ def parse_printer_status(printer, printer_state):
     :printer_status: dictionary of status from the printer
     :returns: the information for the web api
     """
-    uuid = printer.get("uuid")
+    id = printer.get("id")
     jobs = printer.get("jobs")
     status = printer.get("status")
     friendly_id = status.get("friendly_id")
@@ -18,7 +18,7 @@ def parse_printer_status(printer, printer_state):
     description = status.get("description")
     num_jobs = len(jobs.list())
     s = {
-            "id": uuid,
+            "id": id,
             "friendly_id": friendly_id,
             "manufacturer": manufacturer,
             "model": model,
