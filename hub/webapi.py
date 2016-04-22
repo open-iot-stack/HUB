@@ -4,8 +4,6 @@
 import os
 import hub
 import auth
-import printers
-import nodes
 
 #DO NOT EDIT HEADERS MANUALY
 headers = {}
@@ -180,7 +178,7 @@ def add_job(web_url, job):
                 + ' on ' + url)
         ret = update_headers(web_url)
         return add_job(web_url, job)
-    if code != 201
+    if code != 201:
         # Catch all if did not succeed and not handling
         log.log('ERROR: Job ' + str(job_id) + ' not created.'
                 + ' Server responded with ' + str(r.status_code)
