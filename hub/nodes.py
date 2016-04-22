@@ -8,20 +8,22 @@ from flask import request
 from flask import json
 from flask import abort
 from hub import app
-from dealer import sensor_data_collector
+from dealer import node_data_collector
 
 nodes = Chest()
 
-@app.route('/sensors/<int:id>/data', methods=['GET'])
-def sensor_data(id):
-    global nodes
+@app.route('/nodes/<int:id>', methods=['GET'])
+def node_data(id):
     #uuid = str(uuid)
-    return str(nodes.data)
+    with nodes.lock:
+        if id in nodes.data:
+            return json.jsonify(nodes.data.get(id).copy())
+    abort(400)
 
-@app.route('/sensors/activate', methods=['GET'])
-def activate_sensor(payload = None):
-    """API call to activate a sensor on the hub.
-    The sensor should provide a parameter 'payload' in
+@app.route('/nodes/activate', methods=['GET'])
+def activate_node(payload = None):
+    """API call to activate a node on the hub.
+    The node should provide a parameter 'payload' in
     json format that contains it's IP address as "ip",
     id as "id", and port as "port"
     :returns: TODO
@@ -52,17 +54,16 @@ def activate_sensor(payload = None):
                     "type": pertype,
                     "port": port
             }
-        thread.start_new_thread(sensor_data_collector, (id, ip, pertype))
+        thread.start_new_thread(node_data_collector, (id, ip, pertype))
         return json.jsonify({"message": str(id) + " has been activated."})
 
     log.log("ERROR: Node " + str(id) + " tried to activate but was never registered")
     abort(400)
 
-@app.route('/sensors/list')
-def sensors_list():
-    """Return a json of the sensors that are currently active
+@app.route('/nodes', methods=['GET'])
+def nodes_list():
+    """Return a json of the nodes that are currently active
     :returns: TODO
     """
 
-    global nodes
-    return json.jsonify(nodes.data)
+    return json.jsonify(nodes.data.copy())
