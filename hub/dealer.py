@@ -15,7 +15,7 @@ import auth
 from hub import app
 
 def printer_data_collector(printer):
-    uuid   = printer.get("uuid")
+    id   = printer.get("id")
     ip     = printer.get("ip")
     port   = printer.get("port")
     key    = printer.get("key")
@@ -25,7 +25,7 @@ def printer_data_collector(printer):
     printers     = hub.printers.printers
     send_channel = hub.send_channel
     log          = hub.log
-    log.log("printer_data_collector starting for printer " + str(uuid))
+    log.log("printer_data_collector starting for printer " + str(id))
     failures     = 0
     #url          = "http://" + ip + ":" + port
     url          = ip + ":" + str(port)
@@ -33,9 +33,9 @@ def printer_data_collector(printer):
     while(True):
         if failures > 20:
             log.log("ERROR: Have failed communication 20 times in a row."
-                  + " Closing connection with " + str(uuid))
+                  + " Closing connection with " + str(id))
             with printers.lock:
-                if printers.data.has_key(uuid):
+                if printers.data.has_key(id):
                     # SET STATUS TO OFFLINE
                     status["data"]["state"]["text"] = "Offline"
                     pass
@@ -47,11 +47,11 @@ def printer_data_collector(printer):
             sleep(1)
             failures += 1
             log.log("ERROR: Could not collect printer"
-                  + " data from printer "+str(uuid))
+                  + " data from printer "+str(id))
             continue
         if response.status_code != requests.codes.ok:
             log.log("ERROR: Response from "
-                    + str(uuid) + " returned status code "
+                    + str(id) + " returned status code "
                     + response.status_code + " on "
                     + url)
         else:
@@ -67,7 +67,7 @@ def printer_data_collector(printer):
 
 
 def job_data_collector(printer):
-    uuid = printer.get("uuid")
+    id = printer.get("id")
     ip   = printer.get("ip")
     port = printer.get("port")
     key  = printer.get("key")
@@ -77,7 +77,7 @@ def job_data_collector(printer):
     printers     = hub.printers.printers
     send_channel = hub.send_channel
     log          = hub.log
-    log.log("job_data_collector starting for printer " + str(uuid))
+    log.log("job_data_collector starting for printer " + str(id))
     failures     = 0
     #url          = "http://" + ip + ":" + port
     url          = ip + ":" + str(port)
@@ -85,9 +85,9 @@ def job_data_collector(printer):
     while(True):
         if failures > 20:
             log.log("ERROR: Have failed communication 20 times in a row."
-                  + " Closing connection with " + str(uuid))
+                  + " Closing connection with " + str(id))
             with printers.lock:
-                if printers.data.has_key(uuid):
+                if printers.data.has_key(id):
                     status["data"]["state"]["text"] = "Offline"
             thread.exit()
         response = octopi.get_job_info(url, key)
@@ -97,11 +97,11 @@ def job_data_collector(printer):
             sleep(1)
             failures += 1
             log.log("ERROR: Could not collect"
-                   + " job data from printer " + str(uuid))
+                   + " job data from printer " + str(id))
             continue
         if response.status_code != requests.codes.ok:
             log.log("ERROR: Response from "
-                    + str(uuid) + " returned status code "
+                    + str(id) + " returned status code "
                     + response.status_code + " on "
                     + url)
         else:
@@ -132,7 +132,7 @@ def get_temp(node_ip, gpio):
     #print("temp: "+temp+" humidity: "+ humi)
     #return data
 
-def node_data_collector(uuid, ip, pertype):
+def node_data_collector(id, ip, pertype):
     """Should spawn as its own thread for each node
     that calls activate. Collects data from the node every
     second and dumps it into the send channel.
@@ -150,10 +150,10 @@ def node_data_collector(uuid, ip, pertype):
         # load the json from the chip
         if failures > 20:
             log.log("ERROR: Have failed communication 20 times in a row."
-                  + " Closing connection with " + str(uuid))
+                  + " Closing connection with " + str(id))
             with nodes.lock:
-                if nodes.data.has_key(uuid):
-                    nodes.data.pop(uuid)
+                if nodes.data.has_key(id):
+                    nodes.data.pop(id)
             thread.exit()
         try:
             #need to find how we're getting the node_ip and fill in.
@@ -164,26 +164,26 @@ def node_data_collector(uuid, ip, pertype):
         except requests.Timeout:
             failures += 1
             log.log("ERROR: Timeout occured when communicating with "
-                    + str(uuid) + ".")
+                    + str(id) + ".")
             continue
         except requests.ConnectionError:
             failures += 1
             with nodes.lock:
-                if (ip == nodes.data[uuid]["ip"]):
+                if (ip == nodes.data[id]["ip"]):
                     log.log("ERROR: Lost Connection to "
-                            + str(uuid) + ".")#" Thread exiting...")
+                            + str(id) + ".")#" Thread exiting...")
             continue
     # Start handling of data here.
 
         if response.status_code != requests.codes.ok:
             log.log("ERROR: Response from "
-                    + str(uuid) + " returned status code "
+                    + str(id) + " returned status code "
                     + response.status_code)
 
         else:
             r_json = response.json()
             send_channel.send({
-                uuid: {
+                id: {
                     pertype : r_json.get("data")
                 } 
             })
@@ -256,7 +256,7 @@ def upload_and_print(printer,job_id,fpath,loc=octopi.local):
     :returns: None
 
     """
-    uuid = printer.get("uuid")
+    id = printer.get("id")
     ip   = printer.get("ip")
     port = printer.get("port")
     key  = printer.get("key")
@@ -268,7 +268,7 @@ def upload_and_print(printer,job_id,fpath,loc=octopi.local):
         return False
     r = octopi.upload_file(url, key, fpath, loc)
     if r == None:
-        log.log("ERROR: Did not have a response from " + str(uuid)
+        log.log("ERROR: Did not have a response from " + str(id)
                 + ". File upload canceled for " + fpath + ".")
         return False
     if r.status_code != requests.codes.created:
@@ -280,11 +280,11 @@ def upload_and_print(printer,job_id,fpath,loc=octopi.local):
     #TODO fix this to work with gcode files as well
     r = slice_and_print(url, key, fname, loc)
     if r == None:
-        log.log("ERROR: Did not have a response from " + str(uuid)
+        log.log("ERROR: Did not have a response from " + str(id)
                 + ". File slice canceled for " + fname + ".")
         return False
     if r.status_code != requests.codes.accepted:
-        log.log("ERROR: Slice and print did not work for " + str(uuid)
+        log.log("ERROR: Slice and print did not work for " + str(id)
                 + ". Return code from printer " + str(r.status_code)
                 + ". Is the printer already printing?")
         return False
