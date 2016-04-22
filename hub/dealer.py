@@ -115,7 +115,7 @@ def job_data_collector(printer):
         sleep(1)
 
 def get_temp(node_ip, gpio):
-    """Creates request to dht sensor for data"""
+    """Creates request to dht node for data"""
 
     url = "http://"+str(node_ip)+"/"+str(gpio)+"/dht"
     response = requests.get(url, timeout=10)
@@ -132,9 +132,9 @@ def get_temp(node_ip, gpio):
     #print("temp: "+temp+" humidity: "+ humi)
     #return data
 
-def sensor_data_collector(uuid, ip, pertype):
-    """Should spawn as its own thread for each sensor
-    that calls activate. Collects data from the sensor every
+def node_data_collector(uuid, ip, pertype):
+    """Should spawn as its own thread for each node
+    that calls activate. Collects data from the node every
     second and dumps it into the send channel.
 
     """
@@ -191,7 +191,7 @@ def sensor_data_collector(uuid, ip, pertype):
 
 def data_receiver():
     """Should spawn as its own thread. Will take data that
-    is collected by the sensors and send it to the Web API.
+    is collected by the nodes and send it to the Web API.
     Also is in charge of logging data based on UUID.
 
     """
