@@ -9,7 +9,7 @@ import requests
 import webapi
 import octopifunctions as octopi
 from message_generator import MessageGenerator
-from jobs import parse_job_status, parse_printer_status
+from parse import parse_job_status, parse_printer_status
 from time import sleep
 import auth
 from hub import app
