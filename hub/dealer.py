@@ -133,7 +133,7 @@ def get_temp(node_ip, gpio):
     #print("temp: "+temp+" humidity: "+ humi)
     #return data
 
-def node_data_collector(id, ip, pertype):
+def node_data_collector(id, ip):
     """Should spawn as its own thread for each node
     that calls activate. Collects data from the node every
     second and dumps it into the send channel.
@@ -144,8 +144,6 @@ def node_data_collector(id, ip, pertype):
     log          = hub.log
     failures     = 0
     #print str(hub.print_enabled)
-    #TODO fix url to be the correct call based on type
-    #url = "http://" + ip + "/GPIO/2"
     #TODO a lot of this code is fulling working/tested but general idea is there
     while(True):
         # load the json from the chip
@@ -157,11 +155,10 @@ def node_data_collector(id, ip, pertype):
                     nodes.data.pop(id)
             thread.exit()
         try:
-            #need to find how we're getting the node_ip and fill in.
-            temp, humidity = get_temp(ip, 3)
+            #TODO: get all sensors attached to node then call the correct
+            #method to get data
+            #temp, humidity = get_temp(ip, 3)
             failures = 0
-        #TODO Talk to Nolan about how to handle these exceptions.
-        #Can either be node or server side
         except requests.Timeout:
             failures += 1
             log.log("ERROR: Timeout occured when communicating with "
@@ -183,11 +180,12 @@ def node_data_collector(id, ip, pertype):
 
         else:
             r_json = response.json()
-            send_channel.send({
-                id: {
-                    pertype : r_json.get("data")
-                } 
-            })
+            #TODO: Could break current implementation
+            #send_channel.send({
+            #    id: {
+            #        pertype : r_json.get("data")
+            #    }
+            #})
         time.sleep(1)
 
 def data_receiver():
