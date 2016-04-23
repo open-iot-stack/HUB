@@ -36,9 +36,11 @@ def activate_node(payload = None):
     conf_data = hub.conf.read_data()
     log = hub.log
 
-    anode = Node(ip)
+    anode = Node(id, ip)
     db_session.add(anode)
     db_session.commit()
+
+    nodes = Node.query.all()
     #TODO make dynamic registering by going through different GPIO
     # ports and when you get a response that's the type
 
@@ -68,13 +70,19 @@ def nodes_list():
     """Return a json of the nodes that are currently active
     :returns: TODO
     """
-    nodes = Node.query.all()
-    print(nodes)
-    return json.jsonify(nodes)
+
+    results = Node.query.all()
+    json_results = []
+    for result in results:
+        d = {'id': result.id,
+             'ip': result.ip}
+        json_results.append(d)
+    return json.jsonify(nodes = json_results)
+
 
 @app.route('/nodes/trigger/callback', methods=['GET'])
 def nodes_trigger_callback():
     """Return a json of the nodes that are currently active
     :returns: TODO
     """
-    return json.jsonify(Node.query.all())
+    return json.jsonify(nodes.data.copy())

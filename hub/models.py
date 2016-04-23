@@ -3,11 +3,10 @@
 
 from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from sqlalchemy.orm import relationship
-#from database import db.Base
-import hub.database as db
-#from hub.database import db.Base
+from database import Base
 
-class File(db.Base):
+
+class File(Base):
     __tablename__="files"
 
     id = Column(Integer, primary_key=True)
@@ -22,7 +21,7 @@ class File(db.Base):
         return "<File(name='%s', origin='%s', size='%d', date='%s')>" %\
                 (self.name, self.origin, self.size, self.date)
 
-class Job(db.Base):
+class Job(Base):
     __tablename__="jobs"
 
     id         = Column(Integer, primary_key=True)
@@ -41,7 +40,7 @@ class Job(db.Base):
         (self.uuid, self.created_at, self.updated_at, self.status,\
             self.file)
 
-class Printer(db.Base):
+class Printer(Base):
     __tablename__="printers"
 
     id   = Column(Integer, primary_key=True)
@@ -54,13 +53,14 @@ class Printer(db.Base):
                 % (self.uuid, self.jobs, self.cjob)
 
 
-class Node(db.Base):
+class Node(Base):
     __tablename__="nodes"
 
     id = Column(Integer, primary_key=True)
     ip = Column(String)
 
-    def __init__(self, ip):
+    def __init__(self, id, ip):
+        self.id = id
         self.ip = ip
 
     def __repr__(self):
@@ -68,7 +68,7 @@ class Node(db.Base):
                 % (self.id, self.ip)
 
 
-class Sensor(db.Base):
+class Sensor(Base):
     __tablename__="sensors"
 
     id   = Column(Integer, primary_key=True)
@@ -84,4 +84,4 @@ class Sensor(db.Base):
 
     def __repr__(self):
         return "<Sensor='%d' node_id='%d', pin='%d', type='%s')>"\
-                % (self.id, self.node_id, self.pin, self.type)
+                % (self.node_id, self.pin, self.type)
