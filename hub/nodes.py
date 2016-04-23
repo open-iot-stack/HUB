@@ -73,5 +73,4 @@ def nodes_trigger_callback():
     """Return a json of the nodes that are currently active
     :returns: TODO
     """
-
     return json.jsonify(nodes.data.copy())
