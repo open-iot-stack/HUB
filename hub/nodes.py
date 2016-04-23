@@ -6,7 +6,7 @@ import hub
 from chest import Chest
 from flask import request, json, url_for
 from hub import app
-from dealer import node_data_collector
+from dealer import node_data_collector,get_temp,get_gpio
 from database import db_session
 from models import Sensor, Node
 
@@ -20,6 +20,7 @@ def node_data(node_id):
     d = {'id': result.id,
          'ip': result.ip}
     return json.jsonify(node=d)
+
 
 @app.route('/nodes/activate', methods=['GET'])
 def activate_node(payload = None):
@@ -82,35 +83,54 @@ def nodes_trigger_callback():
 @app.route('/nodes/<int:nid>/sensors', methods=['GET', 'POST'])
 def node_sensors(nid):
     """
-        List Sensors Attached to Node
+        List Node Sensors
         ---
-    get:
-      description: Returns sensors attached to node
-      summary: Find sensors by node id
-      operationId: getSensorsFromNode
-      produces:
-      - application/json
-      - text/html
-      responses:
-        '200':
-          description: sensor response
-          schema:
-            type: array
-            items:
-              $ref: '#/definitions/Sensor'
-        default:
-          description: error payload
-          schema:
-            $ref: '#/definitions/ErrorModel'
-    parameters:
-    - name: id
-      in: path
-      description: ID of node to use
-      required: true
-      type: array
-      items:
-        type: string
-    """
+        tags:
+          - nodes, sensors
+        definitions:
+          - schema:
+              id: Sensor
+              properties:
+                id:
+                 type: int
+                 description: the sensors type
+        parameters:
+          - in: body
+            name: body
+            schema:
+              id: User
+              required:
+                - email
+                - name
+              properties:
+                email:
+                  type: string
+                  description: email for user
+                name:
+                  type: string
+                  description: name for user
+                address:
+                  description: address for user
+                  schema:
+                    id: Address
+                    properties:
+                      street:
+                        type: string
+                      state:
+                        type: string
+                      country:
+                        type: string
+                      postalcode:
+                        type: string
+                groups:
+                  type: array
+                  description: list of groups
+                  items:
+                    $ref: "#/definitions/Group"
+        responses:
+          201:
+            description: User created
+        """
 
 
     if request.method == 'GET':
@@ -133,3 +153,33 @@ def node_sensors(nid):
         return json.jsonify({'sensor': {'node_id': nid, 'pin': pin,
                                                         'sensor_type': sensor_type}}), 201
 
+@app.route('/sensors/<int:sensor_id>', methods=['GET'])
+def get_sensor(sensor_id):
+    result = Sensor.query.filter_by(id=sensor_id).first()
+    if result is None:
+        abort(404)
+    d = {'id': result.id,
+         'node_id': result.node_id,
+         'pin': result.pin,
+         'sensor_type': result.sensor_type}
+    return json.jsonify(sensor=d)
+
+
+@app.route('/sensors/<int:sensor_id>/data', methods=['GET'])
+def get_sensor_data(sensor_id):
+    result = Sensor.query.filter_by(id=sensor_id).first()
+    if result is None:
+        abort(404)
+    node_result = Node.query.filter_by(id=result.node_id).first()
+    if result is None:
+        abort(404)
+
+    if result.sensor_type == 'temp':
+        temp, humidity = get_temp(node_result.ip, result.pin)
+        d = {'temp': temp,
+             'humi': humidity}
+    else:
+        data = get_gpio(node_result.ip, result.pin, result.sensor_type)
+        d = {'data': data}
+
+    return json.jsonify(data=d)

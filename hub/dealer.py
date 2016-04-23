@@ -125,13 +125,17 @@ def get_temp(node_ip, gpio):
     humidity = data['humi']
     return temp, humidity #data
 
-    #req = Request(node_ip+"/"+gpio+"/dht")
-    #response_body = urlopen(req).read()
-    #data = json.loads(response_body)
-    #temp = data['data']['temp']
-    #humidity = data['data']['humi']
-    #print("temp: "+temp+" humidity: "+ humi)
-    #return data
+
+def get_gpio(node_ip, gpio, type):
+    """Creates request to node for data"""
+
+    url = "http://"+str(node_ip)+"/gpio/"+str(gpio)+"/"+type
+    response = requests.get(url, timeout=10)
+    data = json.loads(response.text)
+    if data['message']=="success":
+        return data["data"]
+    return "error"
+
 
 def node_data_collector(id, ip):
     """Should spawn as its own thread for each node
@@ -172,7 +176,7 @@ def node_data_collector(id, ip):
                             + str(id) + ".")#" Thread exiting...")
             continue
     # Start handling of data here.
-
+    """
         if response.status_code != requests.codes.ok:
             log.log("ERROR: Response from "
                     + str(id) + " returned status code "
@@ -186,7 +190,8 @@ def node_data_collector(id, ip):
             #        pertype : r_json.get("data")
             #    }
             #})
-        time.sleep(1)
+    """
+    time.sleep(1)
 
 def data_receiver():
     """Should spawn as its own thread. Will take data that
