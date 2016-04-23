@@ -37,8 +37,8 @@ def activate_node(payload = None):
     log = hub.log
 
     anode = Node(ip)
-    db.session.add(anode)
-    db.session.commit()
+    db_session.add(anode)
+    db_session.commit()
     #TODO make dynamic registering by going through different GPIO
     # ports and when you get a response that's the type
 
