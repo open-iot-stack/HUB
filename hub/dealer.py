@@ -161,7 +161,14 @@ def node_data_collector(id, ip):
         try:
             #TODO: get all sensors attached to node then call the correct
             #method to get data
-            #temp, humidity = get_temp(ip, 3)
+            results = Sensor.query.filter_by(node_id=nid).all()
+            json_results = []
+
+            for result in results:
+                if result.sensor_type == 'temp':
+                    temp, humidity = get_temp(ip, result.pin)
+                else:
+                    data = get_gpio(ip, result.pin, result.sensor_type)
             failures = 0
         except requests.Timeout:
             failures += 1
