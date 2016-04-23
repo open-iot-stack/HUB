@@ -12,7 +12,7 @@ from models import Sensor, Node
 
 nodes = Chest()
 
-@app.route('/nodes/<int:id>', methods=['GET'])
+@app.route('/nodes/<int:node_id>', methods=['GET'])
 def node_data(node_id):
     result = Node.query.filter_by(id=node_id).first()
     if result is None:
@@ -43,7 +43,7 @@ def activate_node(payload = None):
 
     result = Node.query.filter_by(id=id).first()
     if result:
-        thread.start_new_thread(node_data_collector, (id, ip, pertype))
+        thread.start_new_thread(node_data_collector, (id, ip))
         return json.jsonify({"message": str(id) + " has been activated."})
 
     log.log("ERROR: Node " + str(id) + " tried to activate but was never registered")
@@ -79,7 +79,7 @@ def nodes_trigger_callback():
     return json.jsonify(d)
 
 
-@app.route('/nodes/<int:id>/sensors', methods=['GET', 'POST'])
+@app.route('/nodes/<int:nid>/sensors', methods=['GET', 'POST'])
 def node_sensors(nid):
     """
         List Sensors Attached to Node
