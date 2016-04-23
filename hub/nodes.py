@@ -14,7 +14,6 @@ nodes = Chest()
 
 @app.route('/nodes/<int:id>', methods=['GET'])
 def node_data(id):
-    #uuid = str(uuid)
     with nodes.lock:
         if id in nodes.data:
             return json.jsonify(nodes.data.get(id).copy())
