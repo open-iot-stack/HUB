@@ -10,7 +10,7 @@
 
 import json
 import os
-import httplib
+import hub
 import requests
 
 
@@ -119,9 +119,9 @@ def http_request(address, api_extension,
     url = "http://" + address + api_extension
     try:
         if method == type_get:
-            response = requests.get(url, headers=headers, params=params)
+            response = requests.get(url, headers=headers, params=params, timeout=10)
         elif method == type_post:
-            response = requests.post(url, headers=headers, params=params,
+            response = requests.post(url, headers=headers, params=params, timeout=10,
                                         files=files, json=json, data=data)
     except requests.ConnectionError:
         hub.log.log("ERROR: Could not connect to " + url)
@@ -131,20 +131,6 @@ def http_request(address, api_extension,
         return None
     return response
 
-########################
-    conn = httplib.HTTPConnection(url_address)
-    conn.request(httpMethod, apiExtension, str(params), header)
-    response = conn.getresponse()
-    return response
-    if(200 <=  response.status and response.status < 300):
-        if response.status is 204: #delete returns no content and crashes 
-            return response.status
-        else :
-            return json.loads(response.read())
-    else:
-        return str(response.status) + '\n' + str(response.reason)   
-    
-    
 ##################################### PUBLIC METHODS #####################################
 
     
