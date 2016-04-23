@@ -29,14 +29,11 @@ def activate_node(payload = None):
     """
 
     global nodes
-    if payload == None:
-        str_payload = request.args.get('payload')
-        payload     = json.loads(str_payload)
-
-    id   = request.args.get("id")
+    id   = int(request.args.get("id"))
     ip   = request.args.get("ip")
     port = int(request.args.get("port", 80))
     conf_data = hub.conf.read_data()
+    log = hub.log
 
     #TODO make dynamic registering by going through different GPIO
     # ports and when you get a response that's the type
