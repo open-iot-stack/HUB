@@ -21,26 +21,20 @@ def sensor_data(uuid):
 @app.route('/sensors/activate', methods=['GET'])
 def activate_sensor(payload = None):
     """API call to activate a sensor on the hub.
-    The sensor should provide a parameter 'payload' in
-    json format that contains it's IP address as "ip",
-    uuid as "uuid", and port as "port"
-    :returns: TODO
+    The sensor should contain a parameter fo it's \
+    IP address as "ip", uuid as "id"
     """
 
     global nodes
-    if payload == None:
-        str_payload = request.args.get('payload')
-        payload     = json.loads(str_payload)
-
-    uuid = int(payload.get("uuid"))
-    ip   = payload.get("ip")
-    port = int(payload.get("port", 80))
+    
+    uuid = int(request.args.get("id").replace("/",""))
+    ip = request.args.get("ip")
+    port = 80
     conf_data = hub.conf.read_data()
 
     #TODO make dynamic registering by going through different GPIO
     # ports and when you get a response that's the type
     if uuid in conf_data.keys():
-        pertype = conf_data.get(uuid)
         with nodes.lock:
             # THIS REQUIRES NODES THREADS TO REMOVE THEMSELVES
             if uuid in nodes.data:
@@ -49,14 +43,15 @@ def activate_sensor(payload = None):
             nodes.data[uuid] = {
                     "uuid": uuid,
                     "ip"  : ip,
-                    "type": pertype,
+                    "type": "temp",
                     "port": port
             }
-        thread.start_new_thread(sensor_data_collector, (uuid, ip, pertype))
-        return json.jsonify({"message": str(uuid) + " has been activated."})
+    thread.start_new_thread(sensor_data_collector, (uuid, ip, "temp"))
+
+    return json.jsonify({"message": str(uuid) + " has been activated."})
 
     #TODO Log the fact that the sensor must be registered.
-    abort(400)
+    #abort(400)
 
 @app.route('/sensors/list')
 def sensors_list():

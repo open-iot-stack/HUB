@@ -9,7 +9,7 @@ import octopifunctions as octopi
 from message_generator import MessageGenerator
 from jobs import parse_job_status, parse_printer_status
 from time import sleep
-
+from flask import json
 from hub import app
 
 def printer_data_collector(printer):
@@ -121,11 +121,11 @@ def job_data_collector(printer):
 def get_temp(node_ip, gpio):
     """Creates request to dht sensor for data"""
 
-    url = "http://"+str(node_ip)+"/"+str(gpio)+"/dht"
+    url = "http://"+str(node_ip)+"/gpio/"+str(gpio)+"/dht"
     response = requests.get(url, timeout=10)
     data = json.loads(response.text)
-    temp = data['data']['temp']
-    humidity = data['data']['humi']
+    temp = data['temp']
+    humidity = data['humi']
     return temp, humidity #data
 
     #req = Request(node_ip+"/"+gpio+"/dht")
@@ -161,7 +161,7 @@ def sensor_data_collector(uuid, ip, pertype):
             thread.exit()
         try:
             #need to find how we're getting the node_ip and fill in.
-            temp, humidity = get_temp(ip, 1)
+            temp, humidity = get_temp(ip, 3)
             failures = 0
         #TODO Talk to Nolan about how to handle these exceptions.
         #Can either be node or server side
