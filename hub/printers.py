@@ -131,10 +131,10 @@ def activate_printer():
     global printers
     #TODO make into post method on /printers
     #TODO track thread that spawns for printer data
-    id = int(requests.args.get("id"))
-    ip   = requests.args.get("ip")
-    port = int(requests.args.get("port", 80))
-    key  = requests.args.get("key", "0")
+    id = int(request.args.get("id"))
+    ip   = request.args.get("ip")
+    port = int(request.args.get("port", 80))
+    key  = request.args.get("key", "0")
     jobs = Jobs()
     cjob = {}
     status = {
