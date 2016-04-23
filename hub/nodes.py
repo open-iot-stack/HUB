@@ -4,7 +4,7 @@
 import thread
 import hub
 from chest import Chest
-from flask import request, json, abort
+from flask import request, json, url_for
 from hub import app
 from dealer import node_data_collector
 from database import db_session
@@ -19,7 +19,7 @@ def node_data(node_id):
         abort(404)
     d = {'id': result.id,
          'ip': result.ip}
-    return json.jsonify(classes=d)
+    return json.jsonify(node=d)
 
 @app.route('/nodes/activate', methods=['GET'])
 def activate_node(payload = None):
@@ -125,12 +125,11 @@ def node_sensors(nid):
             json_results.append(d)
         return json.jsonify(sensors = json_results)
     if request.method == 'POST':
-        node_id = request.json.get('node_id')
         pin = request.json.get('pin')
         sensor_type = request.json.get('sensor_type')
-        Node.query.filter(Sensor.id == id).update({'node_id': node_id, 'pin': pin,
-                                                        'sensor_type': sensor_type})
-        db.session.commit()
-        return json.jsonify({'sensor': {'node_id': node_id, 'pin': pin,
+        sensor = Sensor(nid, pin, sensor_type)
+        db_session.add(sensor)
+        db_session.commit()
+        return json.jsonify({'sensor': {'node_id': nid, 'pin': pin,
                                                         'sensor_type': sensor_type}}), 201
 
