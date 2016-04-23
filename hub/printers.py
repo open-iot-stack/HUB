@@ -9,12 +9,14 @@ from flask import request
 from flask import json
 from flask import abort
 from dealer import job_data_collector
+from dealer import upload_and_print
+from dealer import printer_data_collector
 import octopifunctions as octopi
 from hub import app
 
 printers = Chest()
 
-@app.route('/printers/list')
+@app.route('/printers', methods=['GET', 'POST'])
 def printers_list():
     """Returns a json of currently active printers
     :returns: TODO
@@ -23,54 +25,57 @@ def printers_list():
     global printers
     data = {}
     with printers.lock:
-        for uuid, printer in printers.data.iteritems():
-            data[uuid] = {
-                    "uuid": printer.get("uuid"),
+        for id, printer in printers.data.iteritems():
+            data[id] = {
+                    "id": printer.get("id"),
                     "ip"  : printer.get("ip"),
                     "port": printer.get("port"),
                     "jobs": printer.get("jobs").list(),
-                    "cjob": printer.get("cjob")
+                    "cjob": printer.get("cjob"),
+                    "status": printer.get("status")
             }
 
     return json.jsonify(data)
 
-@app.route('/printers/<int:uuid>/<action>',methods=['POST'])
-def print_action(uuid, action):
+@app.route('/printers/<int:id>/<action>',methods=['POST'])
+def print_action(id, action):
     """Post request to do a print action. UUID must match a printer
     type in the config file
     """
 
     global printers
-    #uuid = str(uuid)
+    #id = str(id)
     with printers.lock:
-        if not uuid in printers.data:
+        if not id in printers.data:
             abort(400)
-        printer = printers.data.get(uuid)
+        printer = printers.data.get(id)
         ip   = printer.get("ip")
         port = printer.get("port")
         key  = printer.get("key")
         jobs = printer.get("jobs")
         cjob = printer.get("cjob")
 
-    url = "http://" + ip + ":" + str(port)
+    url = ip + ":" + str(port)
 
     #TODO make helper function for actions to respond the web api
     # with the actual success as the command. For now just spawn command
     # as new thread
     if action == "start":
-        #response = octopi.StartCommand(url, key)
-        thread.start_new_thread(octopi.StartCommand, (url, key))
-        thread.start_new_thread(job_data_collector, (printer,))
+        job = jobs.current()
+        if job:
+            fpath = os.path.join(app.config['UPLOAD_FOLDER'],
+                                    job["data"]["file"]["name"])
+            job_id = job["id"]
+        thread.start_new_thread(upload_and_print,(printer,job_id,fpath))
+#        thread.start_new_thread(job_data_collector, (printer,))
         pass
 
     elif action == "pause":
-        #response = octopi.PauseUnpauseCommand(url, key)
-        thread.start_new_thread(octopi.PauseUnpauseCommand, (url, key))
+        thread.start_new_thread(octopi.pause_unpause_command, (url, key))
         pass
 
     elif action == "cancel":
-        #response = octopi.CancelCommand(url, key)
-        thread.start_new_thread(octopi.CancelCommand, (url, key))
+        thread.start_new_thread(octopi.cancel_command, (url, key))
         pass
 
     elif action == "upload":
@@ -81,113 +86,129 @@ def print_action(uuid, action):
         if f:
             fpath = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
             f.save(fpath)
-            job_id = jobs.add(f.filename)
+            #TODO get job_id from request
+            job_id = jobs.add(f.filename, id)
         else:
             abort(400)
-
-        start = request.args.get('start', None)
         # check if start isn't none, then make sure it is equal to true
-        if start and start.lower() == "true":
-            thread.start_new_thread(octopi.UploadFileAndPrint,
-                                            (url, key, fpath))
+        start = request.args.get('start', 'false')
+        if start.lower() == "true":
+            thread.start_new_thread(upload_and_print,(printer,job_id,fpath))
             # TODO Make sure nothing else is printing
-            # TODO remove job from jobs
-            printer["jobs"].remove(job_id)
-            printer["cjob"] = {
-                    "id": job_id
-            }
-            #thread.start_new_thread(job_data_collector, (printer,))
-            #TODO Handle starting the print job imediately
-            pass
-        pass
     return json.jsonify({"message": action
                         + " successfully sent to the printer."})
 
-@app.route('/printers/<int:uuid>/status', methods=['GET'])
-def print_status(uuid):
+@app.route('/printers/<int:id>/status', methods=['GET'])
+def print_status(id):
 
-    #uuid = str(uuid)
+    #id = str(id)
     with printers.lock:
-        if not uuid in printers.data:
+        if not id in printers.data:
             abort(400)
-        printer = printers.data.get(uuid)
+        printer = printers.data.get(id)
         ip   = printer.get("ip")
         port = printer.get("port")
         key  = printer.get("key")
         jobs = printer.get("jobs")
         cjob = printer.get("cjob")
+        status = printer.get("status")
 
     #url  = "http://" + ip + ":" + str(port)
 
-    #response = octopi.GetJobInfo(url, key)
     #TODO return the actual data that's useful for the web api
-    return json.jsonify(cjob)
+    return json.jsonify(status.copy())
 
 
 @app.route('/printers/activate', methods=['GET'])
-def activate_printer(payload = None):
+def activate_printer():
     """API call to activate a printer on the hub.
     The printer should provide a parameter 'payload' in
     json format that contains it's IP address as "ip",
-    uuid as "uuid", port as "port", and apikey as "key"
+    id as "id", port as "port", and apikey as "key"
     :returns: TODO
     """
 
     global printers
-    if payload == None:
-        str_payload = request.args.get("payload")
-        payload     = json.loads(str_payload)
-
-    uuid = int(payload.get("uuid"))
-    ip   = payload.get("ip")
-    port = int(payload.get("port", 80))
-    key  = payload.get("key", "0")
+    #TODO make into post method on /printers
+    #TODO track thread that spawns for printer data
+    id = int(request.args.get("id"))
+    ip   = request.args.get("ip")
+    port = int(request.args.get("port", 80))
+    key  = request.args.get("key", "0")
     jobs = Jobs()
     cjob = {}
-
+    status = {
+        "id": id,
+        "friendly_id": "NOT_IMPLEMENTED",
+        "model": "NOT_IMPLEMENTED",
+        "num_jobs": 0,
+        "description": "NOT_IMPLEMENTED",
+        "data" : {
+            "state": {
+                "text": "Operational",
+                "flags": {
+                    "operational": True,
+                    "paused": False,
+                    "printing": False,
+                    "sd_ready": False,
+                    "error": False,
+                    "ready": False,
+                    "closed_or_error": False
+                }
+            }
+        }
+    }
     with printers.lock:
-        if uuid in printers.data:
-            return json.jsonify({"message": str(uuid)
-                                + " was already activated."})
-        printers.data[uuid] = {
-                "uuid": uuid,
+        if id in printers.data:
+            edit = False
+            printer = printers.data.get(id)
+            jobs = printer.get("jobs")
+            cjob = printer.get("cjob")
+            status = printer.get("status")
+            if ip != printer.get("ip") or \
+                   port != printer.get("port") or \
+                   key != printer.get("key"):
+                edit = True
+            if not edit and status['data']['state']['text'] != "Offline":
+                return json.jsonify({"message": str(id)
+                                        + " was already activated."})
+        printers.data[id] = {
+                "id": id,
                 "ip"  : ip,
                 "port": port,
                 "key" : key,
                 "jobs": jobs,
-                "cjob": cjob
+                "cjob": cjob,
+                "status": status
         }
-        printer = printers.data[uuid]
+        printer = printers.data[id]
+        #TODO Move job_data_collector to only start when a job is running
     thread.start_new_thread(job_data_collector, (printer,))
-#    thread.start_new_thread(printer_data_collector,
-#                            (uuid, ip, port, key))
+    thread.start_new_thread(printer_data_collector, (printer,))
 
-    return json.jsonify({"message": str(uuid) + " has been activated."})
+    return json.jsonify({"message": str(id) + " has been activated."})
 
-@app.route('/printers/<int:uuid>/jobs/list')
-def jobs_list(uuid):
+@app.route('/printers/<int:id>/jobs/list')
+def jobs_list(id):
     """Returns a json of queued up jobs
     :returns: TODO
     """
 
-    #uuid = str(uuid)
     try:
-        jobs = printers.data.get(uuid).get("jobs").list()
+        jobs = printers.data.get(id).get("jobs").list()
     except AttributeError:
-        #TODO how to handle printer not existing
-        jobs = []
-    return json.jsonify(jobs.list())
+        abort(400)
+    return json.jsonify(jobs)
 
-@app.route('/printers/<int:uuid>/jobs/next')
-def jobs_next(uuid):
+@app.route('/printers/<int:id>/jobs/next')
+def jobs_next(id):
     """Returns a json of the next job to be 
     processed by the printer
     """
 
-    #uuid = str(uuid)
     with printers.lock:
-        if uuid in printers.data:
-            job = printers.data.get(uuid).get("jobs").next(remove=False)
+        if id in printers.data:
+            job = printers.data.get(id).get("jobs").next(remove=False)
         else:
             #TODO if printer doesn't exists
             return json.jsonify({})
@@ -197,32 +218,30 @@ def jobs_next(uuid):
         #TODO if job didn't exist
         return json.jsonify({})
 
-@app.route('/printers/<int:uuid>/jobs/current', methods=["GET"])
-def jobs_current(uuid):
+@app.route('/printers/<int:id>/jobs/current', methods=["GET"])
+def jobs_current(id):
     """Returns a json of the current job
-    :uuid: id of printer to get the job from
+    :id: id of printer to get the job from
     :returns: current status of the job
     """
 
     with printers.lock:
-        if not uuid in printers.data:
+        if not id in printers.data:
             abort(400)
-        cjob = printers.data[uuid]["cjob"].copy()
+        cjob = printers.data[id]["cjob"].copy()
     return  json.jsonify(cjob)
 
 
-@app.route('/printers/<int:uuid>/jobs/<int:job_id>',
+@app.route('/printers/<int:id>/jobs/<int:job_id>',
                                     methods=["GET","DELETE"])
-def job_action(uuid, job_id):
-    """Will do the specified action on the job.
+def job_action(id, job_id):
+    """Will either add or delete a job
+
     """
-
-    #uuid   = str(uuid)
-
     if request.method == "GET":
         with printers.lock:
             try:
-                printer = printers.data.get(uuid)
+                printer = printers.data.get(id)
                 # if current job, return current job data
                 if printer:
                     cjob = printer.get("cjob")

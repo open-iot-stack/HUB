@@ -53,3 +53,26 @@ class Printer(db.Base):
         return "<Printer(uuid='%d' jobs='%s', cjob='%s')>"\
                 % (self.uuid, self.jobs, self.cjob)
 
+
+class Node(db.Base):
+    __tablename__="nodes"
+
+    id   = Column(Integer, primary_key=True)
+    ip = Column(String)
+
+    def __repr__(self):
+        return "<Node='%d' ip='%s')>"\
+                % (self.id, self.ip)
+
+
+class Sensor(db.Base):
+    __tablename__="sensors"
+
+    id   = Column(Integer, primary_key=True)
+    node_id = Column(Integer, ForeignKey('nodes.id'))
+    pin  = Column(Integer)
+    type = Column(String)
+
+    def __repr__(self):
+        return "<Sensor='%d' node_id='%d', pin='%d', type='%s')>"\
+                % (self.id, self.node_id, self.pin, self.type)

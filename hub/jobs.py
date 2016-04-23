@@ -3,56 +3,15 @@
 
 import thread
 #from collections import OrderedDict
+import os
 from datetime import datetime as dt
 from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
 import octopifunctions as octopi
-#from hub import app
 
-def parse_jobstatus(job, cjob, status="NOT_IMPLEMENTED"):
-    """Parses the passed in dictionary file
-    Set to match specifications
-    :returns: the information for the web api.
-    """
-
-    njob = {}
-    #job = json.loads(json_job)
-    jf = job.get("job").get("file")
-    """if jf.get("data").get("name") != cjob.get("data").get("name"):
-        log.log("ERROR: Current Job and New Job are not the same. "
-                + "Current Job: " + str(cjob.get("data").get("name"))
-                + " New Job: " + str(jf.get("data").get("name")))
-    """
-    unix_date = jf.get("date")
-    if not unix_date:
-        unix_date = 0
-    fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
-    njob["id"] = cjob.get("id", 0)
-    njob["created_at"] = cjob.get("created_at", fdate)
-    njob["updated_at"] = fdate
-    njob["data"] = {
-        "status": status,
-        "file": {
-            "name": jf.get("name"),
-            "origin": jf.get("origin"),
-            "size": jf.get("size"),
-            "date": fdate
-            },
-        "estimated_print_time": job.get("estimatedPrintTime"),
-        "filament": {
-            "length": job.get("job").get("filament").get("length"),
-            "volume": job.get("job").get("filament").get("volume")
-            },
-        "progress": {
-            "completion": job.get("completion"),
-            "file_position": job.get("filepos"),
-            "print_time": job.get("printTime"),
-            "print_time_left": job.get("printTimeLeft")
-            }
-    }
-    return njob
+from hub import app
 
 class Jobs(object):
     """Jobs is a class that will hold
@@ -63,8 +22,8 @@ class Jobs(object):
         """TODO: to be defined1. """
 
         self._jobs = jobs
-        
-    def add(self, fname, origin="remote"):
+
+    def add(self, fname, printer_id, origin="remote"):
         """Add a job to the queue
         :fname: file to be added to the queue
         :returns: the id of the job
@@ -72,18 +31,22 @@ class Jobs(object):
 
         uuid = Uuid.generate()
         current_time   = dt.utcnow().isoformat()[:-3] + 'Z'
+        st = os.stat(os.path.join(app.config["UPLOAD_FOLDER"], fname))
+        fdate = str(dt.fromtimestamp(st.st_mtime).isoformat()[:-3])+'Z'
         self._jobs.append(
                     {
                       "id": uuid,
-                      "created_at": str(current_time),
-                      "updated_at": str(current_time),
+                      "printer": printer_id,
+                      "created_at": current_time,
+                      "updated_at": current_time,
+
                       "data": {
                         "status": "pending",
                         "file": {
                           "name": fname,
                           "origin": origin,
-                          "size": 0,
-                          "date": 0
+                          "size": st.st_size,
+                          "date": fdate
                         }
                       }
                     })
@@ -111,18 +74,28 @@ class Jobs(object):
 
         return list(self._jobs)
 
-    def next(self, remove=True):
+    def next(self, remove=False):
         """Get the next job to be printed.
-        Removes job from queue unless specified with remove=False
-        :remove: will remove the data unless set to false
+        :remove: will remove the data if set to True
         :returns: dictionary of job id and file, None if no jobs
         """
 
-        if len(self._jobs):
+        if len(self._jobs) > 1:
             if remove:
-                return self._jobs.pop(0)
+                return self._jobs.pop(1)
             else:
-                return self._jobs[0].copy()
+                return self._jobs[1].copy()
+        return None
+
+    def current(self):
+        """Returns a dictionary of the current job printing.
+        Data in here is of local information, not from the
+        printer
+        :returns: dictionary of job
+        """
+
+        if len(self._jobs):
+            return self._jobs[0].copy()
         return None
 
 class Uuid(object):
