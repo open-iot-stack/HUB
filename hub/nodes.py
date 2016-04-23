@@ -67,3 +67,11 @@ def nodes_list():
     """
 
     return json.jsonify(nodes.data.copy())
+
+@app.route('/nodes/trigger/callback', methods=['GET'])
+def nodes_trigger_callback():
+    """Return a json of the nodes that are currently active
+    :returns: TODO
+    """
+
+    return json.jsonify(nodes.data.copy())
