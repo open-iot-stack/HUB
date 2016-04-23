@@ -2,14 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import hub
-from flask import url_for
-from flask import json
-from flask import render_template
-from flask import abort
-from flask import request
+from flask import url_for, json, render_template, abort, request
 from jobs import Jobs
 from hub import app
 from hub.database import db_session
+from flask_swagger import swagger
 
 from models import Printer
 from models import Job
@@ -18,6 +15,16 @@ from models import File
 @app.teardown_appcontext
 def shutdown_session(exception=None):
     db_session.remove
+
+
+@app.route("/swagger")
+def spec():
+    return json.jsonify(swagger(app))
+
+
+@app.route("/docs")
+def docs():
+    return render_template('index.html')
 
 @app.route('/list', methods=['GET'])
 def list_peripherals():

@@ -14,6 +14,16 @@ nodes = Chest()
 
 @app.route('/nodes/<int:node_id>', methods=['GET'])
 def node_data(node_id):
+    """
+        Get Node
+        Get Individual Node
+        ---
+        tags:
+          - nodes
+        responses:
+          200:
+            description: Returns a Node
+        """
     result = Node.query.filter_by(id=node_id).first()
     if result is None:
         abort(404)
@@ -24,12 +34,16 @@ def node_data(node_id):
 
 @app.route('/nodes/activate', methods=['GET'])
 def activate_node(payload = None):
-    """API call to activate a node on the hub.
-    The node should provide a parameter 'payload' in
-    json format that contains it's IP address as "ip",
-    id as "id", and port as "port"
-    :returns: TODO
     """
+        Activate Node
+        Called by node to activate itself on the hub
+        ---
+        tags:
+          - nodes
+        responses:
+          200:
+            description: Returns a list of sensors
+        """
 
     global nodes
     id   = int(request.args.get("id"))
@@ -52,9 +66,16 @@ def activate_node(payload = None):
 
 @app.route('/nodes', methods=['GET'])
 def nodes_list():
-    """Return a json of the nodes that are currently active
-    :returns: TODO
     """
+        Get nodes
+        List's all nodes activated on the hub
+        ---
+        tags:
+          - nodes
+        responses:
+          200:
+            description: Returns a list of nodes
+        """
 
     results = Node.query.all()
     json_results = []
@@ -67,9 +88,16 @@ def nodes_list():
 
 @app.route('/nodes/trigger/callback', methods=['GET'])
 def nodes_trigger_callback():
-    """Return a json of the nodes that are currently active
-    :returns: TODO
     """
+        Trigger Callback
+        Called when node gpio triggered
+        ---
+        tags:
+          - sensors
+        responses:
+          200:
+            description: Returns node data
+        """
     id   = int(request.args.get("id"))
     pin  = int(request.srgs.get("pin"))
     data = int(request.args.get("data"))
@@ -80,61 +108,23 @@ def nodes_trigger_callback():
     return json.jsonify(d)
 
 
-@app.route('/nodes/<int:nid>/sensors', methods=['GET', 'POST'])
-def node_sensors(nid):
+@app.route('/nodes/<int:node_id>/sensors', methods=['GET', 'POST'])
+def node_sensors(node_id):
     """
-        List Node Sensors
+        Get a list of sensors/Register Sensor
+        List's all sensors registered with node
+        Registers sensor on nodes
         ---
         tags:
-          - nodes, sensors
-        definitions:
-          - schema:
-              id: Sensor
-              properties:
-                id:
-                 type: int
-                 description: the sensors type
-        parameters:
-          - in: body
-            name: body
-            schema:
-              id: User
-              required:
-                - email
-                - name
-              properties:
-                email:
-                  type: string
-                  description: email for user
-                name:
-                  type: string
-                  description: name for user
-                address:
-                  description: address for user
-                  schema:
-                    id: Address
-                    properties:
-                      street:
-                        type: string
-                      state:
-                        type: string
-                      country:
-                        type: string
-                      postalcode:
-                        type: string
-                groups:
-                  type: array
-                  description: list of groups
-                  items:
-                    $ref: "#/definitions/Group"
+          - sensors
         responses:
-          201:
-            description: User created
+          200:
+            description: Returns a list of sensors
         """
 
 
     if request.method == 'GET':
-        results = Sensor.query.filter_by(node_id=nid).all()
+        results = Sensor.query.filter_by(node_id=node_id).all()
         json_results = []
 
         for result in results:
@@ -147,14 +137,24 @@ def node_sensors(nid):
     if request.method == 'POST':
         pin = request.json.get('pin')
         sensor_type = request.json.get('sensor_type')
-        sensor = Sensor(nid, pin, sensor_type)
+        sensor = Sensor(node_id, pin, sensor_type)
         db_session.add(sensor)
         db_session.commit()
-        return json.jsonify({'sensor': {'node_id': nid, 'pin': pin,
+        return json.jsonify({'sensor': {'node_id': node_id, 'pin': pin,
                                                         'sensor_type': sensor_type}}), 201
 
 @app.route('/sensors/<int:sensor_id>', methods=['GET'])
 def get_sensor(sensor_id):
+    """
+        Get Sensor
+        Get individual sensor information
+        ---
+        tags:
+          - sensors
+        responses:
+          200:
+            description: Returns a Sensor
+        """
     result = Sensor.query.filter_by(id=sensor_id).first()
     if result is None:
         abort(404)
@@ -167,6 +167,16 @@ def get_sensor(sensor_id):
 
 @app.route('/sensors/<int:sensor_id>/data', methods=['GET'])
 def get_sensor_data(sensor_id):
+    """
+        Get Sensor Data
+        Get individual sensor data
+        ---
+        tags:
+          - sensors
+        responses:
+          200:
+            description: Returns a data
+        """
     result = Sensor.query.filter_by(id=sensor_id).first()
     if result is None:
         abort(404)

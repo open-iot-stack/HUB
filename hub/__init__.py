@@ -3,7 +3,7 @@ from hub.config import Config
 from hub.channel import Channel
 from hub.logger import Log
 from hub.db_wrapper import Printers
-from flask_swagger import swagger
+
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = "uploads/"
@@ -25,6 +25,3 @@ WEB_API    = hub.auth.dev_url
 ID         = 0
 #TODO get correct ID
 
-@app.route("/docs")
-def spec():
-    return json.jsonify(swagger(app))
