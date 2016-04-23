@@ -132,9 +132,9 @@ def get_gpio(node_ip, gpio, type):
     url = "http://"+str(node_ip)+"/gpio/"+str(gpio)+"/"+type
     response = requests.get(url, timeout=10)
     data = json.loads(response.text)
-    if data['message']=="success":
+    if data['data']=="success":
         return data["data"]
-    return "error"
+    return "{'data':error}"
 
 
 def node_data_collector(id, ip):
