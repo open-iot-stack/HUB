@@ -57,8 +57,11 @@ class Printer(db.Base):
 class Node(db.Base):
     __tablename__="nodes"
 
-    id   = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
     ip = Column(String)
+
+    def __init__(self, ip):
+        self.ip = ip
 
     def __repr__(self):
         return "<Node='%d' ip='%s')>"\
@@ -71,7 +74,13 @@ class Sensor(db.Base):
     id   = Column(Integer, primary_key=True)
     node_id = Column(Integer, ForeignKey('nodes.id'))
     pin  = Column(Integer)
-    type = Column(String)
+    sensor_type = Column(String)
+
+
+    def __init__(self, node_id, pin, sensor_type):
+        self.node_id = node_id
+        self.pin = pin
+        self.sensor_type = sensor_type
 
     def __repr__(self):
         return "<Sensor='%d' node_id='%d', pin='%d', type='%s')>"\

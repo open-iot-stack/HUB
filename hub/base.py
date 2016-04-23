@@ -63,8 +63,8 @@ def index():
         "uuid": 1234,
         "jobs": Jobs()
     }
-    p["jobs"].add("test2")
-    p["jobs"].add("test1")
+    #p["jobs"].add("test2")
+    #p["jobs"].add("test1")
     hub.printers_wrapper.add(p)
     p = hub.printers_wrapper.get(1234)
     return json.jsonify(p)

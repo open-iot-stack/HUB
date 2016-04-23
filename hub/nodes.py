@@ -4,11 +4,11 @@
 import thread
 import hub
 from chest import Chest
-from flask import request
-from flask import json
-from flask import abort
+from flask import request, json, abort
 from hub import app
 from dealer import node_data_collector
+from database import db_session
+from models import Sensor, Node
 
 nodes = Chest()
 
@@ -36,6 +36,9 @@ def activate_node(payload = None):
     conf_data = hub.conf.read_data()
     log = hub.log
 
+    anode = Node(ip)
+    db.session.add(anode)
+    db.session.commit()
     #TODO make dynamic registering by going through different GPIO
     # ports and when you get a response that's the type
 
