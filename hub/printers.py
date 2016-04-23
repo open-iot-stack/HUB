@@ -25,7 +25,7 @@ def printers_list():
     global printers
     data = {}
     with printers.lock:
-    for id, printer in printers.data.iteritems():
+        for id, printer in printers.data.iteritems():
             data[id] = {
                     "id": printer.get("id"),
                     "ip"  : printer.get("ip"),
