@@ -19,7 +19,7 @@ def node_data(node_id):
         abort(404)
     d = {'id': result.id,
          'ip': result.ip}
-    return jsonify(classes=d)
+    return json.jsonify(classes=d)
 
 @app.route('/nodes/activate', methods=['GET'])
 def activate_node(payload = None):
@@ -123,7 +123,7 @@ def node_sensors(nid):
                  'pin': result.pin,
                  'sensor_type': result.sensor_type}
             json_results.append(d)
-        return json.jsonify(nodes = json_results)
+        return json.jsonify(sensors = json_results)
     if request.method == 'POST':
         node_id = request.json.get('node_id')
         pin = request.json.get('pin')
