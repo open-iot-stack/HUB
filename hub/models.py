@@ -1,12 +1,10 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-#import hub
 from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.orderinglist import ordering_list
 from database import Base, db_session
-from logger import Log
 
 class PrinterExists(Exception):
     pass
