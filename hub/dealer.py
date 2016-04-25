@@ -19,6 +19,8 @@ import auth
 from hub import app
 
 def printer_data_collector(id):
+    job_thread = threading.Thread(target=job_data_collector, args=(id,))
+    job_thread.start()
     send_channel = hub.send_channel
     log          = hub.log
     log.log("printer_data_collector starting for printer " + str(id))
@@ -26,6 +28,9 @@ def printer_data_collector(id):
     #url          = "http://" + ip + ":" + port
     prev_data    = {}
     while(True):
+        if not job_thread.is_alive():
+            job_thread = threading.Thread(target=job_data_collector, args=(id,))
+            job_thread.start()
         printer = Printer.get_by_id(id)
         ip     = printer.ip
         port   = printer.port
