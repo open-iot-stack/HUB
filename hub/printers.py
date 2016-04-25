@@ -5,7 +5,6 @@ import os
 import thread
 import threading
 import hub
-from jobs import Jobs
 from chest import Chest
 from flask import request
 from flask import json

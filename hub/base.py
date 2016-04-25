@@ -3,7 +3,6 @@
 
 import hub
 from flask import url_for, json, render_template, abort, request
-from jobs import Jobs
 from hub import app
 from hub.database import db_session
 from flask_swagger import swagger
