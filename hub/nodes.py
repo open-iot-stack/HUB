@@ -108,12 +108,12 @@ def nodes_trigger_callback():
     return json.jsonify(d)
 
 
-@app.route('/nodes/<int:node_id>/sensors', methods=['GET', 'POST'])
+@app.route('/nodes/<int:node_id>/sensors', methods=['GET'])
 def node_sensors(node_id):
     """
-        Get a list of sensors/Register Sensor
+
+        Get a list of sensors
         List's all sensors registered with node
-        Registers sensor on nodes
         ---
         tags:
           - sensors
@@ -122,26 +122,54 @@ def node_sensors(node_id):
             description: Returns a list of sensors
         """
 
+    results = Sensor.query.filter_by(node_id=node_id).all()
+    json_results = []
 
-    if request.method == 'GET':
-        results = Sensor.query.filter_by(node_id=node_id).all()
-        json_results = []
+    for result in results:
+        d = {'id': result.id,
+             'node_id': result.node_id,
+             'pin': result.pin,
+             'sensor_type': result.sensor_type}
+        json_results.append(d)
+    return json.jsonify(sensors = json_results)
 
-        for result in results:
-            d = {'id': result.id,
-                 'node_id': result.node_id,
-                 'pin': result.pin,
-                 'sensor_type': result.sensor_type}
-            json_results.append(d)
-        return json.jsonify(sensors = json_results)
-    if request.method == 'POST':
-        pin = request.json.get('pin')
-        sensor_type = request.json.get('sensor_type')
-        sensor = Sensor(node_id, pin, sensor_type)
-        db_session.add(sensor)
-        db_session.commit()
-        return json.jsonify({'sensor': {'node_id': node_id, 'pin': pin,
-                                                        'sensor_type': sensor_type}}), 201
+
+@app.route('/nodes/<int:node_id>/sensors', methods=['POST'])
+def node_add_sensors(node_id):
+    """
+        Add a Sensor
+        Registers sensor on nodes
+        ---
+        tags:
+          - sensors
+        responses:
+          200:
+            description: Returns a list of sensors
+        """
+    pin = request.json.get('pin')
+    sensor_type = request.json.get('sensor_type')
+    sensor = Sensor(node_id, pin, sensor_type)
+    db_session.add(sensor)
+    db_session.commit()
+    return json.jsonify({'sensor': {'node_id': node_id, 'pin': pin,
+                                                    'sensor_type': sensor_type}}), 201
+
+
+@app.route('/nodes/<int:node_id>', methods=['DELETE'])
+def node_delete(node_id):
+    """
+        Delete a Node
+        ---
+        tags:
+          - nodes
+        responses:
+          200:
+            description: Returns "Deleted"
+        """
+    Node.query.filter(Node.id == node_id).delete()
+    db.session.commit()
+    return json.jsonify({'message': 'Deleted'}), 201
+
 
 @app.route('/sensors/<int:sensor_id>', methods=['GET'])
 def get_sensor(sensor_id):
@@ -163,6 +191,22 @@ def get_sensor(sensor_id):
          'pin': result.pin,
          'sensor_type': result.sensor_type}
     return json.jsonify(sensor=d)
+
+
+@app.route('/sensors/<int:sensor_id>', methods=['DELETE'])
+def sensor_delete(sensor_id):
+    """
+        Delete a Sensor
+        ---
+        tags:
+          - sensors
+        responses:
+          200:
+            description: Returns "Deleted"
+        """
+    Sensor.query.filter(Sensor.id == sensor_id).delete()
+    db.session.commit()
+    return json.jsonify({'message': 'Deleted'}), 201
 
 
 @app.route('/sensors/<int:sensor_id>/data', methods=['GET'])
