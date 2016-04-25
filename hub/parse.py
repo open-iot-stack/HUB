@@ -2,21 +2,22 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime as dt
 
-def parse_printer_status(printer, printer_state):
+def parse_printer_status(printer, state):
     """Parses the passed in dictionary.
     Set to match specifications
     :printer: printer dictionary of the printer status was retrieved from
     :printer_status: dictionary of status from the printer
     :returns: the information for the web api
     """
-    id = printer.get("id")
-    jobs = printer.get("jobs")
-    status = printer.get("status")
-    friendly_id = status.get("friendly_id")
-    manufacturer = status.get("manufacturer")
-    model = status.get("model")
-    description = status.get("description")
-    num_jobs = len(jobs.list())
+    id     = printer.id
+    ip     = printer.ip
+    port   = printer.port
+    key    = printer.key
+    friendly_id = state.get("friendly_id")
+    manufacturer = state.get("manufacturer")
+    model = state.get("model")
+    description = state.get("description")
+    num_jobs = printer.num_jobs()
     s = {
             "id": id,
             "friendly_id": friendly_id,
@@ -24,11 +25,11 @@ def parse_printer_status(printer, printer_state):
             "model": model,
             "description": description,
             "num_jobs": num_jobs,
-            "data": printer_state
+            "data": state
     }
     return s
 
-def parse_job_status(job, cjob, status="NOT_IMPLEMENTED"):
+def parse_job_status(job, status="NOT_IMPLEMENTED"):
     """Parses the passed in dictionary file
     Set to match specifications
     :returns: the information for the web api.
@@ -42,6 +43,7 @@ def parse_job_status(job, cjob, status="NOT_IMPLEMENTED"):
                 + "Current Job: " + str(cjob.get("data").get("name"))
                 + " New Job: " + str(jf.get("data").get("name")))
     """
+    id = int(jf.get("name").split('.', 1)[0])
     unix_date = jf.get("date")
     filament = job.get("job").get("filament")
     progress = job.get("progress")
@@ -55,10 +57,7 @@ def parse_job_status(job, cjob, status="NOT_IMPLEMENTED"):
     if not unix_date:
         unix_date = 0
     fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
-    njob["id"] = cjob.get("id", 0)
-    njob["printer"] = cjob.get("printer", 0)
-    njob["created_at"] = cjob.get("created_at", fdate)
-    njob["updated_at"] = fdate
+    njob["id"] = id
     njob["data"] = {
         "status": status,
         "file": {
