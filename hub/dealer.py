@@ -14,7 +14,6 @@ from parse import parse_job_status, parse_printer_status
 from time import sleep
 from flask import json
 from sqlalchemy.orm import sessionmaker
-from database import engine
 from models import Printer, Node, Job
 import auth
 from hub import app

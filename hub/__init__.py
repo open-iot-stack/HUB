@@ -16,7 +16,6 @@ import hub.auth
 printer_listeners = Listener()
 job_listeners     = Listener()
 node_listeners    = Listener()
-printers_wrapper = Printers()
 conf = Config()
 send_channel, recv_channel = Channel()
 
