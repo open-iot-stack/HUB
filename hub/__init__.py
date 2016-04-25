@@ -2,7 +2,6 @@ from flask import Flask, json
 from hub.config import Config
 from hub.channel import Channel
 from hub.logger import Log
-from hub.db_wrapper import Printers
 from hub.listener import Listener
 
 
