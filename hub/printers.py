@@ -9,9 +9,8 @@ from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
-from dealer import job_data_collector
 from dealer import upload_and_print
-from dealer import printer_data_collector
+from dealer import PrinterCollector
 from models import Printer, Job, File
 import octopifunctions as octopi
 from hub import app
@@ -47,26 +46,27 @@ def printers_list():
         if printer:
             printer.update(ip=ip, port=port, key=key)
             if not listener.is_alive(id):
-                t = threading.Thread(target=printer_data_collector,
-                                    args=(id,))
+                t = PrinterCollector(id)
                 t.start()
                 listener.add_thread(id, t)
                 log.log("Printer " + str(id) + " is now online.")
                 return json.jsonify({'message': 'Printer ' + str(id)
                                                 + ' is now online.'})
             if listener.is_alive(id):
-                log.log("Printer " + str(id) + " is already online but tried"
+                log.log("Printer " + str(id) 
+                        + " is already online but tried"
                         + " to activate again. Updated it's data")
-                return json.jsonify({'message': 'Printer ' + str(id)
-                                                + ' was already online.'})
+                return json.jsonify({'message': 'Printer ' 
+                                        + str(id) 
+                                        + ' was already online.'})
         else:
             #Add printer to database
             printer = Printer(id, key=key, ip=ip, port=port)
-            t = threading.Thread(target=printer_data_collector, args=(id,))
+            t = PrinterCollector(id)
             t.start()
             listener.add_thread(id, t)
             return json.jsonify({'message': 'Printer ' + str(id)
-                                            + ' has been added and is online.'})
+                                    + ' has been added and is online.'})
 
 
 @app.route('/printers/<int:id>/<action>',methods=['POST'])

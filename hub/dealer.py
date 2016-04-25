@@ -18,102 +18,153 @@ from models import Printer, Node, Job
 import auth
 from hub import app
 
-def printer_data_collector(id):
-    job_thread = threading.Thread(target=job_data_collector, args=(id,))
-    job_thread.start()
-    send_channel = hub.send_channel
-    log          = hub.log
-    log.log("printer_data_collector starting for printer " + str(id))
-    failures     = 0
-    #url          = "http://" + ip + ":" + port
-    prev_data    = {}
-    while(True):
-        if not job_thread.is_alive():
-            job_thread = threading.Thread(target=job_data_collector, args=(id,))
-            job_thread.start()
-        printer = Printer.get_by_id(id)
-        ip     = printer.ip
-        port   = printer.port
-        key    = printer.key
-        jobs   = printer.jobs
-        status = printer.status
-        url    = ip + ":" + str(port)
-        response = octopi.get_printer_info(url, key)
-        if response:
-            failures = 0
-        else:
-            printer.state("Error")
-            failures += 1
-            log.log("ERROR: Could not collect printer"
-                  + " data from printer "+str(id))
-            if failures > 20:
-                printer.state("Closed on Error")
-                log.log("ERROR: Have failed communication 20 times in a row."
-                      + " Closing connection with " + str(id))
+class PrinterCollector(threading.Thread):
+
+    """Printer Collector will continue to grab """
+
+    def __init__(self, printer_id):
+        """TODO: to be defined1. """
+        threading.Thread.__init__(self)
+        self.printer_id = printer_id
+        self.stop = False
+
+    def run(self):
+        id = self.printer_id
+        job_thread = JobCollector(id)
+        job_thread.start()
+        send_channel = hub.send_channel
+        log          = hub.log
+        log.log("printer_data_collector starting for printer " + str(id))
+        failures     = 0
+        #url          = "http://" + ip + ":" + port
+        prev_data    = {}
+        while(True):
+            if self.stop:
+                log.log("PrinterCollector stop signal received for "
+                        + str(id) + ". Telling JobCollector to stop.")
+                job_thread.stop()
+                job_thread.join()
+                log.log("JobCollector stopped."
+                        +" Exiting PrinterCollector.")
                 thread.exit()
+            if not job_thread.is_alive():
+                log.log("ERROR: JobCollector thread died for "
+                        + str(id) + ". Starting new JobCollector.")
+                job_thread = JobCollector(id)
+                job_thread.start()
+
+            printer = Printer.get_by_id(id)
+            ip     = printer.ip
+            port   = printer.port
+            key    = printer.key
+            jobs   = printer.jobs
+            status = printer.status
+            url    = ip + ":" + str(port)
+            response = octopi.get_printer_info(url, key)
+            if response:
+                failures = 0
+            else:
+                printer.state("Error")
+                failures += 1
+                log.log("ERROR: Could not collect printer"
+                      + " data from printer "+str(id)
+                      + " on " + url )
+                if failures > 20:
+                    printer.state("Closed on Error")
+                    log.log("ERROR: Have failed communication"
+                            + " 20 times in a row for printer "
+                            + str(id)
+                            + ". Closing JobCollector if alive.")
+                    job_thread.stop()
+                    job_thread.join()
+                    log.log("JobCollector stopped."
+                            +" Exiting PrinterCollector.")
+                    thread.exit()
+                sleep(1)
+                continue
+            if response.status_code != 200:
+                log.log("ERROR: Response from "
+                        + str(id) + " returned status code "
+                        + response.status_code + " on "
+                        + url)
+            else:
+                #data = response.json()
+                state = response.json()
+                printer.state(state['text'])
+                data = printer.to_web(state)
+                # Check to see if data is the same as last collected
+                # if so, do not send it
+                if cmp(prev_data, data):
+                    prev_data = data.copy()
+                    send_channel.send({ "printer": data })
             sleep(1)
-            continue
-        if response.status_code != 200:
-            log.log("ERROR: Response from "
-                    + str(id) + " returned status code "
-                    + response.status_code + " on "
-                    + url)
-        else:
-            #data = response.json()
-            state = response.json()
-            printer.state(state['text'])
-            data = printer.to_web(state)
-            # Check to see if data is the same as last collected
-            # if so, do not send it
-            if cmp(prev_data, data):
-                prev_data = data.copy()
-                send_channel.send({ "printer": data })
-        sleep(1)
 
+    def stop(self):
+        self.stop = True
 
-def job_data_collector(id):
-    send_channel = hub.send_channel
-    log          = hub.log
-    log.log("job_data_collector starting for printer " + str(id))
-    failures     = 0
-    #url          = "http://" + ip + ":" + port
-    prev_data    = {}
-    while(True):
-        printer = Printer.get_by_id(id)
-        ip     = printer.ip
-        port   = printer.port
-        key    = printer.key
-        jobs   = printer.jobs
-        status = printer.status
-        url    = ip + ":" + str(port)
+class JobCollector(threading.Thread):
 
-        response = octopi.get_job_info(url, key)
-        if response:
-            failures = 0
-        else:
-            failures += 1
-            log.log("ERROR: Could not collect"
-                   + " job data from printer " + str(id))
-            if failures > 20:
-                log.log("ERROR: Have failed communication 20 times in a row."
-                      + " Closing connection with " + str(id))
+    """Job Collector will continue to grab """
+
+    def __init__(self, printer_id):
+        """TODO: to be defined1. """
+        threading.Thread.__init__(self)
+        self.printer_id = printer_id
+        self.stop = False
+
+    def run(self):
+        id = self.printer_id
+        send_channel = hub.send_channel
+        log          = hub.log
+        log.log("job_data_collector starting for printer " + str(id))
+        failures     = 0
+        #url          = "http://" + ip + ":" + port
+        prev_data    = {}
+        while(True):
+            if self.stop:
+                log.log("JobCollector stop signal received for "
+                        + str(id) + ", exiting.")
                 thread.exit()
+            printer = Printer.get_by_id(id)
+            ip     = printer.ip
+            port   = printer.port
+            key    = printer.key
+            jobs   = printer.jobs
+            status = printer.status
+            url    = ip + ":" + str(port)
+
+            response = octopi.get_job_info(url, key)
+            if response:
+                failures = 0
+            else:
+                failures += 1
+                log.log("ERROR: Could not collect"
+                       + " job data from printer " + str(id)
+                       + " on " + url )
+                if failures > 20:
+                    log.log("ERROR: Have failed communication"
+                            + " 20 times in a row."
+                            + " Closing connection with " + str(id))
+                    thread.exit()
+                sleep(1)
+                continue
+            if response.status_code != requests.codes.ok:
+                log.log("ERROR: Response from "
+                        + str(id) + " returned status code "
+                        + response.status_code + " on "
+                        + url)
+            else:
+                data = parse_job_status(response.json())
+                # Check to see if data is the same as last collected
+                # if so, do not send it
+                if cmp(prev_data, data):
+                    prev_data = data
+                    prev_data = data.copy()
+                    send_channel.send({"patch_job": data})
             sleep(1)
-            continue
-        if response.status_code != requests.codes.ok:
-            log.log("ERROR: Response from "
-                    + str(id) + " returned status code "
-                    + response.status_code + " on "
-                    + url)
-        else:
-            data = parse_job_status(response.json())
-            # Check to see if data is the same as last collected
-            # if so, do not send it
-            if cmp(prev_data, data):
-                prev_data = data
-                prev_data = data.copy()
-                send_channel.send({"patch_job": data})
-        sleep(1)
+
+    def stop(self):
+        self.stop = True
 
 def get_temp(node_ip, gpio):
     """Creates request to dht node for data"""
