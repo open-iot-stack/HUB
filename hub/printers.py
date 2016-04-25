@@ -37,7 +37,7 @@ def printers_list():
         id   = int(request.form.get("id"))
         ip   = request.form.get("ip")
         port = int(request.form.get("port", 80))
-        key  = request.form.get("api_key")
+        key  = request.form.get("key")
         printer = Printer.get_by_id(id)
         listener = hub.printer_listeners
         if printer:
@@ -131,7 +131,7 @@ def print_action(id, action):
     return json.jsonify({"message": action
                         + " successfully sent to the printer."})
 
-@app.route('/printers/<int:id>/status', methods=['GET'])
+@app.route('/printers/<int:id>', methods=['GET'])
 def print_status(id):
 
     #id = str(id)
@@ -139,7 +139,7 @@ def print_status(id):
     #TODO return the actual data that's useful for the web api
     return json.jsonify(printer.to_dict())
 
-@app.route('/printers/<int:id>/jobs/list')
+@app.route('/printers/<int:id>/jobs')
 def jobs_list(id):
     """Returns a json of queued up jobs
     :returns: TODO
@@ -169,10 +169,10 @@ def jobs_current(id):
     abort(404)
 
 
-@app.route('/printers/<int:id>/jobs/<int:job_id>',
+@app.route('/jobs/<int:job_id>',
                                     methods=["GET","DELETE"])
 def job_action(id, job_id):
-    """Will either add or delete a job
+    """Will either get or delete a job
 
     """
     if request.method == "GET":
