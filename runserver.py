@@ -7,7 +7,6 @@ import getopt
 import thread
 import hub.models
 from hub import app
-from hub.dealer import data_receiver
 from hub.logger import Log
 
 from hub.database import init_db
@@ -57,7 +56,6 @@ for opt, arg in opts:
 
 hub.log = Log(print_enabled=print_enabled)
 
-thread.start_new_thread(data_receiver, ())
 init_db()
 app.run(host=host, debug=debug, port=port,threaded=threaded)
 
