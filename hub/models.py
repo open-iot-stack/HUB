@@ -24,6 +24,18 @@ class File(Base):
 
     def __init__(self, name):
         self.name = name
+        db_session.add(self)
+        db_session.commit()
+
+    def to_dict(self):
+        """Returns dictionary representation of a file
+        :returns: TODO
+
+        """
+        d = {
+                "name": self.name
+        }
+        return d
 
     def __repr__(self):
         return "<File(name='%s')>" % (self.name)
@@ -32,7 +44,7 @@ class Job(Base):
     __tablename__="job"
 
     id         = Column(Integer, primary_key=True)
-    position      = Column(Integer)
+    position   = Column(Integer)
     status     = Column(String)
     file       = relationship("File", back_populates="job", uselist=False)
     printer    = relationship("Printer", back_populates="jobs", uselist=False)
@@ -45,6 +57,7 @@ class Job(Base):
         :returns: Job if id is found, None if didn't exist
 
         """
+        db_session.remove()
         job =\
             db_session.query(Job).filter(Job.id == id).one_or_none()
         return job
@@ -61,6 +74,8 @@ class Job(Base):
         self.id = id
         self.status = status
         self.file = file
+        db_session.add(self)
+        db_session.commit()
 
     def state(self, state):
         """Set the status of the current job
@@ -77,9 +92,21 @@ class Job(Base):
             return True
         return False
 
+    def to_dict(self):
+        """Returns a dictionary representation of the Job
+        :returns: dictionary of job
+
+        """
+        d = {
+                "id": self.id,
+                "file": self.file.to_dict(),
+                "status": self.status
+        }
+        return d
+
     def __repr__(self):
-        return "<Job(id='%d', position='%d', status='%s', file='%s')>" %\
-        (self.id, self.position, self.status, self.file)
+        return "<Job(id='%d', status='%s', file='%s')>" %\
+        (self.id, self.status, self.file)
 
 class Printer(Base):
     __tablename__="printer"
@@ -88,8 +115,13 @@ class Printer(Base):
     status = Column(String)
     jobs = relationship("Job", order_by=Job.position, back_populates="printer",
                                 collection_class=ordering_list("position"))
-    ip   = None
-    port = 0
+    key  = Column(String)
+    ip   = Column(String)
+    port = Column(Integer)
+    friendly_id = Column(String)
+    manufacturer = Column(String)
+    model = Column(String)
+    description = Column(String)
 
     @staticmethod
     def get_by_id(id):
@@ -98,48 +130,73 @@ class Printer(Base):
         :returns: Printer if id is found, None if didn't exist
 
         """
+        db_session.remove()
         printer =\
             db_session.query(Printer).filter(Printer.id == id).one_or_none()
         return printer
 
-    def __init__(self, id, ip="0.0.0.0", port=80, status="Offline"):
+    @staticmethod
+    def get_printers():
+        """Retrieve all printers in the database
+        :returns: TODO
+
+        """
+        db_session.remove()
+        l = []
+        for printer in db_session.query(Printer):
+            l.append(printer)
+        return l
+
+    def __init__(self, id, key=None, ip=None, port=80, status="Paused",
+                friendly_id=None, manufacturer=None, model=None
+                , description=None):
         """Creates a new Printer, adds to database. If printer exists
         or params aren't formatted correctly, will throw and exception
         :id: id of the printer
         :status: State of the printer, must be in
-            ["Operational", "Paused", "Printing", "Offline",
+            ["Operational", "Paused", "Printing",
             "SD Ready", "Error", "Ready", "Closed on Error"]
 
         """
-        self.id   = id
-        self.ip   = ip
-        self.port = port
-        if not status in ["Operational", "Paused", "Printing", "Offline",
+        self.id           = id
+        self.key          = key
+        self.ip           = ip
+        self.port         = port
+        self.model        = model
+        self.friendly_id  = friendly_id
+        self.description  = description
+        self.manufacturer = manufacturer
+
+        if not status in ["Operational", "Paused", "Printing",
                             "SD Ready", "Error", "Ready", "Closed on Error"]:
             status = "Offline"
         self.status = status
         db_session.add(self)
         db_session.commit()
 
-    def update(self, ip=None, port=None, status=None):
+    def update(self, ip=None, port=None, status=None, key=None):
         """Update data on printer
         :ip: IP address to set to
         :port: Port to set to
-        :status: Status to set to
+        :status: Status to set to. Must be in 
+            ["Operational", "Paused", "Printing",
+            "SD Ready", "Error", "Ready", "Closed on Error"]:
         :returns: Boolean of sucess
 
         """
         if status:
-            if status in ["Operational", "Paused", "Printing", "Offline",
+            if status in ["Operational", "Paused", "Printing",
                             "SD Ready", "Error", "Ready", "Closed on Error"]:
                 self.status = status
-                db_session.commit()
             else:
                 return False
+        if key:
+            self.key = key
         if ip:
             self.ip = ip
         if port:
             self.port = port
+        db_session.commit()
         return True
 
     def is_online(self):
@@ -161,17 +218,18 @@ class Printer(Base):
         self.ip = ip
         if port:
             self.port = port
+        db_session.commit()
         return True
 
     def state(self, state):
         """Sets the status of the printer
         :state: state of the printer to set. Will return false if not in
-                ["Operational", "Paused", "Printing", "Offline",
+                ["Operational", "Paused", "Printing",
                 "SD Ready", "Error", "Ready", "Closed on Error"]
         :returns: boolean of success
 
         """
-        if state in ["Operational", "Paused", "Printing", "Offline",
+        if state in ["Operational", "Paused", "Printing",
                         "SD Ready", "Error", "Ready", "Closed on Error"]:
             self.status = state
             db_session.commit()
@@ -195,6 +253,7 @@ class Printer(Base):
         if position == -1:
             self.jobs.append(job)
             db_session.commit()
+            print self
             return True
         if position >= len(self.jobs):
             self.jobs.append(job)
@@ -212,6 +271,7 @@ class Printer(Base):
         :returns: boolean of success
         """
 
+        db_session.remove()
         job = db_session.query(Job).filter(Job.id == job_id).one_or_none()
         if job:
             if job.position == 0:
@@ -253,6 +313,43 @@ class Printer(Base):
 
         """
         return len(self.jobs)
+
+    def to_dict(self):
+        """Returns a dictionary object that represents the printer
+        :returns: dictionary
+        
+        """
+        d = {
+                "id": self.id,
+                "ip": self.ip,
+                "port": self.port,
+                "jobs": [j.to_dict() for j in self.jobs],
+                "status": self.status,
+                "num_jobs": self.num_jobs(),
+                "friendly_id": self.friendly_id,
+                "manufacturer": self.manufacturer,
+                "model": self.model,
+                "description": self.description
+        }
+        return d
+
+    def to_web(self, state):
+        """Properly formats data to be sent to the web api
+
+        :state: TODO
+        :returns: TODO
+
+        """
+        d = {
+                "id": self.id,
+                "friendly_id": self.friendly_id,
+                "manufacturer": self.manufacturer,
+                "model": self.model,
+                "num_jobs": self.num_jobs(),
+                "description": self.description,
+                "data": state
+        }
+        return d
 
     def __repr__(self):
         return "<Printer(id='%d', ip='%s', port='%d', status='%s' jobs='%s')>"\
