@@ -116,6 +116,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        log = self.log
         headers = self.headers
         web_url = self.url
         hub_id = self.id
@@ -159,6 +160,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        log = self.log
         headers = self.headers
         web_url = self.url
         printer_id = printer.get('id')
@@ -199,6 +201,7 @@ class WebAPI(object):
         :returns: TODO
 
         '''
+        log = self.log
         headers = self.headers
         web_url = self.url
         url = web_url + '/printers/' + str(printer_id) 
@@ -249,6 +252,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        log = self.log
         headers = self.headers
         web_url = self.url
         printer_id = job.get('printer')
@@ -290,6 +294,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        log = self.log
         headers = self.headers
         web_url = self.url
         printer_id = job.get('printer')
@@ -341,6 +346,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        log = self.log
         headers = self.headers
         web_url = self.url
         printer_id = job.get('printer')
@@ -392,6 +398,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        log = self.log
         headers = self.headers
         web_url = self.url
         hub_id = self.id
@@ -434,6 +441,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        log = self.log
         headers = self.headers
         web_url = self.url
         node_id = node.get('id')
@@ -475,6 +483,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        log = self.log
         headers = self.headers
         web_url = self.url
         url = web_url + '/sensors/' + str(node_id)
@@ -524,6 +533,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         """
+        log = self.log
         headers = self.headers
         web_url = self.url
         #TODO sensor data parsing, category will be [temperature,humidity,door], for door send open or closed
