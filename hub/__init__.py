@@ -23,6 +23,6 @@ SND_PASSWD  = None
 WEB_API_KEY = None
 WEB_API_URL = 'https://dev.api.stratusprint.com/v1'
 ID         = 0
-Webapi = WebAPI(WEB_API_URL, WEB_API_KEY, ID)
+Webapi = WebAPI(WEB_API_URL, WEB_API_KEY, log)
 #TODO get correct ID
 
