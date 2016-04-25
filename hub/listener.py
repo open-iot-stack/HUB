@@ -21,7 +21,7 @@ class Listener(object):
         :returns: Boolean of success, fails if id has a living thread
 
         """
-        assert(type(thread) is threading.Thread)
+        assert(isinstance(thread, threading.Thread))
         with self.lock:
             if self.is_alive(id):
                 return False
