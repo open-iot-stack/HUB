@@ -3,6 +3,7 @@ from hub.config import Config
 from hub.channel import Channel
 from hub.logger import Log
 from hub.listener import Listener
+from hub.webapi import WebAPI
 
 
 app = Flask(__name__)
@@ -11,19 +12,17 @@ app.config['UPLOAD_FOLDER'] = "uploads/"
 import hub.printers
 import hub.nodes
 import hub.base
-import hub.auth
 
 printer_listeners = Listener()
-job_listeners     = Listener()
 node_listeners    = Listener()
 conf = Config()
-send_channel, recv_channel = Channel()
 
 # These all get defined from commandline args
-log        = None
-SND_PASSWD = None
-API_KEY    = None
-WEB_API    = hub.auth.dev_url
+log         = None
+SND_PASSWD  = None
+WEB_API_KEY = None
+WEB_API_URL = 'https://dev.api.stratusprint.com/v1'
 ID         = 0
+Webapi = WebAPI(WEB_API_URL, WEB_API_KEY, ID)
 #TODO get correct ID
 
