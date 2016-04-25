@@ -3,7 +3,6 @@ from hub.config import Config
 from hub.channel import Channel
 from hub.logger import Log
 from hub.listener import Listener
-from hub.webapi import WebAPI
 
 
 app = Flask(__name__)

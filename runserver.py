@@ -8,6 +8,7 @@ import thread
 import hub.models
 from hub import app
 from hub.logger import Log
+from hub.webapi import WebAPI
 
 from hub.database import init_db
 
