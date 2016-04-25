@@ -43,7 +43,13 @@ def parse_job_status(job, status="NOT_IMPLEMENTED"):
                 + "Current Job: " + str(cjob.get("data").get("name"))
                 + " New Job: " + str(jf.get("data").get("name")))
     """
-    id = int(jf.get("name").split('.', 1)[0])
+    name = jf.get("name")
+    if name:
+        id = name.split('.', 1)[0]
+        fname = Job.get_by_id(id).file.name
+    else:
+        id = 0
+        fname = None
     unix_date = jf.get("date")
     filament = job.get("job").get("filament")
     progress = job.get("progress")
@@ -61,7 +67,7 @@ def parse_job_status(job, status="NOT_IMPLEMENTED"):
     njob["data"] = {
         "status": status,
         "file": {
-            "name": jf.get("name"),
+            "name": fname,
             "origin": jf.get("origin"),
             "size": jf.get("size"),
             "date": fdate
