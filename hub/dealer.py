@@ -1,40 +1,35 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import os
 import hub
-import thread
 import threading
-import channel
 import requests
 import webapi
 import octopifunctions as octopi
-from message_generator import MessageGenerator
 from parse import parse_job_status, parse_printer_status
 from time import sleep
 from flask import json
-from sqlalchemy.orm import sessionmaker
 from models import Printer, Node, Job
-import auth
 from hub import app
 
 class PrinterCollector(threading.Thread):
 
     """Printer Collector will continue to grab """
 
-    def __init__(self, printer_id):
+    def __init__(self, printer_id, webapi):
         """TODO: to be defined1. """
         threading.Thread.__init__(self)
         self.printer_id = printer_id
         self.stopped = False
+        self.webapi = webapi
 
     def run(self):
         id = self.printer_id
-        job_thread = JobCollector(id)
+        webapi = self.webapi
+        job_thread = JobCollector(id, webapi)
         job_thread.start()
-        send_channel = hub.send_channel
         log          = hub.log
-        log.log("printer_data_collector starting for printer " + str(id))
+        log.log("PrinterCollector starting for printer " + str(id))
         failures     = 0
         #url          = "http://" + ip + ":" + port
         prev_data    = {}
@@ -46,7 +41,7 @@ class PrinterCollector(threading.Thread):
                 job_thread.join()
                 log.log("JobCollector stopped."
                         +" Exiting PrinterCollector.")
-                thread.exit()
+                return 0
             if not job_thread.is_alive():
                 log.log("ERROR: JobCollector thread died for "
                         + str(id) + ". Starting new JobCollector.")
@@ -79,7 +74,7 @@ class PrinterCollector(threading.Thread):
                     job_thread.join()
                     log.log("JobCollector stopped."
                             +" Exiting PrinterCollector.")
-                    thread.exit()
+                    return -1
                 sleep(1)
                 continue
             if response.status_code != 200:
@@ -96,7 +91,7 @@ class PrinterCollector(threading.Thread):
                 # if so, do not send it
                 if cmp(prev_data, data):
                     prev_data = data.copy()
-                    send_channel.send({ "printer": data })
+                    webapi.patch_printer(data)
             sleep(1)
 
     def stop(self):
@@ -106,17 +101,18 @@ class JobCollector(threading.Thread):
 
     """Job Collector will continue to grab """
 
-    def __init__(self, printer_id):
+    def __init__(self, printer_id, webapi):
         """TODO: to be defined1. """
         threading.Thread.__init__(self)
         self.printer_id = printer_id
         self.stopped = False
+        self.webapi = webapi
 
     def run(self):
         id = self.printer_id
-        send_channel = hub.send_channel
+        webapi = self.webapi
         log          = hub.log
-        log.log("job_data_collector starting for printer " + str(id))
+        log.log("JobCollector starting for printer " + str(id))
         failures     = 0
         #url          = "http://" + ip + ":" + port
         prev_data    = {}
@@ -124,7 +120,7 @@ class JobCollector(threading.Thread):
             if self.stopped:
                 log.log("JobCollector stop signal received for "
                         + str(id) + ", exiting.")
-                thread.exit()
+                return 0
             printer = Printer.get_by_id(id)
             ip     = printer.ip
             port   = printer.port
@@ -145,7 +141,7 @@ class JobCollector(threading.Thread):
                     log.log("ERROR: Have failed communication"
                             + " 20 times in a row."
                             + " Closing connection with " + str(id))
-                    thread.exit()
+                    return -1
                 sleep(1)
                 continue
             if response.status_code != requests.codes.ok:
@@ -158,9 +154,8 @@ class JobCollector(threading.Thread):
                 # Check to see if data is the same as last collected
                 # if so, do not send it
                 if cmp(prev_data, data):
-                    prev_data = data
                     prev_data = data.copy()
-                    send_channel.send({"patch_job": data})
+                    webapi.patch_job(data)
             sleep(1)
 
     def stop(self):
@@ -195,7 +190,6 @@ def node_data_collector(id, ip):
 
     """
     nodes        = hub.nodes.nodes
-    send_channel = hub.send_channel
     log          = hub.log
     failures     = 0
     #print str(hub.print_enabled)
@@ -208,7 +202,7 @@ def node_data_collector(id, ip):
             with nodes.lock:
                 if nodes.data.has_key(id):
                     nodes.data.pop(id)
-            thread.exit()
+            return
         try:
             #TODO: get all sensors attached to node then call the correct
             #method to get data
@@ -250,63 +244,6 @@ def node_data_collector(id, ip):
             #})
     """
     time.sleep(1)
-
-def data_receiver():
-    """Should spawn as its own thread. Will take data that
-    is collected by the nodes and send it to the Web API.
-    Also is in charge of logging data based on UUID.
-
-    """
-    log = hub.log
-    domain  = "www.stratusprint.com"
-    web_url = "http://" + domain
-    api_key = hub.API_KEY
-    base_url = hub.webapi
-    #TODO set base_url from hub and commandline argument
-    for message in MessageGenerator(hub.recv_channel):
-        headers = auth.get_headers(api_key, base_url=auth.dev_url)
-        if message.has_key("add_job"):
-            job = message.get('add_job')
-            if job:
-                ret,code = webapi.add_job(web_url, headers, job)
-                if ret == False:
-                    if code == requests.codes.unauthorized:
-                        headers = get_headers(api_key, base_url=base_url)
-                    #TODO readd to queue
-            else:
-                log.log("ERROR: Job to add was empty")
-
-        if message.has_key("patch_job"):
-            job = message.get("patch_job")
-            if job:
-                ret,code = webapi.patch_job(web_url, headers, job)
-                if ret == False:
-                    if code == requests.codes.unauthorized:
-                        headers = get_headers(api_key, base_url=base_url)
-            else:
-                log.log("ERROR: Job to update was empty")
-
-        if message.has_key("add_printer"):
-            printer = message.get("add_printer")
-            if printer:
-                ret,code = webapi.add_printer(web_url, headers,
-                                                    printer)
-                if ret == False:
-                    if code == requests.codes.unauthorized:
-                        headers = get_headers(api_key, base_url=base_url)
-            else:
-                log.log("ERROR: Printer to add was empty")
-
-        if message.has_key('patch_printer'):
-            printer = message.get('patch_printer')
-            if printer:
-                ret,code = webapi.patch_printer(web_url, headers,
-                                                    printer)
-                if ret == False:
-                    if code == requests.codes.unauthorized:
-                        headers = get_headers(api_key, base_url=base_url)
-            else:
-                log.log("ERROR: Printer to printer was empty")
 
 def upload_and_print(id,job_id,fpath,loc=octopi.local):
     """Function that will take care of everything
