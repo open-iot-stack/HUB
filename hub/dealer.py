@@ -39,7 +39,7 @@ class PrinterCollector(threading.Thread):
         #url          = "http://" + ip + ":" + port
         prev_data    = {}
         while(True):
-            if self.stop:
+            if self.stopped:
                 log.log("PrinterCollector stop signal received for "
                         + str(id) + ". Telling JobCollector to stop.")
                 job_thread.stop()
@@ -100,7 +100,7 @@ class PrinterCollector(threading.Thread):
             sleep(1)
 
     def stop(self):
-        self.stop = True
+        self.stopped = True
 
 class JobCollector(threading.Thread):
 
@@ -110,7 +110,7 @@ class JobCollector(threading.Thread):
         """TODO: to be defined1. """
         threading.Thread.__init__(self)
         self.printer_id = printer_id
-        self.stop = False
+        self.stopped = False
 
     def run(self):
         id = self.printer_id
@@ -121,7 +121,7 @@ class JobCollector(threading.Thread):
         #url          = "http://" + ip + ":" + port
         prev_data    = {}
         while(True):
-            if self.stop:
+            if self.stopped:
                 log.log("JobCollector stop signal received for "
                         + str(id) + ", exiting.")
                 thread.exit()
@@ -164,7 +164,7 @@ class JobCollector(threading.Thread):
             sleep(1)
 
     def stop(self):
-        self.stop = True
+        self.stopped = True
 
 def get_temp(node_ip, gpio):
     """Creates request to dht node for data"""
