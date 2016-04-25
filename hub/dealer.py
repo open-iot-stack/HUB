@@ -26,7 +26,7 @@ class PrinterCollector(threading.Thread):
         """TODO: to be defined1. """
         threading.Thread.__init__(self)
         self.printer_id = printer_id
-        self.stop = False
+        self.stopped = False
 
     def run(self):
         id = self.printer_id
