@@ -3,6 +3,10 @@
 .log
 .uuid
 .config
+uploads/*
+testsuite.py
+test.py
+stratus.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
