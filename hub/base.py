@@ -3,7 +3,6 @@
 
 import hub
 from flask import url_for, json, render_template, abort, request
-from jobs import Jobs
 from hub import app
 from hub.database import db_session
 from flask_swagger import swagger
@@ -66,29 +65,6 @@ def register_peripheral():
 
 @app.route('/')
 def index():
-    p = {
-        "uuid": 1234,
-        "jobs": Jobs()
-    }
-    #p["jobs"].add("test2")
-    #p["jobs"].add("test1")
-    hub.printers_wrapper.add(p)
-    p = hub.printers_wrapper.get(1234)
-    return json.jsonify(p)
-    exit()
-    fdate = str(dt.utcnow().isoformat()[:-3])+'Z'
-    j = Job(uuid=3121, created_at=fdate, updated_at=fdate,status="ERROR")
-    j.file += [File(name="Holder.st",origin="remote",size=9123)]
-    p.cjob = []
-    p.jobs += [j]
-    j2 = Job(uuid=3221,created_at=fdate,updated_at=fdate,status="ERROR")
-    p.jobs+=[j2]
-    db_session.add(p)
-    db_session.commit()
-    db_session.remove()
-    #print Printer.query.all()
-    return str(p)
-    #print j
     id=0
 
     return "0 represents the UUID" + '<br>'\

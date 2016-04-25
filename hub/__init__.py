@@ -2,7 +2,7 @@ from flask import Flask, json
 from hub.config import Config
 from hub.channel import Channel
 from hub.logger import Log
-from hub.db_wrapper import Printers
+from hub.listener import Listener
 
 
 app = Flask(__name__)
@@ -13,7 +13,9 @@ import hub.nodes
 import hub.base
 import hub.auth
 
-printers_wrapper = Printers()
+printer_listeners = Listener()
+job_listeners     = Listener()
+node_listeners    = Listener()
 conf = Config()
 send_channel, recv_channel = Channel()
 

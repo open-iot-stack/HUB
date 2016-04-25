@@ -3,7 +3,8 @@
 
 import os
 import thread
-from jobs import Jobs
+import threading
+import hub
 from chest import Chest
 from flask import request
 from flask import json
@@ -11,62 +12,91 @@ from flask import abort
 from dealer import job_data_collector
 from dealer import upload_and_print
 from dealer import printer_data_collector
+from models import Printer, Job, File
 import octopifunctions as octopi
 from hub import app
-
-printers = Chest()
 
 @app.route('/printers', methods=['GET', 'POST'])
 def printers_list():
     """Returns a json of currently active printers
     :returns: TODO
+
     """
+    log = hub.log
+    listener = hub.printer_listeners
 
-    global printers
-    data = {}
-    with printers.lock:
-        for id, printer in printers.data.iteritems():
-            data[id] = {
-                    "id": printer.get("id"),
-                    "ip"  : printer.get("ip"),
-                    "port": printer.get("port"),
-                    "jobs": printer.get("jobs").list(),
-                    "cjob": printer.get("cjob"),
-                    "status": printer.get("status")
-            }
+    if request.method == "GET":
+        online = request.args.get('online_only', 'false')
+        data = {}
+        for printer in Printer.get_printers():
+            id = printer.id
+            if online.lower() == 'true':
+                with listener.lock:
+                    if listener.is_alive(id):
+                        data[id] = printer.to_dict()
+            else:
+                data[id] = printer.to_dict()
+        return json.jsonify(data)
+    if request.method == "POST":
+        id   = int(request.form.get("id"))
+        ip   = request.form.get("ip")
+        port = int(request.form.get("port", 80))
+        key  = request.form.get("key")
+        printer = Printer.get_by_id(id)
+        listener = hub.printer_listeners
+        if printer:
+            printer.update(ip=ip, port=port, key=key)
+            if not listener.is_alive(id):
+                t = threading.Thread(target=printer_data_collector,
+                                    args=(id,))
+                t.start()
+                listener.add_thread(id, t)
+                log.log("Printer " + str(id) + " is now online.")
+                return json.jsonify({'message': 'Printer ' + str(id)
+                                                + ' is now online.'})
+            if listener.is_alive(id):
+                log.log("Printer " + str(id) + " is already online but tried"
+                        + " to activate again. Updated it's data")
+                return json.jsonify({'message': 'Printer ' + str(id)
+                                                + ' was already online.'})
+        else:
+            #Add printer to database
+            printer = Printer(id, key=key, ip=ip, port=port)
+            t = threading.Thread(target=printer_data_collector, args=(id,))
+            t.start()
+            listener.add_thread(id, t)
+            return json.jsonify({'message': 'Printer ' + str(id)
+                                            + ' has been added and is online.'})
 
-    return json.jsonify(data)
 
 @app.route('/printers/<int:id>/<action>',methods=['POST'])
 def print_action(id, action):
-    """Post request to do a print action. UUID must match a printer
-    type in the config file
+    """Post request to do a print action.
+    :id: ID of the printer to command
+    :action: Action to perform
     """
 
-    global printers
-    #id = str(id)
-    with printers.lock:
-        if not id in printers.data:
-            abort(400)
-        printer = printers.data.get(id)
-        ip   = printer.get("ip")
-        port = printer.get("port")
-        key  = printer.get("key")
-        jobs = printer.get("jobs")
-        cjob = printer.get("cjob")
-
+    if not hub.printer_listeners.is_alive(id):
+        abort(400)
+    printer = Printer.get_by_id(id)
+    ip   = printer.ip
+    port = printer.port
+    key  = printer.key
+    jobs = printer.jobs
     url = ip + ":" + str(port)
+    log = hub.log
 
     #TODO make helper function for actions to respond the web api
     # with the actual success as the command. For now just spawn command
     # as new thread
     if action == "start":
-        job = jobs.current()
+        job = printer.current_job()
         if job:
-            fpath = os.path.join(app.config['UPLOAD_FOLDER'],
-                                    job["data"]["file"]["name"])
-            job_id = job["id"]
-        thread.start_new_thread(upload_and_print,(printer,job_id,fpath))
+            ext = job.file.name.rsplit('.', 1)[1]
+            fpath = os.path.join(app.config['UPLOAD_FOLDER'],job.id+'.'+ext)
+            thread.start_new_thread(upload_and_print,(printer,job_id,fpath))
+        else:
+            abort(400)
 #        thread.start_new_thread(job_data_collector, (printer,))
         pass
 
@@ -84,139 +114,47 @@ def print_action(id, action):
         #TODO make sure there is enough space on the device
         f = request.files.get('file', None)
         if f:
-            fpath = os.path.join(app.config['UPLOAD_FOLDER'], f.filename)
+            job_id = request.form.get('id')
+            start = request.form.get('start', 'false')
+            filename = f.filename
+            ext = filename.rsplit(".", 1)[1]
+            # save file as the job_id to verify printer
+            fpath = os.path.join(app.config['UPLOAD_FOLDER'], job_id+"."+ext)
             f.save(fpath)
-            #TODO get job_id from request
-            job_id = jobs.add(f.filename, id)
+            job = Job.get_by_id(job_id)
+            if not job:
+                job = Job(int(job_id), File(filename))
+            ret = printer.add_job(job)
+            if start.lower() == "true":
+                thread.start_new_thread(upload_and_print,
+                                        (printer_id,job_id,fpath))
+                # TODO Make sure nothing else is printing
         else:
             abort(400)
-        # check if start isn't none, then make sure it is equal to true
-        start = request.args.get('start', 'false')
-        if start.lower() == "true":
-            thread.start_new_thread(upload_and_print,(printer,job_id,fpath))
-            # TODO Make sure nothing else is printing
+        # check if start is true, then make sure it is equal to true
     return json.jsonify({"message": action
                         + " successfully sent to the printer."})
 
-@app.route('/printers/<int:id>/status', methods=['GET'])
+@app.route('/printers/<int:id>', methods=['GET'])
 def print_status(id):
 
     #id = str(id)
-    with printers.lock:
-        if not id in printers.data:
-            abort(400)
-        printer = printers.data.get(id)
-        ip   = printer.get("ip")
-        port = printer.get("port")
-        key  = printer.get("key")
-        jobs = printer.get("jobs")
-        cjob = printer.get("cjob")
-        status = printer.get("status")
-
-    #url  = "http://" + ip + ":" + str(port)
-
+    printer = Printer.get_by_id(id)
     #TODO return the actual data that's useful for the web api
-    return json.jsonify(status.copy())
+    return json.jsonify(printer.to_dict())
 
-
-@app.route('/printers/activate', methods=['GET'])
-def activate_printer():
-    """API call to activate a printer on the hub.
-    The printer should provide a parameter 'payload' in
-    json format that contains it's IP address as "ip",
-    id as "id", port as "port", and apikey as "key"
-    :returns: TODO
-    """
-
-    global printers
-    #TODO make into post method on /printers
-    #TODO track thread that spawns for printer data
-    id = int(request.args.get("id"))
-    ip   = request.args.get("ip")
-    port = int(request.args.get("port", 80))
-    key  = request.args.get("key", "0")
-    jobs = Jobs()
-    cjob = {}
-    status = {
-        "id": id,
-        "friendly_id": "NOT_IMPLEMENTED",
-        "model": "NOT_IMPLEMENTED",
-        "num_jobs": 0,
-        "description": "NOT_IMPLEMENTED",
-        "data" : {
-            "state": {
-                "text": "Operational",
-                "flags": {
-                    "operational": True,
-                    "paused": False,
-                    "printing": False,
-                    "sd_ready": False,
-                    "error": False,
-                    "ready": False,
-                    "closed_or_error": False
-                }
-            }
-        }
-    }
-    with printers.lock:
-        if id in printers.data:
-            edit = False
-            printer = printers.data.get(id)
-            jobs = printer.get("jobs")
-            cjob = printer.get("cjob")
-            status = printer.get("status")
-            if ip != printer.get("ip") or \
-                   port != printer.get("port") or \
-                   key != printer.get("key"):
-                edit = True
-            if not edit and status['data']['state']['text'] != "Offline":
-                return json.jsonify({"message": str(id)
-                                        + " was already activated."})
-        printers.data[id] = {
-                "id": id,
-                "ip"  : ip,
-                "port": port,
-                "key" : key,
-                "jobs": jobs,
-                "cjob": cjob,
-                "status": status
-        }
-        printer = printers.data[id]
-        #TODO Move job_data_collector to only start when a job is running
-    thread.start_new_thread(job_data_collector, (printer,))
-    thread.start_new_thread(printer_data_collector, (printer,))
-
-    return json.jsonify({"message": str(id) + " has been activated."})
-
-@app.route('/printers/<int:id>/jobs/list')
+@app.route('/printers/<int:id>/jobs')
 def jobs_list(id):
     """Returns a json of queued up jobs
     :returns: TODO
     """
 
-    try:
-        jobs = printers.data.get(id).get("jobs").list()
-    except AttributeError:
-        abort(400)
-    return json.jsonify(jobs)
-
-@app.route('/printers/<int:id>/jobs/next')
-def jobs_next(id):
-    """Returns a json of the next job to be 
-    processed by the printer
-    """
-
-    with printers.lock:
-        if id in printers.data:
-            job = printers.data.get(id).get("jobs").next(remove=False)
-        else:
-            #TODO if printer doesn't exists
-            return json.jsonify({})
-    if job:
-        return json.jsonify(job)
-    else:
-        #TODO if job didn't exist
-        return json.jsonify({})
+    printer = Printer.get_by_id(id)
+    if printer:
+        jobs = {
+                "jobs": [ job.to_dict() for job in printer.jobs]
+        }
+        return json.jsonify(jobs)
 
 @app.route('/printers/<int:id>/jobs/current', methods=["GET"])
 def jobs_current(id):
@@ -225,42 +163,34 @@ def jobs_current(id):
     :returns: current status of the job
     """
 
-    with printers.lock:
-        if not id in printers.data:
-            abort(400)
-        cjob = printers.data[id]["cjob"].copy()
-    return  json.jsonify(cjob)
+    printer = Printer.get_by_id(id)
+    if printer:
+        job = printer.current_job()
+        if job:
+            return json.jsonify(job.to_dict())
+        else:
+            return json.jsonify({})
+    abort(404)
 
 
-@app.route('/printers/<int:id>/jobs/<int:job_id>',
+@app.route('/jobs/<int:job_id>',
                                     methods=["GET","DELETE"])
 def job_action(id, job_id):
-    """Will either add or delete a job
+    """Will either get or delete a job
 
     """
     if request.method == "GET":
-        with printers.lock:
-            try:
-                printer = printers.data.get(id)
-                # if current job, return current job data
-                if printer:
-                    cjob = printer.get("cjob")
-                    if job_id == cjob.get("id"):
-                        return json.jsonify(cjob.copy())
-                    # if not current job, find it in the jobs queue
-                    jobs = printer.get("jobs")
-                    for job in jobs.list():
-                        if job_id == job.get("id"):
-                            return json.jsonify(job.copy())
-                else:
-                    return json.jsonify({"ERROR": "Printer did not exist"})
-            except KeyError:
-                log.log("ERROR: Jobs are corrupted")
-        return json.jsonify({"ERROR": "Could not find job"})
+        job = Job.get_by_id(job_id)
+        if job:
+            return json.jsonify(job.to_dict())
+        else:
+            abort(404)
     elif request.method == "DELETE":
-        with printers.lock:
-            cjob = printer.get("cjob")
-            if job_id == cjob.get("id"):
+        job = Job.get_by_id(job_id)
+        if job:
+            if job.position == 0:
                 # TODO stop current job
                 return {"NOT_IMPLEMENTED": "NOT_IMPLEMENTED"}
+            else:
+                printer = Printer.get_by_id(job.printer_id)
     pass

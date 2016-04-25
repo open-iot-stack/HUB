@@ -129,6 +129,7 @@ def http_request(address, api_extension,
     except requests.exceptions.Timeout:
         hub.log.log("ERROR: Timeout occured on " + url)
         return None
+    hub.log.log("Made contact on " + url + ".")
     return response
 
 ##################################### PUBLIC METHODS #####################################
