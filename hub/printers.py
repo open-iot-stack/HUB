@@ -26,11 +26,15 @@ def printers_list():
     listener = hub.printer_listeners
 
     if request.method == "GET":
+        online = request.args.get('online_only', 'false')
         data = {}
         for printer in Printer.get_printers():
             id = printer.id
-            with listener.lock:
-                state = {}
+            if online.lower() == 'true':
+                with listener.lock:
+                    if listener.is_alive(id):
+                        data[id] = printer.to_dict()
+            else:
                 data[id] = printer.to_dict()
         return json.jsonify(data)
     if request.method == "POST":
