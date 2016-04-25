@@ -92,7 +92,7 @@ class WebAPI(object):
         #TODO Make sure this doesn't make communication super slow.
         # Might need caching
         if self.headers == None:
-            return self.hub_sign_in()
+            return self.sign_in()
         url = web_url + 'hub_auth/validate_token'
         try:
                 r = requests.get(url, headers = self.headers, timeout=10)
@@ -106,7 +106,7 @@ class WebAPI(object):
             return False
         code = r.status_code
         if code == 401:
-                return self.hub_sign_in()
+                return self.sign_in()
         return True
 
     def add_printer(self, printer):
