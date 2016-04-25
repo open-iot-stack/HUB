@@ -86,8 +86,6 @@ class WebAPI(object):
 
     def update_headers(self):
         #checks validation and signs in once again
-        #return { 'Content-Type' : 'application/json',
-        #        'Accept': 'application/json' , 'Authorization': api_key }
         log = self.log
         web_url = self.url
         api_key = self.key
@@ -118,6 +116,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        headers = self.headers
         web_url = self.url
         hub_id = self.id
         printer_id = printer.get('id')
@@ -160,6 +159,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        headers = self.headers
         web_url = self.url
         printer_id = printer.get('id')
         url = web_url + '/printers/' + str(printer_id) 
@@ -199,6 +199,7 @@ class WebAPI(object):
         :returns: TODO
 
         '''
+        headers = self.headers
         web_url = self.url
         url = web_url + '/printers/' + str(printer_id) 
         try:
@@ -248,6 +249,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        headers = self.headers
         web_url = self.url
         printer_id = job.get('printer')
         job_id = job.get('id')
@@ -288,6 +290,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        headers = self.headers
         web_url = self.url
         printer_id = job.get('printer')
         job_id = job.get('id')
@@ -338,6 +341,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        headers = self.headers
         web_url = self.url
         printer_id = job.get('printer')
         job_id = job.get('id')
@@ -388,6 +392,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        headers = self.headers
         web_url = self.url
         hub_id = self.id
         node_id = node.get('id')
@@ -429,6 +434,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        headers = self.headers
         web_url = self.url
         node_id = node.get('id')
         url = web_url + '/sensors/' + str(node_id)
@@ -469,6 +475,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         '''
+        headers = self.headers
         web_url = self.url
         url = web_url + '/sensors/' + str(node_id)
         try:
@@ -517,6 +524,7 @@ class WebAPI(object):
         :returns: boolean of success
 
         """
+        headers = self.headers
         web_url = self.url
         #TODO sensor data parsing, category will be [temperature,humidity,door], for door send open or closed
         url = web_url + '/sensors/' + node_id + '/data'

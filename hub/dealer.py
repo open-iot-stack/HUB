@@ -45,7 +45,7 @@ class PrinterCollector(threading.Thread):
             if not job_thread.is_alive():
                 log.log("ERROR: JobCollector thread died for "
                         + str(id) + ". Starting new JobCollector.")
-                job_thread = JobCollector(id)
+                job_thread = JobCollector(id, webapi)
                 job_thread.start()
 
             printer = Printer.get_by_id(id)
