@@ -18,10 +18,10 @@ threaded      = False
 print_enabled = False
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "hdtvp:a:",
+    opts, args = getopt.getopt(sys.argv[1:], "hdtvp:a:u:",
             ["apikey=","pass=","help",
                 "port=","debug","host=",
-                "threaded","verbose"])
+                "threaded","verbose","weburl="])
 except getopt.GetoptError, err:
     # Print debug info
     print str(err)
@@ -30,6 +30,7 @@ except getopt.GetoptError, err:
 for opt, arg in opts:
     if opt in ["-h", "--help"]:
         print "Usage: Server.py"\
+        + "\n    -u/--weburl <web url>"\
         + "\n    -a/--apikey <apikey>"\
         + "\n    -p/--port   <port>"\
         + "\n       --pass   <password>"\
@@ -39,8 +40,10 @@ for opt, arg in opts:
         + "\n    -t/--threaded"\
         + "\n    -v/--verbose"
         sys.exit(0)
+    elif opt in ["-u", "--weburl"]:
+        hub.WEB_API_URL = arg
     elif opt in ["-a", "--apikey"]:
-        hub.API_KEY = arg
+        hub.WEB_API_KEY = arg
     elif opt in ["--pass"]:
         hub.SND_PASSWD = arg
     elif opt in ["-p", "--port"]:
@@ -55,6 +58,7 @@ for opt, arg in opts:
         print_enabled = True
 
 hub.log = Log(print_enabled=print_enabled)
+hub.Webapi = WebAPI(hub.WEB_API_URL, hub.WEB_API_KEY, hub.log)
 
 init_db()
 app.run(host=host, debug=debug, port=port,threaded=threaded)
