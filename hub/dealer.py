@@ -4,6 +4,7 @@
 import os
 import hub
 import thread
+import threading
 import channel
 import requests
 import webapi
@@ -12,93 +13,88 @@ from message_generator import MessageGenerator
 from parse import parse_job_status, parse_printer_status
 from time import sleep
 from flask import json
+from sqlalchemy.orm import sessionmaker
+from database import engine
+from models import Printer, Node, Job
 import auth
 from hub import app
 
-def printer_data_collector(printer):
-    id   = printer.get("id")
-    ip     = printer.get("ip")
-    port   = printer.get("port")
-    key    = printer.get("key")
-    jobs   = printer.get("jobs")
-    cjob   = printer.get("cjob")
-    status = printer.get("status")
-    printers     = hub.printers.printers
+def printer_data_collector(id):
     send_channel = hub.send_channel
     log          = hub.log
     log.log("printer_data_collector starting for printer " + str(id))
     failures     = 0
     #url          = "http://" + ip + ":" + port
-    url          = ip + ":" + str(port)
     prev_data    = {}
     while(True):
-        if failures > 20:
-            log.log("ERROR: Have failed communication 20 times in a row."
-                  + " Closing connection with " + str(id))
-            with printers.lock:
-                if printers.data.has_key(id):
-                    # SET STATUS TO OFFLINE
-                    status["data"]["state"]["text"] = "Offline"
-                    pass
-            thread.exit()
+        printer = Printer.get_by_id(id)
+        ip     = printer.ip
+        port   = printer.port
+        key    = printer.key
+        jobs   = printer.jobs
+        status = printer.status
+        url    = ip + ":" + str(port)
         response = octopi.get_printer_info(url, key)
         if response:
             failures = 0
         else:
-            sleep(1)
+            printer.state("Error")
             failures += 1
             log.log("ERROR: Could not collect printer"
                   + " data from printer "+str(id))
+            if failures > 20:
+                printer.state("Closed on Error")
+                log.log("ERROR: Have failed communication 20 times in a row."
+                      + " Closing connection with " + str(id))
+                thread.exit()
+            sleep(1)
             continue
-        if response.status_code != requests.codes.ok:
+        if response.status_code != 200:
             log.log("ERROR: Response from "
                     + str(id) + " returned status code "
                     + response.status_code + " on "
                     + url)
         else:
             #data = response.json()
-            data = parse_printer_status(printer, response.json())
+            state = response.json()
+            printer.state(state['text'])
+            data = printer.to_web(state)
             # Check to see if data is the same as last collected
             # if so, do not send it
             if cmp(prev_data, data):
-                printer["cjob"] = data
                 prev_data = data.copy()
                 send_channel.send({ "printer": data })
         sleep(1)
 
 
-def job_data_collector(printer):
-    id = printer.get("id")
-    ip   = printer.get("ip")
-    port = printer.get("port")
-    key  = printer.get("key")
-    jobs = printer.get("jobs")
-    cjob = printer.get("cjob")
-    status = printer.get("status")
-    printers     = hub.printers.printers
+def job_data_collector(id):
     send_channel = hub.send_channel
     log          = hub.log
     log.log("job_data_collector starting for printer " + str(id))
     failures     = 0
     #url          = "http://" + ip + ":" + port
-    url          = ip + ":" + str(port)
     prev_data    = {}
     while(True):
-        if failures > 20:
-            log.log("ERROR: Have failed communication 20 times in a row."
-                  + " Closing connection with " + str(id))
-            with printers.lock:
-                if printers.data.has_key(id):
-                    status["data"]["state"]["text"] = "Offline"
-            thread.exit()
+        printer = Printer.get_by_id(id)
+        ip     = printer.ip
+        port   = printer.port
+        key    = printer.key
+        jobs   = printer.jobs
+        status = printer.status
+        url    = ip + ":" + str(port)
+
         response = octopi.get_job_info(url, key)
         if response:
             failures = 0
         else:
-            sleep(1)
             failures += 1
             log.log("ERROR: Could not collect"
                    + " job data from printer " + str(id))
+            if failures > 20:
+                log.log("ERROR: Have failed communication 20 times in a row."
+                      + " Closing connection with " + str(id))
+                thread.exit()
+            sleep(1)
             continue
         if response.status_code != requests.codes.ok:
             log.log("ERROR: Response from "
@@ -106,11 +102,11 @@ def job_data_collector(printer):
                     + response.status_code + " on "
                     + url)
         else:
-            data = parse_job_status(response.json(), printer["cjob"].copy())
+            data = parse_job_status(response.json())
             # Check to see if data is the same as last collected
             # if so, do not send it
-            if cmp(printer["cjob"], data):
-                printer["cjob"] = data
+            if cmp(prev_data, data):
+                prev_data = data
                 prev_data = data.copy()
                 send_channel.send({"patch_job": data})
         sleep(1)
@@ -257,7 +253,7 @@ def data_receiver():
             else:
                 log.log("ERROR: Printer to printer was empty")
 
-def upload_and_print(printer,job_id,fpath,loc=octopi.local):
+def upload_and_print(id,job_id,fpath,loc=octopi.local):
     """Function that will take care of everything
     to print a file that exists on the hub.
     If current job is not the job_id, returns false
@@ -267,15 +263,16 @@ def upload_and_print(printer,job_id,fpath,loc=octopi.local):
     :returns: None
 
     """
-    id = printer.get("id")
-    ip   = printer.get("ip")
-    port = printer.get("port")
-    key  = printer.get("key")
-    jobs = printer.get("jobs")
-    cjob = printer.get("cjob")
+    printer = Printer.get_by_id(id)
+    ip   = printer.ip
+    port = printer.port
+    key  = printer.key
+    jobs = printer.jobs
     log  = hub.log
     url = "http://" + ip + ":" + str(port)
-    if job_id != jobs.current().get("id"):
+    if job_id != printer.current_job().id:
+        log.log("ERROR: Job " + str(id) +
+                "requested to be started was not the next job")
         return False
     r = octopi.upload_file(url, key, fpath, loc)
     if r == None:
@@ -299,5 +296,4 @@ def upload_and_print(printer,job_id,fpath,loc=octopi.local):
                 + ". Return code from printer " + str(r.status_code)
                 + ". Is the printer already printing?")
         return False
-    printer["cjob"] = jobs.current()
     return True
