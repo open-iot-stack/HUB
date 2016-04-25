@@ -153,7 +153,7 @@ class JobCollector(threading.Thread):
                 data = parse_job_status(response.json())
                 # Check to see if data is the same as last collected
                 # if so, do not send it
-                if cmp(prev_data, data):
+                if cmp(prev_data, data) and data.get('id') != 0:
                     prev_data = data.copy()
                     webapi.patch_job(data)
             sleep(1)
