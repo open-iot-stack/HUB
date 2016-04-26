@@ -157,12 +157,17 @@ class JobCollector(threading.Thread):
                         + response.status_code + " on "
                         + url)
             else:
-                data = parse_job_status(response.json())
-                # Check to see if data is the same as last collected
-                # if so, do not send it
-                if cmp(prev_data, data) and data.get('id') != 0:
-                    prev_data = data.copy()
-                    webapi.patch_job(data)
+                job = printer.current_job()
+                data = job.to_web(esponse.json())
+                if data != None:
+                    # Check to see if data is the same as last collected
+                    # if so, do not send it
+                    if cmp(prev_data, data) and data.get('id') != 0:
+                        prev_data = data.copy()
+                        webapi.patch_job(data)
+                else:
+                    log.log("ERROR: Did not get proper job data from"
+                            + str(id))
             sleep(1)
 
     def stop(self):
