@@ -133,7 +133,8 @@ class Job(Base):
         jf = job.get("job").get("file")
         if jf.get('name') == None:
             return None
-        id = self.webid
+        id = self.id
+        webid = self.webid
         if jf.get('name').split('.',1)[0] != str(id):
             return None
         fname = self.file.name
@@ -150,7 +151,7 @@ class Job(Base):
         if not unix_date:
             unix_date = 0
         fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
-        njob["id"] = id
+        njob["id"] = webid
         njob["data"] = {
             "status": self.status,
             "file": {
