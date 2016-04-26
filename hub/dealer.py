@@ -6,7 +6,6 @@ import threading
 import requests
 import webapi
 import octopifunctions as octopi
-from parse import parse_job_status, parse_printer_status
 from time import sleep
 from flask import json
 from models import Printer, Node, Job
@@ -26,6 +25,13 @@ class PrinterCollector(threading.Thread):
     def run(self):
         id = self.printer_id
         webapi = self.webapi
+        printer = Printer.get_by_id(id)
+        # loop until the printer has a webid, otherwise we can't update
+        while priner.webid == None:
+            webid = webapi.add_printer(printer.to_web(None))
+            if webid:
+                printer.set_webid(webid)
+            printer = Printer.get_by_id(id)
         job_thread = JobCollector(id, webapi)
         job_thread.start()
         log          = hub.log
@@ -42,18 +48,26 @@ class PrinterCollector(threading.Thread):
                 log.log("JobCollector stopped."
                         +" Exiting PrinterCollector.")
                 return 0
-            if not job_thread.is_alive():
-                log.log("ERROR: JobCollector thread died for "
-                        + str(id) + ". Starting new JobCollector.")
-                job_thread = JobCollector(id, webapi)
-                job_thread.start()
-
             printer = Printer.get_by_id(id)
             ip     = printer.ip
             port   = printer.port
             key    = printer.key
             jobs   = printer.jobs
             status = printer.status
+            # If status is set to complete, stop current job
+            # and don't do anything else. Triggered by REST call
+            if status == "Complete":
+                if job_thread.is_alive():
+                    job_thread.stop()
+                    job_thread.join()
+                sleep(5)
+                continue
+            if not job_thread.is_alive():
+                log.log("ERROR: JobCollector thread died for "
+                        + str(id) + ". Starting new JobCollector.")
+                job_thread = JobCollector(id, webapi)
+                job_thread.start()
+
             url    = ip + ":" + str(port)
             response = octopi.get_printer_info(url, key)
             if response:
@@ -80,18 +94,18 @@ class PrinterCollector(threading.Thread):
             if response.status_code != 200:
                 log.log("ERROR: Response from "
                         + str(id) + " returned status code "
-                        + response.status_code + " on "
+                        + str(response.status_code) + " on "
                         + url)
             else:
                 #data = response.json()
                 state = response.json()
-                printer.state(state['text'])
-                data = printer.to_web(state)
-                # Check to see if data is the same as last collected
-                # if so, do not send it
-                if cmp(prev_data, data):
-                    prev_data = data.copy()
-                    webapi.patch_printer(data)
+                if printer.state(state['text']):
+                    data = printer.to_web(state)
+                    # Check to see if data is the same as last collected
+                    # if so, do not send it
+                    if cmp(prev_data, data):
+                        prev_data = data.copy()
+                        webapi.patch_printer(data)
             sleep(1)
 
     def stop(self):
@@ -128,7 +142,11 @@ class JobCollector(threading.Thread):
             jobs   = printer.jobs
             status = printer.status
             url    = ip + ":" + str(port)
-
+            #If printer status is set to complete, exit
+            # a new job thread will be spawned by printer collector
+            # when needed
+            if status == "Complete":
+                return 0
             response = octopi.get_job_info(url, key)
             if response:
                 failures = 0
@@ -147,15 +165,23 @@ class JobCollector(threading.Thread):
             if response.status_code != requests.codes.ok:
                 log.log("ERROR: Response from "
                         + str(id) + " returned status code "
-                        + response.status_code + " on "
+                        + str(response.status_code) + " on "
                         + url)
             else:
-                data = parse_job_status(response.json())
-                # Check to see if data is the same as last collected
-                # if so, do not send it
-                if cmp(prev_data, data) and data.get('id') != 0:
-                    prev_data = data.copy()
-                    webapi.patch_job(data)
+                job = printer.current_job()
+                data = job.to_web(response.json())
+                if data != None:
+                    if data.get('progress').get('completion') == 1:
+                        printer.state("Complete")
+                        return 0
+                    # Check to see if data is the same as last collected
+                    # if so, do not send it
+                    if cmp(prev_data, data):
+                        prev_data = data.copy()
+                        webapi.patch_job(data)
+                else:
+                    log.log("ERROR: Did not get proper job data from"
+                            + str(id))
             sleep(1)
 
     def stop(self):
@@ -245,11 +271,11 @@ def node_data_collector(id, ip):
     """
     time.sleep(1)
 
-def upload_and_print(id,job_id,fpath,loc=octopi.local):
+def start_new_job(id,job_id,fpath,loc=octopi.local):
     """Function that will take care of everything
     to print a file that exists on the hub.
     If current job is not the job_id, returns false
-    :printer: printer object to get data from
+    :id: printer id to get data from
     :job_id: job id that use believes should be started
     :fpath: filepath to the new file to start
     :returns: None
@@ -261,7 +287,7 @@ def upload_and_print(id,job_id,fpath,loc=octopi.local):
     key  = printer.key
     jobs = printer.jobs
     log  = hub.log
-    url = "http://" + ip + ":" + str(port)
+    url = ip + ":" + str(port)
     if job_id != printer.current_job().id:
         log.log("ERROR: Job " + str(id) +
                 "requested to be started was not the next job")
@@ -271,21 +297,34 @@ def upload_and_print(id,job_id,fpath,loc=octopi.local):
         log.log("ERROR: Did not have a response from " + str(id)
                 + ". File upload canceled for " + fpath + ".")
         return False
-    if r.status_code != requests.codes.created:
+    if r.status_code != 201:
         log.log("ERROR: Could not upload file " + fpath
                 + ". Return code from printer " + str(r.status_code))
         return False
     data = r.json()
     fname = data['files'][loc]['name']
-    #TODO fix this to work with gcode files as well
-    r = slice_and_print(url, key, fname, loc)
+    ext = get_extension(fname)
+    if ext in ['stl']:
+        r = octopi.slice_and_print(url, key, fname, loc)
+    elif ext in ['gco']:
+        r = octopi.select_and_print(url, key, fname, loc)
     if r == None:
         log.log("ERROR: Did not have a response from " + str(id)
-                + ". File slice canceled for " + fname + ".")
+                + ". Job start canceled for job " + str(job_id) + ".")
         return False
-    if r.status_code != requests.codes.accepted:
-        log.log("ERROR: Slice and print did not work for " + str(id)
+    if r.status_code != 204:
+        log.log("ERROR: Job start failed for " + str(job_id)
                 + ". Return code from printer " + str(r.status_code)
                 + ". Is the printer already printing?")
         return False
     return True
+
+def get_extension(path):
+    """Returns the extension of a file.
+    :path: path of file to get the extension of
+    :returns: file extension
+
+    """
+    ext = name.rsplit('.', 1)[1]
+    return ext
+    

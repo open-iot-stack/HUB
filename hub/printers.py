@@ -9,7 +9,7 @@ from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
-from dealer import upload_and_print
+from dealer import start_new_job
 from dealer import PrinterCollector
 from models import Printer, Job, File
 import octopifunctions as octopi
@@ -70,6 +70,8 @@ def add_printer():
     if printer:
         printer.update(ip=ip, port=port, key=key)
         if not listener.is_alive(id):
+            #Add printer to database
+            printer = Printer(id, key=key, ip=ip, port=port)
             t = PrinterCollector(id, hub.Webapi)
             t.start()
             listener.add_thread(id, t)
@@ -118,9 +120,12 @@ def print_action(id, action):
     if action == "start":
         job = printer.current_job()
         if job:
+            #TODO fix this to either unpause current job or start
+            # a new job if applicable
             ext = job.file.name.rsplit('.', 1)[1]
-            fpath = os.path.join(app.config['UPLOAD_FOLDER'],job.id+'.'+ext)
-            thread.start_new_thread(upload_and_print,(printer,job_id,fpath))
+            fpath = os.path.join(app.config['UPLOAD_FOLDER'],
+                                    job.id+'.'+ext)
+            thread.start_new_thread(start_new_job,(printer,job_id,fpath))
         else:
             abort(400)
 #        thread.start_new_thread(job_data_collector, (printer,))
@@ -145,16 +150,16 @@ def print_action(id, action):
             filename = f.filename
             ext = filename.rsplit(".", 1)[1]
             # save file as the job_id to verify printer
-            fpath = os.path.join(app.config['UPLOAD_FOLDER'], job_id+"."+ext)
+            fpath = os.path.join(app.config['UPLOAD_FOLDER'],
+                                    str(job_id)+"."+ext)
             f.save(fpath)
             job = Job.get_by_id(job_id)
             if not job:
                 job = Job(int(job_id), File(filename))
             ret = printer.add_job(job)
             if start.lower() == "true":
-                thread.start_new_thread(upload_and_print,
+                thread.start_new_thread(start_new_job,
                                         (printer_id,job_id,fpath))
-                # TODO Make sure nothing else is printing
         else:
             abort(400)
         # check if start is true, then make sure it is equal to true
