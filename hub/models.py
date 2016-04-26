@@ -44,10 +44,11 @@ class Job(Base):
     __tablename__="job"
 
     id         = Column(Integer, primary_key=True)
+    webid      = Column(Integer, unique=True)
     position   = Column(Integer)
     status     = Column(String)
-    file       = relationship("File", back_populates="job", uselist=False)
-    printer    = relationship("Printer", back_populates="jobs", uselist=False)
+    file       = relationship("File", back_populates="job",
+                                uselist=False)
     printer_id = Column(Integer, ForeignKey("printer.id"))
 
     @staticmethod
@@ -62,7 +63,20 @@ class Job(Base):
             db_session.query(Job).filter(Job.id == id).one_or_none()
         return job
 
-    def __init__(self, id,  file, status="queued"):
+    @staticmethod
+    def get_by_webid(webid):
+        """Returns a job based on webid
+        :webid: WebID of job to be found
+        :returns: Job if webid is found, None if didn't exist
+
+        """
+        db_session.remove()
+        job =\
+            db_session.query(Job).\
+                filter(Job.webid == id).one_or_none()
+        return job
+
+    def __init__(self, id,  file, webid=None, status="queued"):
         """Create a job object. A file object should be created first.
         :id: id of the job
         :file: file that the job refers to
@@ -74,6 +88,11 @@ class Job(Base):
         self.id = id
         self.status = status
         self.file = file
+        #atm the webid and id should be the same
+        if webid:
+            self.webid = webid
+        else:
+            self.webid = id
         db_session.add(self)
         db_session.commit()
 
@@ -85,12 +104,60 @@ class Job(Base):
         :returns: boolean of success
 
         """
-        if state in ["processing", "slicing", "printing", "completed", "paused",
-                "errored", "queued"]:
+        if state in ["processing", "slicing", "printing",
+                        "completed", "paused", "errored",
+                        "queued"]:
             self.status = state
             db_session.commit()
             return True
         return False
+
+    def set_web_id(self, webid):
+        """Sets the webid of the job. ATM is the same as ID
+        and set at creation
+        :webid: ID used by the web api
+        :returns: boolean of success
+
+        """
+        self.webid = webid
+        db_session.commit()
+        return True
+
+    def to_web(self, job):
+        """Properly formats data to be sent to the web api 
+        
+        """
+
+        jf = job.get("job").get("file")
+        id = self.webid
+        fname = self.file.name
+        unix_date = jf.get("date")
+        filament = job.get("job").get("filament")
+        progress = job.get("progress")
+        if progress:
+            prog = {}
+            prog["completion"] = progress.get("completion")
+            prog["file_position"] = progress.get("filepos")
+            prog["print_time"] = progress.get("printTime")
+            prog["print_time_left"] = progress.get("printTimeLeft")
+            progress = prog
+        if not unix_date:
+            unix_date = 0
+        fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
+        njob["id"] = id
+        njob["data"] = {
+            "status": status,
+            "file": {
+                "name": fname,
+                "origin": jf.get("origin"),
+                "size": jf.get("size"),
+                "date": fdate
+                },
+            "estimated_print_time": job.get("estimatedPrintTime"),
+            "filament": filament,
+            "progress": progress
+            }
+        return njob
 
     def to_dict(self):
         """Returns a dictionary representation of the Job
@@ -112,9 +179,11 @@ class Printer(Base):
     __tablename__="printer"
 
     id   = Column(Integer, primary_key=True)
+    webid = Column(Integer, unique=True)
     status = Column(String)
-    jobs = relationship("Job", order_by=Job.position, back_populates="printer",
-                                collection_class=ordering_list("position"))
+    jobs = relationship("Job", order_by=Job.position,
+            back_populates="printer",
+            collection_class=ordering_list("position"))
     key  = Column(String)
     ip   = Column(String)
     port = Column(Integer)
@@ -132,7 +201,21 @@ class Printer(Base):
         """
         db_session.remove()
         printer =\
-            db_session.query(Printer).filter(Printer.id == id).one_or_none()
+            db_session.query(Printer).\
+                filter(Printer.id == id).one_or_none()
+        return printer
+
+    @staticmethod
+    def get_by_webid(webid):
+        """Returns a printer based on webid
+        :webid: ID that the web interface uses
+        :returns: Printer if webid is found, None if didn't exist
+
+        """
+        db_session.remove()
+        printer =\
+            db_session.query(Printer).\
+                filter(Printer.webid == webid).one_or_none()
         return printer
 
     @staticmethod
@@ -149,7 +232,7 @@ class Printer(Base):
 
     def __init__(self, id, key=None, ip=None, port=80, status="Paused",
                 friendly_id=None, manufacturer=None, model=None
-                , description=None):
+                , description=None, webid=None):
         """Creates a new Printer, adds to database. If printer exists
         or params aren't formatted correctly, will throw and exception
         :id: id of the printer
@@ -159,6 +242,7 @@ class Printer(Base):
 
         """
         self.id           = id
+        self.webid        = webid
         self.key          = key
         self.ip           = ip
         self.port         = port
@@ -186,7 +270,8 @@ class Printer(Base):
         """
         if status:
             if status in ["Operational", "Paused", "Printing",
-                            "SD Ready", "Error", "Ready", "Closed on Error"]:
+                            "SD Ready", "Error", "Ready",
+                            "Closed on Error"]:
                 self.status = status
             else:
                 return False
@@ -196,6 +281,17 @@ class Printer(Base):
             self.ip = ip
         if port:
             self.port = port
+        db_session.commit()
+        return True
+
+    def set_web_id(self, id):
+        """Sets the web id for the printer
+        :id: ID that web gave back to communicate
+        :returns: boolean of success. Fails if web_id is already set
+        """
+        if self.webid:
+            return False
+        self.webid = id
         db_session.commit()
         return True
 
@@ -341,8 +437,8 @@ class Printer(Base):
 
         """
         d = {
-                "id": self.id,
-                "friendly_id": self.friendly_id,
+                "id": self.webid,
+                "friendly_id": self.id,
                 "manufacturer": self.manufacturer,
                 "model": self.model,
                 "num_jobs": self.num_jobs(),
