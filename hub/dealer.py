@@ -6,7 +6,6 @@ import threading
 import requests
 import webapi
 import octopifunctions as octopi
-from parse import parse_job_status, parse_printer_status
 from time import sleep
 from flask import json
 from models import Printer, Node, Job
