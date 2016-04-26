@@ -49,6 +49,8 @@ class Job(Base):
     status     = Column(String)
     file       = relationship("File", back_populates="job",
                                 uselist=False)
+    printer    = relationship("Printer", back_populates="jobs",
+                                uselist=False)
     printer_id = Column(Integer, ForeignKey("printer.id"))
 
     @staticmethod
@@ -292,6 +294,7 @@ class Printer(Base):
         """Sets the web id for the printer
         :webid: ID that web gave back to communicate
         :returns: boolean of success.
+
         """
         self.webid = webid
         db_session.commit()
@@ -459,11 +462,20 @@ class Node(Base):
     __tablename__="nodes"
 
     id = Column(Integer, primary_key=True)
+    webid = Column(Integer, unique=True)
     ip = Column(String)
 
     def __init__(self, id, ip):
         self.id = id
         self.ip = ip
+
+    def set_webid(self, webid):
+        self.webid = webid
+        return True
+
+    def to_web(self, data):
+        #TODO parse data to send to web
+        return None
 
     def __repr__(self):
         return "<Node='%d' ip='%s')>"\
