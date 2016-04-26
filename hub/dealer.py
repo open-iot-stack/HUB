@@ -48,18 +48,26 @@ class PrinterCollector(threading.Thread):
                 log.log("JobCollector stopped."
                         +" Exiting PrinterCollector.")
                 return 0
-            if not job_thread.is_alive():
-                log.log("ERROR: JobCollector thread died for "
-                        + str(id) + ". Starting new JobCollector.")
-                job_thread = JobCollector(id, webapi)
-                job_thread.start()
-
             printer = Printer.get_by_id(id)
             ip     = printer.ip
             port   = printer.port
             key    = printer.key
             jobs   = printer.jobs
             status = printer.status
+            # If status is set to complete, stop current job
+            # and don't do anything else. Triggered by REST call
+            if status == "Complete":
+                if job_thread.is_alive():
+                    job_thread.stop()
+                    job_thread.join()
+                sleep(5)
+                continue
+            if not job_thread.is_alive():
+                log.log("ERROR: JobCollector thread died for "
+                        + str(id) + ". Starting new JobCollector.")
+                job_thread = JobCollector(id, webapi)
+                job_thread.start()
+
             url    = ip + ":" + str(port)
             response = octopi.get_printer_info(url, key)
             if response:
@@ -86,18 +94,18 @@ class PrinterCollector(threading.Thread):
             if response.status_code != 200:
                 log.log("ERROR: Response from "
                         + str(id) + " returned status code "
-                        + response.status_code + " on "
+                        + str(response.status_code) + " on "
                         + url)
             else:
                 #data = response.json()
                 state = response.json()
-                printer.state(state['text'])
-                data = printer.to_web(state)
-                # Check to see if data is the same as last collected
-                # if so, do not send it
-                if cmp(prev_data, data):
-                    prev_data = data.copy()
-                    webapi.patch_printer(data)
+                if printer.state(state['text']):
+                    data = printer.to_web(state)
+                    # Check to see if data is the same as last collected
+                    # if so, do not send it
+                    if cmp(prev_data, data):
+                        prev_data = data.copy()
+                        webapi.patch_printer(data)
             sleep(1)
 
     def stop(self):
@@ -134,7 +142,11 @@ class JobCollector(threading.Thread):
             jobs   = printer.jobs
             status = printer.status
             url    = ip + ":" + str(port)
-
+            #If printer status is set to complete, exit
+            # a new job thread will be spawned by printer collector
+            # when needed
+            if status == "Complete":
+                return 0
             response = octopi.get_job_info(url, key)
             if response:
                 failures = 0
@@ -153,15 +165,18 @@ class JobCollector(threading.Thread):
             if response.status_code != requests.codes.ok:
                 log.log("ERROR: Response from "
                         + str(id) + " returned status code "
-                        + response.status_code + " on "
+                        + str(response.status_code) + " on "
                         + url)
             else:
                 job = printer.current_job()
                 data = job.to_web(response.json())
                 if data != None:
+                    if data.get('progress').get('completion') == 1:
+                        printer.state("Complete")
+                        return 0
                     # Check to see if data is the same as last collected
                     # if so, do not send it
-                    if cmp(prev_data, data) and data.get('id') != 0:
+                    if cmp(prev_data, data):
                         prev_data = data.copy()
                         webapi.patch_job(data)
                 else:
