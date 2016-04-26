@@ -15,59 +15,84 @@ from models import Printer, Job, File
 import octopifunctions as octopi
 from hub import app
 
-@app.route('/printers', methods=['GET', 'POST'])
+@app.route('/printers', methods=['GET'])
 def printers_list():
-    """Returns a json of currently active printers
-    :returns: TODO
-
     """
+        Printers List
+        Returns a json of currently active printers
+        ---
+        tags:
+          - printer
+        responses:
+          200:
+            description: Returns a list of printers
+        """
+
     log = hub.log
     listener = hub.printer_listeners
 
-    if request.method == "GET":
-        online = request.args.get('online_only', 'false')
-        data = {}
-        for printer in Printer.get_printers():
-            id = printer.id
-            if online.lower() == 'true':
-                with listener.lock:
-                    if listener.is_alive(id):
-                        data[id] = printer.to_dict()
-            else:
-                data[id] = printer.to_dict()
-        return json.jsonify(data)
-    if request.method == "POST":
-        id   = int(request.form.get("id"))
-        ip   = request.form.get("ip")
-        port = int(request.form.get("port", 80))
-        key  = request.form.get("key")
-        printer = Printer.get_by_id(id)
-        listener = hub.printer_listeners
-        if printer:
-            printer.update(ip=ip, port=port, key=key)
-            if not listener.is_alive(id):
-                t = PrinterCollector(id, hub.Webapi)
-                t.start()
-                listener.add_thread(id, t)
-                log.log("Printer " + str(id) + " is now online.")
-                return json.jsonify({'message': 'Printer ' + str(id)
-                                                + ' is now online.'})
-            if listener.is_alive(id):
-                log.log("Printer " + str(id) 
-                        + " is already online but tried"
-                        + " to activate again. Updated it's data")
-                return json.jsonify({'message': 'Printer ' 
-                                        + str(id) 
-                                        + ' was already online.'})
+    online = request.args.get('online_only', 'false')
+    data = {}
+    for printer in Printer.get_printers():
+        id = printer.id
+        if online.lower() == 'true':
+            with listener.lock:
+                if listener.is_alive(id):
+                    data[id] = printer.to_dict()
         else:
-            #Add printer to database
-            #TODO add printer to web api
-            printer = Printer(id, key=key, ip=ip, port=port)
+            data[id] = printer.to_dict()
+    return json.jsonify(data)
+
+
+
+@app.route('/printers', methods=['POST'])
+def add_printer():
+    """
+        Add Printer
+        ---
+        tags:
+          - printer
+        responses:
+          200:
+            description: Returns a printer
+        """
+
+    log = hub.log
+    listener = hub.printer_listeners
+
+
+    id   = int(request.form.get("id"))
+    ip   = request.form.get("ip")
+    port = int(request.form.get("port", 80))
+    key  = request.form.get("key")
+    printer = Printer.get_by_id(id)
+    listener = hub.printer_listeners
+    if printer:
+        printer.update(ip=ip, port=port, key=key)
+        if not listener.is_alive(id):
             t = PrinterCollector(id, hub.Webapi)
             t.start()
             listener.add_thread(id, t)
+            log.log("Printer " + str(id) + " is now online.")
             return json.jsonify({'message': 'Printer ' + str(id)
-                                    + ' has been added and is online.'})
+                                            + ' is now online.'})
+        if listener.is_alive(id):
+            log.log("Printer " + str(id)
+                    + " is already online but tried"
+                    + " to activate again. Updated it's data")
+            return json.jsonify({'message': 'Printer '
+                                    + str(id)
+                                    + ' was already online.'})
+    else:
+        #Add printer to database
+        #TODO add printer to web api
+        printer = Printer(id, key=key, ip=ip, port=port)
+        t = PrinterCollector(id, hub.Webapi)
+        t.start()
+        listener.add_thread(id, t)
+        return json.jsonify({'message': 'Printer ' + str(id)
+                                + ' has been added and is online.'})
+
 
 
 @app.route('/printers/<int:id>/<action>',methods=['POST'])
