@@ -25,18 +25,17 @@ class PrinterCollector(threading.Thread):
 
     def run(self):
         id = self.printer_id
-        webapi  = self.webapi
+        webapi = self.webapi
         printer = Printer.get_by_id(id)
-        log     = hub.log
         # loop until the printer has a webid, otherwise we can't update
         while priner.webid == None:
             webid = webapi.add_printer(printer.to_web(None))
             if webid:
                 printer.set_webid(webid)
             printer = Printer.get_by_id(id)
-
         job_thread = JobCollector(id, webapi)
         job_thread.start()
+        log          = hub.log
         log.log("PrinterCollector starting for printer " + str(id))
         failures     = 0
         #url          = "http://" + ip + ":" + port
@@ -253,11 +252,11 @@ def node_data_collector(id, ip):
     """
     time.sleep(1)
 
-def upload_and_print(id,job_id,fpath,loc=octopi.local):
+def start_new_job(id,job_id,fpath,loc=octopi.local):
     """Function that will take care of everything
     to print a file that exists on the hub.
     If current job is not the job_id, returns false
-    :printer: printer object to get data from
+    :id: printer id to get data from
     :job_id: job id that use believes should be started
     :fpath: filepath to the new file to start
     :returns: None
@@ -269,7 +268,7 @@ def upload_and_print(id,job_id,fpath,loc=octopi.local):
     key  = printer.key
     jobs = printer.jobs
     log  = hub.log
-    url = "http://" + ip + ":" + str(port)
+    url = ip + ":" + str(port)
     if job_id != printer.current_job().id:
         log.log("ERROR: Job " + str(id) +
                 "requested to be started was not the next job")
@@ -279,21 +278,34 @@ def upload_and_print(id,job_id,fpath,loc=octopi.local):
         log.log("ERROR: Did not have a response from " + str(id)
                 + ". File upload canceled for " + fpath + ".")
         return False
-    if r.status_code != requests.codes.created:
+    if r.status_code != 201:
         log.log("ERROR: Could not upload file " + fpath
                 + ". Return code from printer " + str(r.status_code))
         return False
     data = r.json()
     fname = data['files'][loc]['name']
-    #TODO fix this to work with gcode files as well
-    r = slice_and_print(url, key, fname, loc)
+    ext = get_extension(fname)
+    if ext in ['stl']:
+        r = octopi.slice_and_print(url, key, fname, loc)
+    elif ext in ['gco']:
+        r = octopi.select_and_print(url, key, fname, loc)
     if r == None:
         log.log("ERROR: Did not have a response from " + str(id)
-                + ". File slice canceled for " + fname + ".")
+                + ". Job start canceled for job " + str(job_id) + ".")
         return False
-    if r.status_code != requests.codes.accepted:
-        log.log("ERROR: Slice and print did not work for " + str(id)
+    if r.status_code != 204:
+        log.log("ERROR: Job start failed for " + str(job_id)
                 + ". Return code from printer " + str(r.status_code)
                 + ". Is the printer already printing?")
         return False
     return True
+
+def get_extension(path):
+    """Returns the extension of a file.
+    :path: path of file to get the extension of
+    :returns: file extension
+
+    """
+    ext = name.rsplit('.', 1)[1]
+    return ext
+    
