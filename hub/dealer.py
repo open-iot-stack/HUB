@@ -31,6 +31,8 @@ class PrinterCollector(threading.Thread):
             webid = webapi.add_printer(printer.to_web(None))
             if webid:
                 printer.set_webid(webid)
+            else:
+                sleep(10)
             printer = Printer.get_by_id(id)
         job_thread = JobCollector(id, webapi)
         job_thread.start()
