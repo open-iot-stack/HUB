@@ -43,24 +43,29 @@ class WebAPI(object):
         code = r.status_code
         if code == 401:
             log.log("ERROR: Bad status code when signing in. "
-                    + str(r.status_code)
+                    + str(code)
                     + ". API Key is most likely invalid.")
             return False
-        elif code == 200:
-            res_header = r.headers;
-            try:
-                self.headers = {
-                        'access-token' : res_header['access-token'],
-                        'uid': res_header['uid'],
-                        'token-type': res_header['token-type'],
-                        'client' : res_header['client'],
-                        'cache-control': "no-cache",
-                }
-            except KeyError:
-                log.log("ERROR: Headers for signin on " 
-                        + url + " did not contain necessary information.")
-            return True
-        return False
+        elif code != 200:
+            log.log("ERROR: Bad status code when signing in. "
+                    + str(code))
+            return False
+        res_header = r.headers;
+        try:
+            self.headers = {
+                    'access-token' : res_header['access-token'],
+                    'uid': res_header['uid'],
+                    'token-type': res_header['token-type'],
+                    'client' : res_header['client'],
+                    'cache-control': "no-cache",
+            }
+        except KeyError:
+            log.log("ERROR: Headers for signin on " 
+                    + url + " did not contain necessary information.")
+            return False
+        data = r.json().get('data')
+        self.id = data.get('id')
+        return True
             
     def sign_out(self):
         #signs out and invalidates tokens forever
@@ -79,10 +84,11 @@ class WebAPI(object):
             log.log("ERROR: Connection timed out with "
                     + url + ". Trying to sign out.")
             return False
-        return r
-        if r.status_code == 200:
-            return True
-        return False
+        if r.status_code != 200:
+            log.log("ERROR: Bad status code when signing out. "
+                    + str(code))
+            return False
+        return True
 
     def update_headers(self):
         #checks validation and signs in once again
@@ -95,7 +101,7 @@ class WebAPI(object):
             return self.sign_in()
         url = web_url + 'hub_auth/validate_token'
         try:
-                r = requests.get(url, headers = self.headers, timeout=10)
+            r = requests.get(url, headers = self.headers, timeout=10)
         except requests.ConnectionError:
             log.log("ERROR: Could not connect to "
                     + url + ". Trying to validate headers.")
@@ -106,14 +112,18 @@ class WebAPI(object):
             return False
         code = r.status_code
         if code == 401:
-                return self.sign_in()
+            return self.sign_in()
+        elif code != 200:
+            log.log("ERROR: Bad status code when signing out. "
+                    + str(code))
+            return False
         return True
 
     def add_printer(self, printer):
         '''Add a printer on the web api
         :web_url: Base webaddress of server, or ip
         :printer: printer to be added to web api
-        :returns: boolean of success
+        :returns: webID of printer, None if fails
 
         '''
         log = self.log
@@ -129,13 +139,14 @@ class WebAPI(object):
             log.log('ERROR: Could not connect to ' + url 
                     + '. Unable to add printer ' 
                     + str(printer_id) + '.')
-            return False
+            return None
         except requests.exceptions.Timeout:
             log.log('ERROR: Timeout when contacting ' + url
                     + '. Unable to add printer '
                     + str(printer_id) + '.')
-            return False
+            return None
         code = r.status_code
+        data = r.json()
         # Handle error codes from web api
         if code == 401:
             # Not authorized. Fix headers and try again
@@ -143,15 +154,18 @@ class WebAPI(object):
                     + ' Server responded with ' + str(code) 
                     + ' on ' + url)
             ret = self.update_headers()
-            return self.add_printer(printer)
+            if ret:
+                return self.add_printer(printer)
+            return False
         if code != 201:
             # Catch all for if bad status codes
             log.log('ERROR: Printer ' + str(printer_id) + ' not added.'
                     + ' Server responded with ' + str(code) 
                     + ' on ' + url)
-            return False
+            return None
+        webid = data.get('id')
         log.log('Added printer ' + str(printer_id) + ' to ' + url )
-        return True
+        return webid
 
     def patch_printer(self, printer):
         '''Patch a printer on the web api
@@ -166,7 +180,7 @@ class WebAPI(object):
         printer_id = printer.get('id')
         url = web_url + '/printers/' + str(printer_id) 
         try:
-            r = requests.post(url, headers=headers,
+            r = requests.patch(url, headers=headers,
                                 json=printer, timeout=3)
         except requests.ConnectionError:
             log.log('ERROR: Could not connect to ' + url 
@@ -185,7 +199,9 @@ class WebAPI(object):
                     + ' Server responded with ' + str(code) 
                     + ' on ' + url)
             ret = self.update_headers()
-            return self.patch_printer(printer)
+            if ret:
+                return self.patch_printer(printer)
+            return False
         if code != 200:
             log.log('ERROR: Printer ' + str(printer_id) + ' not updated.'
                     + ' Server responded with ' + str(code) 
@@ -225,7 +241,8 @@ class WebAPI(object):
                     + ' Server responded with ' + str(code) 
                     + ' on ' + url)
             ret = self.update_headers()
-            return self.delete_printer(printer_id)
+            if ret:
+                return self.delete_printer(printer_id)
         if code == 404:
             # Printer is not registered. Claim deleted internally
             log.log('ERROR: Printer ' + str(printer_id) + ' not deleted.'
