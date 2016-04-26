@@ -19,7 +19,7 @@ threaded      = False
 print_enabled = False
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "hdtvp:a:u:",
+    opts, args = getopt.getopt(sys.argv[1:], "hdtvp:a:w:",
             ["apikey=","pass=","help",
                 "port=","debug","host=",
                 "threaded","verbose","weburl="])
