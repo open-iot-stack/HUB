@@ -91,7 +91,7 @@ class PrinterCollector(threading.Thread):
                     log.log("JobCollector stopped."
                             +" Exiting PrinterCollector.")
                     return -1
-                sleep(1)
+                sleep(5)
                 continue
             if response.status_code != 200:
                 log.log("ERROR: Response from "
@@ -162,7 +162,7 @@ class JobCollector(threading.Thread):
                             + " 20 times in a row."
                             + " Closing connection with " + str(id))
                     return -1
-                sleep(1)
+                sleep(5)
                 continue
             if response.status_code != requests.codes.ok:
                 log.log("ERROR: Response from "
@@ -172,6 +172,7 @@ class JobCollector(threading.Thread):
             else:
                 job = printer.current_job()
                 if job == None:
+                    log.log("No current job exists for " str(id))
                     sleep(5)
                     continue
                 data = job.to_web(response.json())
