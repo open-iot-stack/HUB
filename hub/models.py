@@ -453,6 +453,10 @@ class Printer(Base):
         :returns: TODO
 
         """
+        if state:
+            flags = state.get('flags')
+        else:
+            flags = None
         d = {
                 "id": self.webid,
                 "friendly_id": self.id,
@@ -460,7 +464,10 @@ class Printer(Base):
                 "model": self.model,
                 "num_jobs": self.num_jobs(),
                 "description": self.description,
-                "data": state
+                "data": {
+                    "text": self.status,
+                    "flags": flags
+                }
         }
         return d
 
