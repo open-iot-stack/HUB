@@ -27,8 +27,17 @@ def docs():
 
 @app.route('/list', methods=['GET'])
 def list_peripherals():
-    """Returns a json list of the peripherals curerntly registered"""
-
+    """
+        List Peripherals
+		Get list of peripherals currently registered
+        ---
+        tags:
+          - sensors
+        responses:
+          200:
+            description: Returns peripherals currently registered
+        """
+	
     return json.jsonify(hub.conf.read_data())
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -37,6 +46,16 @@ def register_peripheral():
     This should be done before activating the node.
     :returns: webpage of result
     """
+	"""
+        Register Peripheral
+		Registers node
+        ---
+        tags:
+          - sensors
+        responses:
+          200:
+            description: Returns "(action) successfully sent to the printer."
+        """
 
     if request.method == "GET":
         return render_template("register.html")

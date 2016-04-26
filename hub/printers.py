@@ -98,6 +98,16 @@ def print_action(id, action):
     :id: ID of the printer to command
     :action: Action to perform
     """
+    """
+        Print Action
+		Add print action
+        ---
+        tags:
+          - printer
+        responses:
+          200:
+            description: Returns "(action) successfully sent to the printer."
+        """
 
     if not hub.printer_listeners.is_alive(id):
         abort(400)
@@ -163,7 +173,16 @@ def print_action(id, action):
 
 @app.route('/printers/<int:id>', methods=['GET'])
 def print_status(id):
-
+    """
+        Print Status
+		Get printer status
+        ---
+        tags:
+          - printer
+        responses:
+          200:
+            description: TODO
+        """
     #id = str(id)
     printer = Printer.get_by_id(id)
     #TODO return the actual data that's useful for the web api
@@ -188,6 +207,16 @@ def jobs_current(id):
     :id: id of printer to get the job from
     :returns: current status of the job
     """
+	    """
+        Jobs Current
+		Get current job information
+        ---
+        tags:
+          - printer
+        responses:
+          200:
+            description: Returns current status of job
+        """
 
     printer = Printer.get_by_id(id)
     if printer:
