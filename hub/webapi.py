@@ -114,7 +114,7 @@ class WebAPI(object):
         if code == 401:
             return self.sign_in()
         elif code != 200:
-            log.log("ERROR: Bad status code when signing out. "
+            log.log("ERROR: Bad status code when validating headers. "
                     + str(code))
             return False
         return True
@@ -153,10 +153,9 @@ class WebAPI(object):
             log.log('ERROR: Printer ' + str(printer_id) + ' not added.'
                     + ' Server responded with ' + str(code) 
                     + ' on ' + url)
-            ret = self.update_headers()
-            if ret:
+            if self.update_headers():
                 return self.add_printer(printer)
-            return False
+            return None
         if code != 201:
             # Catch all for if bad status codes
             log.log('ERROR: Printer ' + str(printer_id) + ' not added.'
