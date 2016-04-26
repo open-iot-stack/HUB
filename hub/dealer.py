@@ -320,8 +320,12 @@ def start_new_job(id,job_id,fpath,loc=octopi.local):
     ext = get_extension(fname)
     if ext in ['stl']:
         r = octopi.slice_and_print(url, key, fname, loc)
-    elif ext in ['gco']:
+    elif ext in ['gcode']:
         r = octopi.select_and_print(url, key, fname, loc)
+    else:
+        log.log("ERROR: File " + fname
+                + " has incorrect extension " + ext)
+        return False
     if r == None:
         log.log("ERROR: Did not have a response from " + str(id)
                 + ". Job start canceled for job " + str(job_id) + ".")
