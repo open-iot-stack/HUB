@@ -59,8 +59,6 @@ def add_printer():
 
     log = hub.log
     listener = hub.printer_listeners
-
-
     id   = int(request.form.get("id"))
     ip   = request.form.get("ip")
     port = int(request.form.get("port", 80))
@@ -85,7 +83,6 @@ def add_printer():
                                     + ' was already online.'})
     else:
         #Add printer to database
-        #TODO add printer to web api
         printer = Printer(id, key=key, ip=ip, port=port)
         t = PrinterCollector(id, hub.Webapi)
         t.start()
