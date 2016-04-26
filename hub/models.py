@@ -73,7 +73,7 @@ class Job(Base):
         db_session.remove()
         job =\
             db_session.query(Job).\
-                filter(Job.webid == id).one_or_none()
+                filter(Job.webid == webid).one_or_none()
         return job
 
     def __init__(self, id,  file, webid=None, status="queued"):
@@ -129,7 +129,11 @@ class Job(Base):
         """
 
         jf = job.get("job").get("file")
+        if jf.get('name') == None:
+            return None
         id = self.webid
+        if jf.get('name').split('.',1)[0] != str(id):
+            return None
         fname = self.file.name
         unix_date = jf.get("date")
         filament = job.get("job").get("filament")
@@ -146,7 +150,7 @@ class Job(Base):
         fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
         njob["id"] = id
         njob["data"] = {
-            "status": status,
+            "status": self.status,
             "file": {
                 "name": fname,
                 "origin": jf.get("origin"),
