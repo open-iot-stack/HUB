@@ -258,8 +258,9 @@ class Printer(Base):
         self.manufacturer = manufacturer
 
         if not status in ["Operational", "Paused", "Printing",
-                            "SD Ready", "Error", "Ready", "Closed on Error"]:
-            status = "Offline"
+                            "SD Ready", "Error", "Ready",
+                            "Closed on Error", "Complete"]:
+            status = "Error"
         self.status = status
         db_session.add(self)
         db_session.commit()
@@ -269,7 +270,7 @@ class Printer(Base):
         :ip: IP address to set to
         :port: Port to set to
         :status: Status to set to. Must be in 
-            ["Operational", "Paused", "Printing",
+            ["Operational", "Paused", "Printing", "Complete",
             "SD Ready", "Error", "Ready", "Closed on Error"]:
         :returns: Boolean of sucess
 
@@ -277,7 +278,7 @@ class Printer(Base):
         if status:
             if status in ["Operational", "Paused", "Printing",
                             "SD Ready", "Error", "Ready",
-                            "Closed on Error"]:
+                            "Closed on Error", "Complete"]:
                 self.status = status
             else:
                 return False
@@ -330,7 +331,9 @@ class Printer(Base):
         :returns: boolean of success
 
         """
-        if state in ["Operational", "Paused", "Printing",
+        if self.status == "Complete":
+            return False
+        if state in ["Operational", "Paused", "Printing", "Complete",
                         "SD Ready", "Error", "Ready", "Closed on Error"]:
             self.status = state
             db_session.commit()
@@ -372,8 +375,7 @@ class Printer(Base):
         :returns: boolean of success
         """
 
-        db_session.remove()
-        job = db_session.query(Job).filter(Job.id == job_id).one_or_none()
+        job = Job.get_by_id(job_id)
         if job:
             if job.position == 0:
                 return False
@@ -388,7 +390,16 @@ class Printer(Base):
         :returns: boolean of success
 
         """
-        pass
+        job = current_job()
+        if job_id != self.current_job().id:
+            return False
+        if self.status != "Complete":
+            return False
+        self.jobs.remove(job)
+        self.status = "Ready"
+        db_session.commit()
+        return True
+
 
     def next_job(self):
         """Returns the next job to be printed
