@@ -77,7 +77,9 @@ class PrinterCollector(threading.Thread):
             else:
                 printer.state("Error")
                 data = printer.to_web(None)
-                webapi.patch_printer(data)
+                if cmp(prev_data, data):
+                    prev_data = data.copy()
+                    webapi.patch_printer(data)
                 failures += 1
                 log.log("ERROR: Could not collect printer"
                       + " data from printer "+str(id)
@@ -85,7 +87,9 @@ class PrinterCollector(threading.Thread):
                 if failures > 20:
                     printer.state("Closed on Error")
                     data = printer.to_web(None)
-                    webapi.patch_printer(data)
+                    if cmp(prev_data, data):
+                        prev_data = data.copy()
+                        webapi.patch_printer(data)
                     log.log("ERROR: Have failed communication"
                             + " 20 times in a row for printer "
                             + str(id)
