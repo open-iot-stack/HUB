@@ -158,7 +158,7 @@ class JobCollector(threading.Thread):
                         + url)
             else:
                 job = printer.current_job()
-                data = job.to_web(esponse.json())
+                data = job.to_web(response.json())
                 if data != None:
                     # Check to see if data is the same as last collected
                     # if so, do not send it
