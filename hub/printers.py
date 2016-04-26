@@ -122,7 +122,8 @@ def print_action(id, action):
             filename = f.filename
             ext = filename.rsplit(".", 1)[1]
             # save file as the job_id to verify printer
-            fpath = os.path.join(app.config['UPLOAD_FOLDER'], job_id+"."+ext)
+            fpath = os.path.join(app.config['UPLOAD_FOLDER'],
+                                    str(job_id)+"."+ext)
             f.save(fpath)
             job = Job.get_by_id(job_id)
             if not job:
@@ -131,7 +132,6 @@ def print_action(id, action):
             if start.lower() == "true":
                 thread.start_new_thread(start_new_job,
                                         (printer_id,job_id,fpath))
-                # TODO Make sure nothing else is printing
         else:
             abort(400)
         # check if start is true, then make sure it is equal to true
