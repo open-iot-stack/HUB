@@ -171,6 +171,9 @@ class JobCollector(threading.Thread):
                         + url)
             else:
                 job = printer.current_job()
+                if job == None:
+                    sleep(5)
+                    continue
                 data = job.to_web(response.json())
                 if data != None:
                     if data.get('progress').get('completion') == 1:
