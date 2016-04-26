@@ -27,7 +27,7 @@ class PrinterCollector(threading.Thread):
         webapi = self.webapi
         printer = Printer.get_by_id(id)
         # loop until the printer has a webid, otherwise we can't update
-        while priner.webid == None:
+        while printer.webid == None:
             webid = webapi.add_printer(printer.to_web(None))
             if webid:
                 printer.set_webid(webid)
