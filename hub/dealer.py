@@ -172,7 +172,7 @@ class JobCollector(threading.Thread):
             else:
                 job = printer.current_job()
                 if job == None:
-                    log.log("No current job exists for " str(id))
+                    log.log("No current job exists for " + str(id))
                     sleep(5)
                     continue
                 data = job.to_web(response.json())
