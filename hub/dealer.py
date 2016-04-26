@@ -25,10 +25,18 @@ class PrinterCollector(threading.Thread):
 
     def run(self):
         id = self.printer_id
-        webapi = self.webapi
+        webapi  = self.webapi
+        printer = Printer.get_by_id(id)
+        log     = hub.log
+        # loop until the printer has a webid, otherwise we can't update
+        while priner.webid == None:
+            webid = webapi.add_printer(printer.to_web(None))
+            if webid:
+                printer.set_webid(webid)
+            printer = Printer.get_by_id(id)
+
         job_thread = JobCollector(id, webapi)
         job_thread.start()
-        log          = hub.log
         log.log("PrinterCollector starting for printer " + str(id))
         failures     = 0
         #url          = "http://" + ip + ":" + port
