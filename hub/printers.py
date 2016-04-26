@@ -70,8 +70,6 @@ def add_printer():
     if printer:
         printer.update(ip=ip, port=port, key=key)
         if not listener.is_alive(id):
-            #Add printer to database
-            printer = Printer(id, key=key, ip=ip, port=port)
             t = PrinterCollector(id, hub.Webapi)
             t.start()
             listener.add_thread(id, t)
