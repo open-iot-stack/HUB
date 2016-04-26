@@ -31,7 +31,7 @@ except getopt.GetoptError, err:
 for opt, arg in opts:
     if opt in ["-h", "--help"]:
         print "Usage: Server.py"\
-        + "\n    -u/--weburl <web url>"\
+        + "\n    -w/--weburl <web url>"\
         + "\n    -a/--apikey <apikey>"\
         + "\n    -p/--port   <port>"\
         + "\n       --pass   <password>"\
@@ -41,7 +41,7 @@ for opt, arg in opts:
         + "\n    -t/--threaded"\
         + "\n    -v/--verbose"
         sys.exit(0)
-    elif opt in ["-u", "--weburl"]:
+    elif opt in ["-w", "--weburl"]:
         hub.WEB_API_URL = arg
     elif opt in ["-a", "--apikey"]:
         hub.WEB_API_KEY = arg
