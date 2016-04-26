@@ -293,7 +293,7 @@ def command_select(url, api_key, path):
 
 
  #########################################################################
-#   Function Name: command_select_and_print
+#   Function Name: select_and_print
 #   Function Description:
 #       -Selects a file on the octopi (or sd card in the 3D printer) and then prints it
 #   Parameter [0]: url {string} URL of pi 
@@ -305,7 +305,7 @@ def command_select(url, api_key, path):
 #   retVal: result of the http_request, On success, returns response status 200 
 #       On fail, it returns the response code and response reason
  #########################################################################  
-def command_select_and_print(url, api_key, path):
+def select_and_print(url, api_key, path):
     header = {
         'Host': 'example.com',
         'X-Api-Key': api_key,
@@ -333,7 +333,7 @@ def command_select_and_print(url, api_key, path):
 #   retVal: result of the http_request, On success, returns response status 202 
 #       On fail, it returns the response code and response reason
  #########################################################################  
-def command_slice(url, api_key, file_name, path_to_store = local):
+def slice(url, api_key, file_name, path_to_store = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     #fileName = os.path.basename(path)
     #fileNameNoExt = os.path.splitext(fileName)[0]
