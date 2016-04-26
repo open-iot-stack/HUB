@@ -112,7 +112,7 @@ class Job(Base):
             return True
         return False
 
-    def set_web_id(self, webid):
+    def set_webid(self, webid):
         """Sets the webid of the job. ATM is the same as ID
         and set at creation
         :webid: ID used by the web api
@@ -284,14 +284,12 @@ class Printer(Base):
         db_session.commit()
         return True
 
-    def set_web_id(self, id):
+    def set_webid(self, webid):
         """Sets the web id for the printer
-        :id: ID that web gave back to communicate
-        :returns: boolean of success. Fails if web_id is already set
+        :webid: ID that web gave back to communicate
+        :returns: boolean of success.
         """
-        if self.webid:
-            return False
-        self.webid = id
+        self.webid = webid
         db_session.commit()
         return True
 
