@@ -322,6 +322,33 @@ class Printer(Base):
         db_session.commit()
         return True
 
+    def state_from_octopi(self, state):
+        """Sets the state of the printer based on output from
+        the octopi.
+
+        :state: TODO
+        :returns: TODO
+
+        """
+        if state:
+            text  = state.get("text")
+            flags = state.get("flags")
+        else:
+            return False
+        if flags.get("error") == True:
+            return self.state("error")
+        elif flags.get("closedOrError") == True:
+            return self.state("error")
+        elif flags.get("printing") == True:
+            return self.state("printing")
+        elif flags.get("paused") == True:
+            return self.state("paused")
+        elif flags.get("ready") == True:
+            return self.state("ready")
+        elif flags.get("sdReady") == True:
+            return self.state("ready")
+        return False
+
     def state(self, state):
         """Sets the status of the printer
         :state: Status to set to. Must be in 
@@ -332,9 +359,10 @@ class Printer(Base):
         """
         if self.status == "completed":
             return False
+        elif self.status == "cancelled":
+            return False
         if state in ["ready", "paused", "printing", "errored",
-                        "offline", "cancelled", "completed"]:
-                self.status = status
+                        "offline", "completed"]:
             self.status = state
             db_session.commit()
             return True
@@ -373,8 +401,8 @@ class Printer(Base):
         Fails if job is the current job
         :job_id: id of the job to be removed
         :returns: boolean of success
-        """
 
+        """
         job = Job.get_by_id(job_id)
         if job:
             if job.position == 0:
@@ -383,6 +411,22 @@ class Printer(Base):
             db_session.commit()
             return True
         return False
+
+    def cancel_job(self, job_id):
+        """Does the proper handling of a job canceling.
+        :job_id: id of the job to be cancelled
+        :returns: boolean of success
+
+        """
+        job = current_job()
+        if job_id != self.current_job().id:
+            return False
+        if self.status != "cancelled":
+            return False
+        self.jobs.remove(job)
+        self.status = "ready"
+        db_session.commit()
+        return True
 
     def complete_job(self, job_id):
         """Does the proper handling of a job completing.
