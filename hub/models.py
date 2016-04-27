@@ -489,7 +489,7 @@ class Printer(Base):
         }
         return d
 
-    def to_web(self, state):
+    def to_web(self):
         """Properly formats data to be sent to the web api
 
         :state: TODO
