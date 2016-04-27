@@ -237,15 +237,15 @@ class Printer(Base):
             l.append(printer)
         return l
 
-    def __init__(self, id, key=None, ip=None, port=80, status="Paused",
+    def __init__(self, id, key=None, ip=None, port=80, status="offline",
                 friendly_id=None, manufacturer=None, model=None
                 , description=None, webid=None):
         """Creates a new Printer, adds to database. If printer exists
         or params aren't formatted correctly, will throw and exception
         :id: id of the printer
         :status: State of the printer, must be in
-            ["Operational", "Paused", "Printing",
-            "SD Ready", "Error", "Ready", "Closed on Error"]
+            ["ready", "paused", "printing", "errored",
+            "offline", "cancelled", "completed"]
 
         """
         self.id           = id
@@ -258,10 +258,9 @@ class Printer(Base):
         self.description  = description
         self.manufacturer = manufacturer
 
-        if not status in ["Operational", "Paused", "Printing",
-                            "SD Ready", "Error", "Ready",
-                            "Closed on Error", "Complete"]:
-            status = "Error"
+        if not status in ["ready", "paused", "printing", "errored",
+                            "offline", "cancelled", "completed"]:
+            status = "offline"
         self.status = status
         db_session.add(self)
         db_session.commit()
@@ -271,15 +270,14 @@ class Printer(Base):
         :ip: IP address to set to
         :port: Port to set to
         :status: Status to set to. Must be in 
-            ["Operational", "Paused", "Printing", "Complete",
-            "SD Ready", "Error", "Ready", "Closed on Error"]:
+            ["ready", "paused", "printing", "errored",
+            "offline", "cancelled", "completed"]:
         :returns: Boolean of sucess
 
         """
         if status:
-            if status in ["Operational", "Paused", "Printing",
-                            "SD Ready", "Error", "Ready",
-                            "Closed on Error", "Complete"]:
+            if status in ["ready", "paused", "printing", "errored",
+                            "offline", "cancelled", "completed"]:
                 self.status = status
             else:
                 return False
@@ -307,7 +305,7 @@ class Printer(Base):
         :returns: True if online, false if Offline or Errored
 
         """
-        if self.status in ["Offline", "Error", "Closed on Error"]:
+        if self.status in ["errored", "offline"]:
             return False
         return True
 
@@ -326,16 +324,17 @@ class Printer(Base):
 
     def state(self, state):
         """Sets the status of the printer
-        :state: state of the printer to set. Will return false if not in
-                ["Operational", "Paused", "Printing",
-                "SD Ready", "Error", "Ready", "Closed on Error"]
+        :state: Status to set to. Must be in 
+            ["ready", "paused", "printing", "errored",
+            "offline", "cancelled", "completed"]:
         :returns: boolean of success
 
         """
-        if self.status == "Complete":
+        if self.status == "completed":
             return False
-        if state in ["Operational", "Paused", "Printing", "Complete",
-                        "SD Ready", "Error", "Ready", "Closed on Error"]:
+        if state in ["ready", "paused", "printing", "errored",
+                        "offline", "cancelled", "completed"]:
+                self.status = status
             self.status = state
             db_session.commit()
             return True
@@ -394,10 +393,10 @@ class Printer(Base):
         job = current_job()
         if job_id != self.current_job().id:
             return False
-        if self.status != "Complete":
+        if self.status != "completed":
             return False
         self.jobs.remove(job)
-        self.status = "Ready"
+        self.status = "ready"
         db_session.commit()
         return True
 
@@ -453,10 +452,6 @@ class Printer(Base):
         :returns: TODO
 
         """
-        if state:
-            flags = state.get('flags')
-        else:
-            flags = None
         d = {
                 "id": self.webid,
                 "friendly_id": self.id,
@@ -464,9 +459,7 @@ class Printer(Base):
                 "model": self.model,
                 "num_jobs": self.num_jobs(),
                 "description": self.description,
-                "data": {
-                    "text": self.status,
-                    "flags": flags
+                "status": self.status
                 }
         }
         return d

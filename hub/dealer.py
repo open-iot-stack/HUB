@@ -19,8 +19,22 @@ class PrinterCollector(threading.Thread):
         """TODO: to be defined1. """
         threading.Thread.__init__(self)
         self.printer_id = printer_id
+        printer = Printer.get_by_id(printer_id)
+        status = printer.status
         self.stopped = False
         self.webapi = webapi
+        self.cancelled = status == "cancelled"
+        self.completed = status == "completed"
+        self.lock = threading.Lock()
+
+    def cancel(self):
+        self.cancelled = True
+
+    def complete(self):
+        self.completed = True
+
+    def status(self, status):
+        self.status = status
 
     def run(self):
         id = self.printer_id
@@ -42,6 +56,33 @@ class PrinterCollector(threading.Thread):
         #url          = "http://" + ip + ":" + port
         prev_data    = {}
         while(True):
+            printer = Printer.get_by_id(id)
+            ip     = printer.ip
+            port   = printer.port
+            key    = printer.key
+            jobs   = printer.jobs
+            status = printer.status
+            if self.completed:
+                if printer.state("completed"):
+                    # TODO Send signal to node. Talk to nolan
+                    if job_thread.is_alive():
+                        job_thread.stop()
+                        job_thread.join()
+                    sleep(5)
+                self.completed = False
+                sleep(1)
+                continue
+            if self.cancelled:
+                if printer.state("cancelled"):
+                    # TODO Send signal to node. Talk to Nolan
+                    if job_thread.is_alive():
+                        job_thread.status("cancelled")
+                        job_thread.stop()
+                        job_thread.join()
+                    sleep(5)
+                self.cancelled = False
+                sleep(1)
+                continue
             if self.stopped:
                 log.log("PrinterCollector stop signal received for "
                         + str(id) + ". Telling JobCollector to stop.")
@@ -50,55 +91,51 @@ class PrinterCollector(threading.Thread):
                 log.log("JobCollector stopped."
                         +" Exiting PrinterCollector.")
                 return 0
-            printer = Printer.get_by_id(id)
-            ip     = printer.ip
-            port   = printer.port
-            key    = printer.key
-            jobs   = printer.jobs
-            status = printer.status
-            # If status is set to complete, stop current job
+            # If status is set to completed, stop job thread
             # and don't do anything else. Triggered by REST call
-            if status == "Complete":
-                if job_thread.is_alive():
-                    job_thread.stop()
-                    job_thread.join()
-                sleep(5)
+            if status == "completed":
                 continue
             if not job_thread.is_alive():
                 log.log("ERROR: JobCollector thread died for "
                         + str(id) + ". Starting new JobCollector.")
                 job_thread = JobCollector(id, webapi)
                 job_thread.start()
-
             url    = ip + ":" + str(port)
             response = octopi.get_printer_info(url, key)
             if response:
                 failures = 0
             else:
-                printer.state("Error")
                 data = printer.to_web(None)
                 if cmp(prev_data, data):
                     prev_data = data.copy()
                     webapi.patch_printer(data)
                 failures += 1
-                log.log("ERROR: Could not collect printer"
-                      + " data from printer "+str(id)
-                      + " on " + url )
+                if failures % 5:
+                    printer.state("errored")
+                    log.log("ERROR: Could not collect printer"
+                          + " data from printer "+str(id)
+                          + " on " + url )
                 if failures > 20:
-                    printer.state("Closed on Error")
-                    data = printer.to_web(None)
-                    if cmp(prev_data, data):
-                        prev_data = data.copy()
-                        webapi.patch_printer(data)
-                    log.log("ERROR: Have failed communication"
-                            + " 20 times in a row for printer "
-                            + str(id)
-                            + ". Closing JobCollector if alive.")
-                    job_thread.stop()
-                    job_thread.join()
-                    log.log("JobCollector stopped."
-                            +" Exiting PrinterCollector.")
-                    return -1
+                    log.log("ERROR: Have failed communication "
+                            + str(failures) " times in a row for printer "
+                            + str(id))
+                    if printer.state("offline"):
+                        data = printer.to_web()
+                        if cmp(prev_data, data):
+                            prev_data = data.copy()
+                            webapi.patch_printer(data)
+                        job_thread.join()
+                        log.log("JobCollector stopped."
+                                +" Exiting PrinterCollector.")
+                        return -1
+                    else:
+                        data = printer.to_web()
+                        if cmp(prev_data, data):
+                            prev_data = data.copy()
+                            webapi.patch_printer(data)
+                        job_thread.stop()
+                        job_thread.join()
+
                 sleep(5)
                 continue
             if response.status_code != 200:
@@ -109,7 +146,7 @@ class PrinterCollector(threading.Thread):
             else:
                 #data = response.json()
                 state = response.json()
-                if printer.state(state['text']):
+                if printer.state_from_octopi(state):
                     data = printer.to_web(state)
                     # Check to see if data is the same as last collected
                     # if so, do not send it
@@ -129,8 +166,10 @@ class JobCollector(threading.Thread):
         """TODO: to be defined1. """
         threading.Thread.__init__(self)
         self.printer_id = printer_id
+        job = Printer.get_by_id(printer_id).current_job()
         self.stopped = False
         self.webapi = webapi
+        self.status = job.status
 
     def run(self):
         id = self.printer_id
@@ -151,12 +190,25 @@ class JobCollector(threading.Thread):
             key    = printer.key
             jobs   = printer.jobs
             status = printer.status
+            cjob   = printer.current_job()
             url    = ip + ":" + str(port)
-            #If printer status is set to complete, exit
+            #If printer status is set to completed, exit
             # a new job thread will be spawned by printer collector
             # when needed
-            if status == "Complete":
+            if status == "completed":
+                cjob.state("completed")
                 return 0
+            if status == "cancelled":
+                cjob.state("errored")
+                return 0
+            if status == "errored":
+                cjob.state("errored")
+                return 0
+            if status == "paused":
+                cjob.state("paused")
+                continue
+            if status == "printing":
+                cjob.state("printing")
             response = octopi.get_job_info(url, key)
             if response:
                 failures = 0
@@ -165,6 +217,8 @@ class JobCollector(threading.Thread):
                 log.log("ERROR: Could not collect"
                        + " job data from printer " + str(id)
                        + " on " + url )
+                if failures % 5:
+                    cjob.state("errored")
                 if failures > 20:
                     log.log("ERROR: Have failed communication"
                             + " 20 times in a row."
@@ -186,8 +240,7 @@ class JobCollector(threading.Thread):
                 data = job.to_web(response.json())
                 if data != None:
                     if data.get('progress').get('completion') == 1:
-                        printer.state("Complete")
-                        return 0
+                        parent.complete()
                     # Check to see if data is the same as last collected
                     # if so, do not send it
                     if cmp(prev_data, data):
