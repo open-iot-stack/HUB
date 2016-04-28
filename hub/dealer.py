@@ -249,10 +249,9 @@ class JobCollector(threading.Thread):
                 if data != None:
                     if data.get("progress") != None:
                         comp = data.get("progress").get("completion")
-                        prev_comp =\
-                            prev_data.get("progress").get("completion")
-                        if comp and prev_comp and prev_comp > comp:
+                        if comp >= 100:
                             self.parent.complete()
+                            cjob.state("completed")
                     # Check to see if data is the same as last collected
                     # if so, do not send it
                     if cmp(prev_data, data):

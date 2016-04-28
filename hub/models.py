@@ -207,8 +207,7 @@ class Job(Base):
         progress = job.get("progress")
         if progress:
             prog = {}
-            prog["completion"] =\
-                    int(round(100 * progress.get("completion")))
+            prog["completion"] = int(progress.get("completion"))
             prog["file_position"] = progress.get("filepos")
             prog["print_time"] = progress.get("printTime")
             prog["print_time_left"] = progress.get("printTimeLeft")
