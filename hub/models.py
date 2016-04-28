@@ -232,6 +232,7 @@ class Job(Base):
         d = {
                 "id": self.id,
                 "webid": self.webid,
+                "estimated_print_time": self.print_time,
                 "file": self.file.to_dict(),
                 "status": self.status
         }
