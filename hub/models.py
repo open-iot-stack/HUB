@@ -3,6 +3,7 @@
 
 import os
 import time
+from datetime import datetime as dt
 from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.orderinglist import ordering_list
@@ -48,12 +49,13 @@ class File(Base):
         :returns: TODO
 
         """
+        fdate = str(dt.fromtimestamp(self.date).isoformat()[:-3])+'Z'
         d = {
                 "name": self.name,
                 "path": self.path,
                 "origin": self.origin,
                 "size": self.size,
-                "date": self.date
+                "date": fdate
         }
 
     def to_dict(self):
@@ -212,7 +214,6 @@ class Job(Base):
             progress = prog
         if not unix_date:
             unix_date = 0
-        fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
         njob = {
             "id": webid,
             "data": {
