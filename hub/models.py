@@ -37,7 +37,7 @@ class File(Base):
         if date == 0:
             date = int(time.time())
         if size == 0:
-            size = os.state(path).st_size
+            size = os.stat(path).st_size
         self.ext = ext
         self.date = date
         self.size = size
