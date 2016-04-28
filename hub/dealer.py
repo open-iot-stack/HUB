@@ -109,7 +109,7 @@ class PrinterCollector(threading.Thread):
                 failures += 1
                 if failures % 5:
                     printer.state("errored")
-                    data = printer.to_web(None)
+                    data = printer.to_web()
                     if cmp(prev_data, data):
                         prev_data = data.copy()
                         webapi.patch_printer(data)
@@ -149,7 +149,7 @@ class PrinterCollector(threading.Thread):
                 #data = response.json()
                 state = response.json()
                 if printer.state_from_octopi(state):
-                    data = printer.to_web(state)
+                    data = printer.to_web()
                     # Check to see if data is the same as last collected
                     # if so, do not send it
                     if cmp(prev_data, data):
