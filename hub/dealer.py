@@ -457,7 +457,7 @@ def start_new_job(id,job_id,fpath,loc=octopi.local):
         return False
     return True
 
-def get_extension(path):
+def get_extension(name):
     """Returns the extension of a file.
     :path: path of file to get the extension of
     :returns: file extension
