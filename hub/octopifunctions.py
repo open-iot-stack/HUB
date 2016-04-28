@@ -242,9 +242,10 @@ def upload_file_and_print(url, api_key, file_path, path_to_store = local):
 #   retVal: result of the http_request, On success, the file's information.
 #       On fail, it returns the response code and response reason
  #########################################################################
-def get_one_file_info(url, api_key, path = local): 
+def get_one_file_info(url, api_key, name, path = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}
-    return http_request(url, files_extension + path, type_get, header)     
+    endpoint = files_extension + path + "/" + name
+    return http_request(url, endpoint, type_get, header)
     
     
  #########################################################################
@@ -337,9 +338,12 @@ def slice(url, api_key, file_name, path_to_store = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     #fileName = os.path.basename(path)
     #fileNameNoExt = os.path.splitext(fileName)[0]
+    name = file_name.split('.',1)[0]
     endpoint = files_extension + path_to_store + "/" + file_name
     payload = {
-        'command': 'slice'
+        'command': 'slice',
+        'slicer': 'cura',
+        'gcode': name + '.gcode',
     }
     #data ['command'] = 'slice'
     #data ['slicer'] = 'cura'
