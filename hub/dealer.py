@@ -40,9 +40,10 @@ class PrinterCollector(threading.Thread):
         id = self.printer_id
         webapi = self.webapi
         printer = Printer.get_by_id(id)
-        # loop until the printer has a webid, otherwise we can't update
+        # loop until the printer has a webid,
+        # otherwise we can't update
         while printer.webid == None:
-            webid = webapi.add_printer(printer.to_web(None))
+            webid = webapi.add_printer(printer.to_web())
             if webid:
                 printer.set_webid(webid)
             else:
