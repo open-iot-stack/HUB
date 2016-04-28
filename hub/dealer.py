@@ -246,10 +246,12 @@ class JobCollector(threading.Thread):
                         + url)
             else:
                 data = cjob.to_web(response.json())
-                if data != None and data.get("progress") != None:
-                    comp = data.get("progress").get("completion")
-                    prev_comp = prev_data.get("progress").get("completion")
-                    if prog and prev_prog and prev_prog > prog:
+                if data != None:
+                    if data.get("progress") != None:
+                        comp = data.get("progress").get("completion")
+                        prev_comp =\
+                            prev_data.get("progress").get("completion")
+                    if comp and prev_comp and prev_comp > comp:
                         self.parent.complete()
                     # Check to see if data is the same as last collected
                     # if so, do not send it
