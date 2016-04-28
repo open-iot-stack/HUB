@@ -29,8 +29,7 @@ class File(Base):
     def __init__(self, name, path, ext=None,
                     size=0, date=0, origin="remote"):
         self.name = name
-        self.size = size
-        self.date = date
+        self.path = path
         self.origin = origin
         if ext == None:
             ext = name.rsplit(".",1)[1]
