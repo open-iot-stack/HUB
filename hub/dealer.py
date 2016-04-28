@@ -96,7 +96,8 @@ class PrinterCollector(threading.Thread):
             # If status is set to completed, don't do anyting else
             if status == "completed":
                 continue
-            if not job_thread.is_alive() and cjob != None:
+            if not job_thread.is_alive() and cjob != None\
+                    and status != "errored":
                 log.log("JobCollector thread died for "
                         + str(id) + ". Starting new JobCollector.")
                 job_thread = JobCollector(id, webapi, self)
@@ -257,7 +258,7 @@ class JobCollector(threading.Thread):
                         webapi.patch_job(data)
                         log.log(data)
                 else:
-                    log.log("ERROR: Did not get proper job data from"
+                    log.log("ERROR: Did not get proper job data from "
                             + str(id))
                     sleep(10)
             sleep(1)
