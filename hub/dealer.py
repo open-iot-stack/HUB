@@ -256,6 +256,7 @@ class JobCollector(threading.Thread):
                 else:
                     log.log("ERROR: Did not get proper job data from"
                             + str(id))
+                    sleep(10)
             sleep(1)
 
     def stop(self):
