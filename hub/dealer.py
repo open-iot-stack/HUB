@@ -360,6 +360,7 @@ def upload_job(id,job_id,loc=octopi.local):
     key  = printer.key
     log  = hub.log
     job  = Job.get_by_id(job_id)
+    log.log("Starting job upload to " + str(id) + " for job " + str(job.id))
     fpath = job.file.path
     job.state("processing")
     url = ip + ":" + str(port)
