@@ -384,10 +384,9 @@ def upload_job(id,job_id,loc=octopi.local):
                     + ". Job upload canceled for job "
                     + str(job_id) + ".")
             return False
-        if r.status_code != 204:
+        if r.status_code != 202:
             log.log("ERROR: Job start failed for " + str(job_id)
-                    + ". Return code from printer " + str(r.status_code)
-                    + ". Is the printer already printing?")
+                    + ". Return code from printer " + str(r.status_code))
             return False
         j = r.json()
         fname = j.get('name')
