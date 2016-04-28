@@ -247,8 +247,9 @@ class JobCollector(threading.Thread):
             else:
                 data = cjob.to_web(response.json())
                 if data != None:
-                    if data.get("progress") != None:
-                        comp = data.get("progress").get("completion")
+                    if data.get("data").get("progress") != None:
+                        comp = data.get("data")\
+                                .get("progress").get("completion")
                         if comp >= 100:
                             log.log("Job " + str(cjob.id)
                                         + " has completed")
