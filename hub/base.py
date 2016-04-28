@@ -29,7 +29,7 @@ def docs():
 def list_peripherals():
     """
         List Peripherals
-		Get list of peripherals currently registered
+                Get list of peripherals currently registered
         ---
         tags:
           - sensors
@@ -37,7 +37,7 @@ def list_peripherals():
           200:
             description: Returns peripherals currently registered
         """
-	
+        
     return json.jsonify(hub.conf.read_data())
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -46,9 +46,9 @@ def register_peripheral():
     This should be done before activating the node.
     :returns: webpage of result
     """
-	"""
+    """
         Register Peripheral
-		Registers node
+                Registers node
         ---
         tags:
           - sensors
