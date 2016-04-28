@@ -1,6 +1,8 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+import os
+import time
 from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.orderinglist import ordering_list
@@ -18,14 +20,42 @@ class File(Base):
     name   = Column(String)
     origin = Column(String)
     size   = Column(Integer)
-    date   = Column(String)
+    date   = Column(Integer)
+    path   = Column(String)
+    ext    = Column(String)
     job    = relationship("Job", back_populates="file", uselist=False)
     job_id = Column(Integer, ForeignKey("job.id"))
 
-    def __init__(self, name):
+    def __init__(self, name, path, ext=None,
+                    size=0, date=0, origin="remote"):
         self.name = name
+        self.size = size
+        self.date = date
+        self.origin = origin
+        if ext == None:
+            ext = name.rsplit(".",1)[1]
+        if date == 0:
+            date = int(time.time())
+        if size == 0:
+            size = os.state(path).st_size
+        self.ext = ext
+        self.date = date
+        self.size = size
         db_session.add(self)
         db_session.commit()
+
+    def to_web(self):
+        """Returns a dictionary to be sent to the web api
+        :returns: TODO
+
+        """
+        d = {
+                "name": self.name,
+                "path": self.path,
+                "origin": self.origin,
+                "size": self.size,
+                "date": self.date
+        }
 
     def to_dict(self):
         """Returns dictionary representation of a file
@@ -33,7 +63,10 @@ class File(Base):
 
         """
         d = {
-                "name": self.name
+                "name": self.name,
+                "origin": self.origin,
+                "size": self.size,
+                "date": self.date
         }
         return d
 
@@ -47,6 +80,7 @@ class Job(Base):
     webid      = Column(Integer, unique=True)
     position   = Column(Integer)
     status     = Column(String)
+    print_time = Column(Integer)
     file       = relationship("File", back_populates="job",
                                 uselist=False)
     printer    = relationship("Printer", back_populates="jobs",
@@ -78,7 +112,7 @@ class Job(Base):
                 filter(Job.webid == webid).one_or_none()
         return job
 
-    def __init__(self, id,  file, webid=None, status="queued"):
+    def __init__(self, webid, print_time=0, status="queued"):
         """Create a job object. A file object should be created first.
         :id: id of the job
         :file: file that the job refers to
@@ -87,16 +121,24 @@ class Job(Base):
         :returns: nothing
 
         """
-        self.id = id
+        self.webid = webid
         self.status = status
-        self.file = file
-        #atm the webid and id should be the same
-        if webid:
-            self.webid = webid
-        else:
-            self.webid = id
+        self.file = None
         db_session.add(self)
         db_session.commit()
+
+    def set_file(self, file):
+        """Set a file for the job. Fails if job already holds a file
+        :file: File object to be set as the file
+        :returns: boolean of success
+
+        """
+        if self.file != None:
+            return False
+        self.file = file
+        db_session.commit()
+        return True
+        pass
 
     def state(self, state):
         """Set the status of the current job
@@ -125,10 +167,31 @@ class Job(Base):
         db_session.commit()
         return True
 
+    def set_print_time(self, print_time):
+        """Sets the estimated print time for the job.
+        :print_time: Integer of print time in seconds
+        :returns: boolean of success
+
+        """
+        self.print_time = print_time
+        db_session.commit()
+        return True
+
     def to_web(self, job):
         """Properly formats data to be sent to the web api 
         
         """
+
+        if job == None:
+            d = {
+                "id": self.webid,
+                "data": {
+                    "status": self.status,
+                    "estimate_print_time": self.print_time,
+                    "file": self.file.to_web()
+                }
+            }
+            return d
 
         jf = job.get("job").get("file")
         if jf.get('name') == None:
@@ -137,7 +200,6 @@ class Job(Base):
         webid = self.webid
         if jf.get('name').split('.',1)[0] != str(id):
             return None
-        fname = self.file.name
         unix_date = jf.get("date")
         filament = job.get("job").get("filament")
         progress = job.get("progress")
@@ -146,24 +208,22 @@ class Job(Base):
             prog["completion"] = progress.get("completion")
             prog["file_position"] = progress.get("filepos")
             prog["print_time"] = progress.get("printTime")
-            prog["print_time_left"] = progress.get("printTimeLeft")
+            prog["print_time_left"] =\
+                    int(round(100 * progress.get("printTimeLeft")))
             progress = prog
         if not unix_date:
             unix_date = 0
         fdate = str(dt.fromtimestamp(unix_date).isoformat()[:-3])+'Z'
-        njob["id"] = webid
-        njob["data"] = {
-            "status": self.status,
-            "file": {
-                "name": fname,
-                "origin": jf.get("origin"),
-                "size": jf.get("size"),
-                "date": fdate
-                },
-            "estimated_print_time": job.get("estimatedPrintTime"),
-            "filament": filament,
-            "progress": progress
+        njob = {
+            "id": webid,
+            "data": {
+                "status": self.status,
+                "file": self.file.to_web(),
+                "estimated_print_time": self.print_time,
+                "filament": filament,
+                "progress": progress
             }
+        }
         return njob
 
     def to_dict(self):
@@ -173,6 +233,7 @@ class Job(Base):
         """
         d = {
                 "id": self.id,
+                "webid": self.webid,
                 "file": self.file.to_dict(),
                 "status": self.status
         }
@@ -497,14 +558,13 @@ class Printer(Base):
 
         """
         d = {
-                "id": self.webid,
-                "friendly_id": self.id,
-                "manufacturer": self.manufacturer,
-                "model": self.model,
-                "num_jobs": self.num_jobs(),
-                "description": self.description,
-                "status": self.status
-                }
+            "id": self.webid,
+            "friendly_id": self.id,
+            "manufacturer": self.manufacturer,
+            "model": self.model,
+            "num_jobs": self.num_jobs(),
+            "description": self.description,
+            "status": self.status
         }
         return d
 
