@@ -9,7 +9,7 @@ from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
-from dealer import start_new_job
+from dealer import start_new_job, upload_job
 from dealer import PrinterCollector
 from models import Printer, Job, File
 import octopifunctions as octopi
@@ -235,9 +235,10 @@ def jobs_post(id):
             f.save(fpath)
             file = File(f.filename, fpath)
             job.set_file(file)
-            t = threading.Thread(target=upload_job, args=(id, job.id))
-            t.start()
-
+        elif job.file == None:
+            abort(400)
+        t = threading.Thread(target=upload_job, args=(id, job.id))
+        t.start()
         #TODO Fix this to start a new job
         start = request.form.get('start', 'false')
         if start.lower() == "true":
