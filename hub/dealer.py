@@ -250,6 +250,8 @@ class JobCollector(threading.Thread):
                     if data.get("progress") != None:
                         comp = data.get("progress").get("completion")
                         if comp >= 100:
+                            log.log("Job " + str(cjob.id)
+                                        + " has completed")
                             self.parent.complete()
                             cjob.state("completed")
                     # Check to see if data is the same as last collected
