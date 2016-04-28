@@ -538,6 +538,7 @@ class Printer(Base):
         """
         d = {
                 "id": self.id,
+                "webid": self.webid,
                 "ip": self.ip,
                 "port": self.port,
                 "jobs": [j.to_dict() for j in self.jobs],
