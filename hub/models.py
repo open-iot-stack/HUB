@@ -206,14 +206,12 @@ class Job(Base):
         progress = job.get("progress")
         if progress:
             prog = {}
-            prog["completion"] = progress.get("completion")
+            prog["completion"] =\
+                    int(round(100 * progress.get("completion")))
             prog["file_position"] = progress.get("filepos")
             prog["print_time"] = progress.get("printTime")
-            prog["print_time_left"] =\
-                    int(round(100 * progress.get("printTimeLeft")))
+            prog["print_time_left"] = progress.get("printTimeLeft")
             progress = prog
-        if not unix_date:
-            unix_date = 0
         njob = {
             "id": webid,
             "data": {
