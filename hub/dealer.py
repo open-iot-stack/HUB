@@ -246,14 +246,16 @@ class JobCollector(threading.Thread):
             else:
                 data = cjob.to_web(response.json())
                 if data != None:
-                    prog = data.get("progress")
-                    if prog and prog.get("completion") == 100:
+                    comp = data.get("progress").get("completion")
+                    prev_comp = prev_data.get("progress").get("completion")
+                    if prog and prev_prog and prev_prog > prog:
                         self.parent.complete()
                     # Check to see if data is the same as last collected
                     # if so, do not send it
                     if cmp(prev_data, data):
                         prev_data = data.copy()
                         webapi.patch_job(data)
+                        log.log(data)
                 else:
                     log.log("ERROR: Did not get proper job data from"
                             + str(id))
