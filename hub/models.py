@@ -57,6 +57,7 @@ class File(Base):
                 "size": self.size,
                 "date": fdate
         }
+        return d
 
     def to_dict(self):
         """Returns dictionary representation of a file
