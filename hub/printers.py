@@ -100,7 +100,7 @@ def print_action(id, action):
     """
     """
         Print Action
-		Add print action
+                Add print action
         ---
         tags:
           - printer
@@ -150,21 +150,24 @@ def print_action(id, action):
         #TODO make sure there is enough space on the device
         f = request.files.get('file', None)
         if f:
-            job_id = request.form.get('id')
-            start = request.form.get('start', 'false')
-            filename = f.filename
-            ext = filename.rsplit(".", 1)[1]
-            # save file as the job_id to verify printer
-            fpath = os.path.join(app.config['UPLOAD_FOLDER'],
-                                    str(job_id)+"."+ext)
-            f.save(fpath)
-            job = Job.get_by_id(job_id)
+            webid = request.form.get('id')
+            job = Job.get_by_webid(webid)
             if not job:
-                job = Job(int(job_id), File(filename))
-            ret = printer.add_job(job)
+                job = Job(int(webid))
+                ext = f.filename.rsplit(".", 1)[1]
+                name = str(job.id) + "." + ext
+                fpath = os.path.join(app.config['UPLOAD_FOLDER'],name)
+                f.save(fpath)
+                file = File(f.filename, fpath)
+                job.set_file(file)
+                t = threading.Thread(target=upload_job, args=(id, job.id))
+                t.start()
+
+            #TODO Fix this to start a new job
+            start = request.form.get('start', 'false')
             if start.lower() == "true":
                 thread.start_new_thread(start_new_job,
-                                        (printer_id,job_id,fpath))
+                                        (printer_id,job.id,fpath))
         else:
             abort(400)
         # check if start is true, then make sure it is equal to true
@@ -175,7 +178,7 @@ def print_action(id, action):
 def print_status(id):
     """
         Print Status
-		Get printer status
+                Get printer status
         ---
         tags:
           - printer
@@ -207,9 +210,9 @@ def jobs_current(id):
     :id: id of printer to get the job from
     :returns: current status of the job
     """
-	    """
+    """
         Jobs Current
-		Get current job information
+                Get current job information
         ---
         tags:
           - printer
