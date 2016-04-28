@@ -392,8 +392,8 @@ class Printer(Base):
 
         """
         if state:
-            text  = state.get("text")
-            flags = state.get("flags")
+            text  = state.get("state").get("text")
+            flags = state.get("state").get("flags")
         else:
             return False
         if flags.get("error") == True:
