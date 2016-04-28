@@ -71,6 +71,7 @@ class PrinterCollector(threading.Thread):
                         job_thread.stop()
                         job_thread.join()
                     sleep(5)
+                    webapi.patch_printer(printer.to_web())
                 self.completed = False
                 sleep(1)
                 continue
@@ -81,6 +82,7 @@ class PrinterCollector(threading.Thread):
                         job_thread.status("cancelled")
                         job_thread.stop()
                         job_thread.join()
+                    webapi.patch_printer(printer.to_web())
                     sleep(5)
                 self.cancelled = False
                 sleep(1)
@@ -151,6 +153,10 @@ class PrinterCollector(threading.Thread):
                 state = response.json()
                 if printer.state_from_octopi(state):
                     data = printer.to_web()
+                    if prev_data.get("status") == "printing"\
+                            and data.get("status") == "ready":
+                                self.complete()
+                                continue
                     # Check to see if data is the same as last collected
                     # if so, do not send it
                     if cmp(prev_data, data):
@@ -210,9 +216,11 @@ class JobCollector(threading.Thread):
             #by printer collector when needed
             if status == "completed":
                 cjob.state("completed")
+                webapi.patch_job(None)
                 return 0
             if status == "cancelled":
                 cjob.state("errored")
+                webapi.patch_job(None)
                 return 0
             if status == "errored":
                 cjob.state("errored")
@@ -247,14 +255,6 @@ class JobCollector(threading.Thread):
             else:
                 data = cjob.to_web(response.json())
                 if data != None:
-                    if data.get("data").get("progress") != None:
-                        comp = data.get("data")\
-                                .get("progress").get("completion")
-                        if comp >= 100:
-                            log.log("Job " + str(cjob.id)
-                                        + " has completed")
-                            self.parent.complete()
-                            cjob.state("completed")
                     # Check to see if data is the same as last collected
                     # if so, do not send it
                     if cmp(prev_data, data):
