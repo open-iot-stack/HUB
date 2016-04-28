@@ -30,20 +30,26 @@ def printers_list():
 
     log = hub.log
     listener = hub.printer_listeners
+    internal = request.args.get("internal", "false")
 
     online = request.args.get('online_only', 'false')
-    data = {}
+    data = {"printers": []}
+    printers = data.get("printers")
     for printer in Printer.get_printers():
         id = printer.id
         if online.lower() == 'true':
             with listener.lock:
                 if listener.is_alive(id):
-                    data[id] = printer.to_dict()
+                    if internal.lower() == "true":
+                        printers.append(printer.to_dict())
+                    else:
+                        printers.append(printer.to_web())
         else:
-            data[id] = printer.to_dict()
+            if internal.lower() == "true":
+                printers.append(printer.to_dict())
+            else:
+                printers.append(printer.to_web())
     return json.jsonify(data)
-
-
 
 @app.route('/printers', methods=['POST'])
 def add_printer():
@@ -187,22 +193,60 @@ def print_status(id):
             description: TODO
         """
     #id = str(id)
-    printer = Printer.get_by_id(id)
+    internal = request.args.get("internal", "false")
+    if internal.lower() == "true":
+        printer = Printer.get_by_id(id)
+        return json.jsonify(printer.to_dict())
+    printer = Printer.get_by_webid(id)
     #TODO return the actual data that's useful for the web api
-    return json.jsonify(printer.to_dict())
+    return json.jsonify(printer.to_web())
 
-@app.route('/printers/<int:id>/jobs')
+@app.route('/printers/<int:id>/jobs', methods=['GET'])
 def jobs_list(id):
     """Returns a json of queued up jobs
     :returns: TODO
     """
 
-    printer = Printer.get_by_id(id)
+    printer = Printer.get_by_webid(id)
     if printer:
         jobs = {
                 "jobs": [ job.to_dict() for job in printer.jobs]
         }
         return json.jsonify(jobs)
+
+@app.route('/printers/<int:id>/jobs', methods=['POST'])
+def jobs_post(id):
+    """Alternative way to add a job to a printer
+    :id: webid of the printer you wish to add a job to
+    """
+    printer = Printer.get_by_webid(id)
+    if printer == None:
+        abort(404)
+    id = printer.id
+    f = request.files.get('file', None)
+    if f:
+        webid = request.form.get('id')
+        job = Job.get_by_webid(webid)
+        if not job:
+            job = Job(int(webid))
+            ext = f.filename.rsplit(".", 1)[1]
+            name = str(job.id) + "." + ext
+            fpath = os.path.join(app.config['UPLOAD_FOLDER'],name)
+            f.save(fpath)
+            file = File(f.filename, fpath)
+            job.set_file(file)
+            t = threading.Thread(target=upload_job, args=(id, job.id))
+            t.start()
+
+        #TODO Fix this to start a new job
+        start = request.form.get('start', 'false')
+        if start.lower() == "true":
+            thread.start_new_thread(start_new_job,
+                                    (printer_id,job.id,fpath))
+    else:
+        abort(400)
+    return json.jsonify({"message": "Job " + str(webid)
+                                    + " has been uploaded successfully"}),201
 
 @app.route('/printers/<int:id>/jobs/current', methods=["GET"])
 def jobs_current(id):
