@@ -188,7 +188,7 @@ class Job(Base):
                 "id": self.webid,
                 "data": {
                     "status": self.status,
-                    "estimate_print_time": self.print_time,
+                    "estimated_print_time": self.print_time,
                     "file": self.file.to_web()
                 }
             }
