@@ -171,7 +171,10 @@ class JobCollector(threading.Thread):
         job = Printer.get_by_id(printer_id).current_job()
         self.stopped = False
         self.webapi = webapi
-        self.status = job.status
+        if job:
+            self.status = job.status
+        else:
+            self.status = None
 
     def run(self):
         id = self.printer_id
