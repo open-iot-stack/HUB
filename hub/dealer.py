@@ -374,7 +374,7 @@ def upload_job(id,job_id,loc=octopi.local):
                 + ". Return code from printer " + str(r.status_code))
         return False
     data = r.json()
-    fname = data['files'][loc]['name']
+    fname = data['files']['local']['name']
     ext = get_extension(fname)
     if ext in ['stl']:
         job.state("slicing")
