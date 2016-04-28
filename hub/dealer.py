@@ -49,7 +49,7 @@ class PrinterCollector(threading.Thread):
             else:
                 sleep(10)
             printer = Printer.get_by_id(id)
-        job_thread = JobCollector(id, webapi)
+        job_thread = JobCollector(id, webapi, self)
         job_thread.start()
         log          = hub.log
         log.log("PrinterCollector starting for printer " + str(id))
@@ -99,7 +99,7 @@ class PrinterCollector(threading.Thread):
             if not job_thread.is_alive() and cjob != None:
                 log.log("JobCollector thread died for "
                         + str(id) + ". Starting new JobCollector.")
-                job_thread = JobCollector(id, webapi)
+                job_thread = JobCollector(id, webapi, self)
                 job_thread.start()
             url    = ip + ":" + str(port)
             response = octopi.get_printer_info(url, key)
@@ -164,13 +164,14 @@ class JobCollector(threading.Thread):
 
     """Job Collector will continue to grab """
 
-    def __init__(self, printer_id, webapi):
+    def __init__(self, printer_id, webapi, parent):
         """TODO: to be defined1. """
         threading.Thread.__init__(self)
         self.printer_id = printer_id
         job = Printer.get_by_id(printer_id).current_job()
         self.stopped = False
         self.webapi = webapi
+        self.parent = parent
         if job:
             self.status = job.status
         else:
@@ -246,7 +247,7 @@ class JobCollector(threading.Thread):
                 data = cjob.to_web(response.json())
                 if data != None:
                     if data.get('progress').get('completion') == 1:
-                        parent.complete()
+                        self.parent.complete()
                     # Check to see if data is the same as last collected
                     # if so, do not send it
                     if cmp(prev_data, data):
