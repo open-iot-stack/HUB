@@ -210,7 +210,7 @@ def jobs_list(id):
     printer = Printer.get_by_webid(id)
     if printer:
         jobs = {
-                "jobs": [ job.to_web() for job in printer.jobs]
+                "jobs": [ job.to_web(None) for job in printer.jobs]
         }
         return json.jsonify(jobs)
 
