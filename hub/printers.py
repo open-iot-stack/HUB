@@ -221,6 +221,7 @@ def jobs_list(id):
                 "jobs": [ job.to_web(None) for job in printer.jobs]
         }
         return json.jsonify(jobs)
+    abort(404)
 
 @app.route('/printers/<int:id>/jobs', methods=['POST'])
 def jobs_post(id):
