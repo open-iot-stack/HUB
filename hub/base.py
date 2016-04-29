@@ -29,7 +29,7 @@ def docs():
 def list_peripherals():
     """
         List Peripherals
-                Get list of peripherals currently registered
+        Get list of peripherals currently registered
         ---
         tags:
           - sensors
@@ -40,25 +40,35 @@ def list_peripherals():
         
     return json.jsonify(hub.conf.read_data())
 
-@app.route('/register', methods=['GET', 'POST'])
-def register_peripheral():
-    """Webpage to register the type of a given node
-    This should be done before activating the node.
-    :returns: webpage of result
+@app.route('/register', methods=['GET'])
+def get_register_peripheral():
     """
-    """
-        Register Peripheral
-                Registers node
+        Get Register Peripheral
+        Get node registration information
         ---
         tags:
           - sensors
         responses:
           200:
-            description: Returns "(action) successfully sent to the printer."
+            description: Returns webpage of result
         """
 
     if request.method == "GET":
         return render_template("register.html")
+    abort(405)
+
+@app.route('/register', methods=['POST'])
+def register_peripheral():
+    """
+        Register Peripheral
+        Registers node type. Should be done before activating node.
+        ---
+        tags:
+          - sensors
+        responses:
+          200:
+            description: Returns "(id) has been registered as (type)"
+        """
 
     if request.method == "POST":
         id = int(request.form.get('id'))
@@ -81,7 +91,7 @@ def register_peripheral():
                         + " was not registered, are you updating?"
                     })
     abort(405)
-
+	
 @app.route('/')
 def index():
     id=0
