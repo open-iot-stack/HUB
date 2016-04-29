@@ -86,7 +86,7 @@ def nodes_list():
     return json.jsonify(nodes = json_results)
 
 
-@app.route('/nodes/trigger/callback', methods=['GET'])
+@app.route('/nodes/trigger/callback', methods=['POST'])
 def nodes_trigger_callback():
     """
         Trigger Callback
@@ -98,12 +98,10 @@ def nodes_trigger_callback():
           200:
             description: Returns node data
         """
-    id   = int(request.args.get("id"))
-    pin  = int(request.srgs.get("pin"))
-    data = int(request.args.get("data"))
+    id   = int(request.json.get('id'))
+    data = int(request.json.get("data"))
 
     d = {'id': id,
-         'ip': pin,
          'data': data}
     return json.jsonify(d)
 
