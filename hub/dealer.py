@@ -369,7 +369,8 @@ def upload_job(id,job_id,loc=octopi.local):
     key  = printer.key
     log  = hub.log
     job  = Job.get_by_id(job_id)
-    log.log("Starting job upload to " + str(id) + " for job " + str(job.id))
+    log.log("Starting job upload to " + str(id)
+            + " for job " + str(job.id))
     fpath = job.file.path
     job.state("processing")
     url = ip + ":" + str(port)
@@ -400,69 +401,26 @@ def upload_job(id,job_id,loc=octopi.local):
         j = r.json()
         fname = j.get('name')
         #TODO somehow delete stl file as well
-    r = octopi.get_one_file_info(url, key, fname, loc)
-    while r == None or r.status_code != 200:
-        #This is really fucking hacky
-        log.log("Could not retrieve file info for " + str(job.id))
-        sleep(10)
         r = octopi.get_one_file_info(url, key, fname, loc)
+        while r == None or r.status_code != 200:
+            #This is really fucking hacky
+            log.log("Could not retrieve file info for " + str(job.id))
+            sleep(10)
+            r = octopi.get_one_file_info(url, key, fname, loc)
+    elif ext in ['gcode', 'gco']:
+        r = octopi.get_one_file_info(url, key, fname, loc)
+        while r == None or r.status_code != 200:
+            #This is really fucking hacky
+            log.log("Could not retrieve file info for " + str(job.id))
+            sleep(10)
+            r = octopi.get_one_file_info(url, key, fname, loc)
+    else:
+        return False
     j = r.json()
     print_time = j.get("gcodeAnalysis").get("estimatedPrintTime")
     job.set_print_time(print_time)
     printer = Printer.get_by_id(id)
     printer.add_job(job)
-    return True
-
-def start_new_job(id,job_id,fpath,loc=octopi.local):
-    """Function that will take care of everything
-    to print a file that exists on the hub.
-    If current job is not the job_id, returns false
-    :id: printer id to get data from
-    :job_id: job id that use believes should be started
-    :fpath: filepath to the new file to start
-    :returns: None
-
-    """
-    printer = Printer.get_by_id(id)
-    ip   = printer.ip
-    port = printer.port
-    key  = printer.key
-    jobs = printer.jobs
-    log  = hub.log
-    url = ip + ":" + str(port)
-    if job_id != printer.current_job().id:
-        log.log("ERROR: Job " + str(id) +
-                "requested to be started was not the next job")
-        return False
-    r = octopi.upload_file(url, key, fpath, loc)
-    if r == None:
-        log.log("ERROR: Did not have a response from " + str(id)
-                + ". File upload canceled for " + fpath + ".")
-        return False
-    if r.status_code != 201:
-        log.log("ERROR: Could not upload file " + fpath
-                + ". Return code from printer " + str(r.status_code))
-        return False
-    data = r.json()
-    fname = data['files'][loc]['name']
-    ext = get_extension(fname)
-    if ext in ['stl']:
-        r = octopi.slice_and_print(url, key, fname, loc)
-    elif ext in ['gcode']:
-        r = octopi.select_and_print(url, key, fname, loc)
-    else:
-        log.log("ERROR: File " + fname
-                + " has incorrect extension " + ext)
-        return False
-    if r == None:
-        log.log("ERROR: Did not have a response from " + str(id)
-                + ". Job start canceled for job " + str(job_id) + ".")
-        return False
-    if r.status_code != 204:
-        log.log("ERROR: Job start failed for " + str(job_id)
-                + ". Return code from printer " + str(r.status_code)
-                + ". Is the printer already printing?")
-        return False
     return True
 
 def get_extension(name):
