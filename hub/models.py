@@ -15,7 +15,7 @@ class JobExists(Exception):
     pass
 
 class File(Base):
-    __tablename__="file"
+    __tablename__="files"
 
     id = Column(Integer, primary_key=True)
     name   = Column(String)
@@ -24,8 +24,7 @@ class File(Base):
     date   = Column(Integer)
     path   = Column(String)
     ext    = Column(String)
-    job    = relationship("Job", back_populates="file", uselist=False)
-    job_id = Column(Integer, ForeignKey("job.id"))
+    job_id = Column(Integer, ForeignKey("jobs.id"))
 
     def __init__(self, name, path, ext=None,
                     size=0, date=0, origin="remote"):
@@ -76,18 +75,15 @@ class File(Base):
         return "<File(name='%s')>" % (self.name)
 
 class Job(Base):
-    __tablename__="job"
+    __tablename__="jobs"
 
     id         = Column(Integer, primary_key=True)
     webid      = Column(Integer, unique=True)
     position   = Column(Integer)
     status     = Column(String)
     print_time = Column(Integer)
-    file       = relationship("File", back_populates="job",
-                                uselist=False)
-    printer    = relationship("Printer", back_populates="jobs",
-                                uselist=False)
-    printer_id = Column(Integer, ForeignKey("printer.id"))
+    printer_id = Column(Integer, ForeignKey("printers.id"))
+    file       = relationship("File", uselist=False)
 
     @staticmethod
     def get_by_id(id):
@@ -243,13 +239,12 @@ class Job(Base):
         (self.id, self.status, self.file)
 
 class Printer(Base):
-    __tablename__="printer"
+    __tablename__="printers"
 
     id   = Column(Integer, primary_key=True)
     webid = Column(Integer, unique=True)
     status = Column(String)
     jobs = relationship("Job", order_by=Job.position,
-            back_populates="printer",
             collection_class=ordering_list("position"))
     key  = Column(String)
     ip   = Column(String)
@@ -258,6 +253,7 @@ class Printer(Base):
     manufacturer = Column(String)
     model = Column(String)
     description = Column(String)
+    button = relationship("Node", uselist=False)
 
     @staticmethod
     def get_by_id(id):
@@ -574,11 +570,21 @@ class Node(Base):
     id = Column(Integer, primary_key=True)
     webid = Column(Integer, unique=True)
     ip = Column(String)
+    sensors = relationship("Sensor")
+    printer_id = Column(Integer, ForeignKey("printers.id"))
 
     @staticmethod
     def get_by_id(id):
-        db_session.remove()
+        """Returns a node based on id
+        :id: ID of node to be found
+        :returns: Node if id is found, None if didn't exist
 
+        """
+        db_session.remove()
+        node =\
+            db_session.query(Node).\
+                filter(Node.id == id).one_or_none()
+        return none
 
     def __init__(self, id, ip):
         self.id = id
@@ -588,6 +594,7 @@ class Node(Base):
 
     def set_webid(self, webid):
         self.webid = webid
+        db_session.commit()
         return True
 
     def to_web(self, data):
@@ -606,7 +613,7 @@ class Sensor(Base):
     node_id = Column(Integer, ForeignKey('nodes.id'))
     pin  = Column(Integer)
     sensor_type = Column(String)
-
+    webid = Column(Integer, unique=True)
 
     def __init__(self, node_id, pin, sensor_type):
         self.node_id = node_id
