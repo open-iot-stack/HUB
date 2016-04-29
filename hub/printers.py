@@ -55,12 +55,13 @@ def printers_list():
 def add_printer():
     """
         Add Printer
+		Adds or updates printer
         ---
         tags:
           - printer
         responses:
           200:
-            description: Returns a printer
+            description: Returns printer status
         """
 
     log = hub.log
@@ -106,7 +107,7 @@ def print_action(id, action):
     """
     """
         Print Action
-                Add print action
+        Add print action
         ---
         tags:
           - printer
@@ -184,13 +185,13 @@ def print_action(id, action):
 def print_status(id):
     """
         Print Status
-                Get printer status
+        Get printer status
         ---
         tags:
           - printer
         responses:
           200:
-            description: TODO
+            description: returns printer information
         """
     #id = str(id)
     internal = request.args.get("internal", "false")
@@ -203,9 +204,16 @@ def print_status(id):
 
 @app.route('/printers/<int:id>/jobs', methods=['GET'])
 def jobs_list(id):
-    """Returns a json of queued up jobs
-    :returns: TODO
     """
+        Jobs List
+        Get list of queued jobs
+        ---
+        tags:
+          - printer
+        responses:
+          200:
+            description: returns json of queued jobs
+        """
 
     printer = Printer.get_by_webid(id)
     if printer:
@@ -216,9 +224,16 @@ def jobs_list(id):
 
 @app.route('/printers/<int:id>/jobs', methods=['POST'])
 def jobs_post(id):
-    """Alternative way to add a job to a printer
-    :id: webid of the printer you wish to add a job to
     """
+        Add a Job
+        Add job to printer
+        ---
+        tags:
+          - printer
+        responses:
+          200:
+            description: returns "(job) has been uploaded successfully"
+        """
     printer = Printer.get_by_webid(id)
     if printer == None:
         abort(404)
@@ -257,7 +272,7 @@ def jobs_current(id):
     """
     """
         Jobs Current
-                Get current job information
+        Get current job information
         ---
         tags:
           - printer
@@ -276,24 +291,44 @@ def jobs_current(id):
     abort(404)
 
 
-@app.route('/jobs/<int:job_id>',
-                                    methods=["GET","DELETE"])
+@app.route('/jobs/<int:job_id>', methods=["GET"])
 def job_action(id, job_id):
-    """Will either get or delete a job
-
     """
-    if request.method == "GET":
-        job = Job.get_by_id(job_id)
-        if job:
-            return json.jsonify(job.to_dict())
-        else:
-            abort(404)
-    elif request.method == "DELETE":
-        job = Job.get_by_id(job_id)
-        if job:
-            if job.position == 0:
-                # TODO stop current job
-                return {"NOT_IMPLEMENTED": "NOT_IMPLEMENTED"}
-            else:
-                printer = Printer.get_by_id(job.printer_id)
+        Job Action
+        Get current job information
+        ---
+        tags:
+          - printer
+        responses:
+          200:
+            description: Returns current status of job
+        """
+
+	job = Job.get_by_id(job_id)
+	if job:
+		return json.jsonify(job.to_dict())
+	else:
+		abort(404)
+    pass
+
+@app.route('/jobs/<int:job_id>', methods=["DELETE"])
+def delete_job_action(id, job_id):
+    """
+        Delete Job Action
+        Stops and Deletes Job
+        ---
+        tags:
+          - printer
+        responses:
+          200:
+            description: TODO
+        """
+
+    job = Job.get_by_id(job_id)
+    if job:
+        if job.position == 0:
+			# TODO stop current job
+			return {"NOT_IMPLEMENTED": "NOT_IMPLEMENTED"}
+		else:
+			printer = Printer.get_by_id(job.printer_id)
     pass
