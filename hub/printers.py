@@ -9,7 +9,7 @@ from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
-from dealer import start_new_job, upload_job
+from dealer import upload_job
 from dealer import PrinterCollector
 from models import Printer, Job, File
 import octopifunctions as octopi
@@ -253,13 +253,9 @@ def jobs_post(id):
             job.set_file(file)
         elif job.file == None:
             abort(400)
-        t = threading.Thread(target=upload_job, args=(id, job.id))
+        t = threading.Thread(target=upload_job,
+                            args=(id, job.id))
         t.start()
-        #TODO Fix this to start a new job
-        start = request.form.get('start', 'false')
-        if start.lower() == "true":
-            thread.start_new_thread(start_new_job,
-                                    (printer_id,job.id,fpath))
     else:
         abort(400)
     return json.jsonify({"message": "Job " + str(webid)
@@ -293,7 +289,7 @@ def jobs_current(id):
 
 
 @app.route('/jobs/<int:job_id>', methods=["GET"])
-def job_action(id, job_id):
+def get_job(job_id):
     """
         Job Action
         Get current job information
@@ -305,14 +301,14 @@ def job_action(id, job_id):
             description: Returns current status of job
         """
 
-    job = Job.get_by_id(job_id)
+    job = Job.get_by_webid(job_id)
     if job:
         return json.jsonify(job.to_dict())
     else:
         abort(404)
 
 @app.route('/jobs/<int:job_id>', methods=["DELETE"])
-def delete_job_action(id, job_id):
+def delete_job(job_id):
     """
         Delete Job Action
         Stops and Deletes Job
@@ -324,7 +320,7 @@ def delete_job_action(id, job_id):
             description: TODO
         """
 
-    job = Job.get_by_id(job_id)
+    job = Job.get_by_webid(job_id)
     if job:
         if job.position == 0:
             # TODO stop current job
