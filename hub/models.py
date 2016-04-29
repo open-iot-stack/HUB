@@ -472,15 +472,12 @@ class Printer(Base):
             return True
         return False
 
-    def cancel_job(self, job_id):
+    def cancel_job(self):
         """Does the proper handling of a job canceling.
-        :job_id: id of the job to be cancelled
         :returns: boolean of success
 
         """
-        job = current_job()
-        if job_id != self.current_job().id:
-            return False
+        job = self.current_job()
         if self.status != "cancelled":
             return False
         self.jobs.remove(job)
@@ -488,15 +485,12 @@ class Printer(Base):
         db_session.commit()
         return True
 
-    def complete_job(self, job_id):
+    def complete_job(self):
         """Does the proper handling of a job completing.
-        :job_id: id of the job that completed
         :returns: boolean of success
 
         """
-        job = current_job()
-        if job_id != self.current_job().id:
-            return False
+        job = self.current_job()
         if self.status != "completed":
             return False
         self.jobs.remove(job)
@@ -581,9 +575,16 @@ class Node(Base):
     webid = Column(Integer, unique=True)
     ip = Column(String)
 
+    @staticmethod
+    def get_by_id(id):
+        db_session.remove()
+
+
     def __init__(self, id, ip):
         self.id = id
         self.ip = ip
+        db_session.add(self)
+        db_session.commit()
 
     def set_webid(self, webid):
         self.webid = webid
