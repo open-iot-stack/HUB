@@ -55,7 +55,7 @@ def printers_list():
 def add_printer():
     """
         Add Printer
-		Adds or updates printer
+                Adds or updates printer
         ---
         tags:
           - printer
@@ -262,7 +262,7 @@ def jobs_post(id):
     else:
         abort(400)
     return json.jsonify({"message": "Job " + str(webid)
-                                    + " has been uploaded successfully"}),201
+                            + " has been uploaded successfully"}),201
 
 @app.route('/printers/<int:id>/jobs/current', methods=["GET"])
 def jobs_current(id):
@@ -304,12 +304,11 @@ def job_action(id, job_id):
             description: Returns current status of job
         """
 
-	job = Job.get_by_id(job_id)
-	if job:
-		return json.jsonify(job.to_dict())
-	else:
-		abort(404)
-    pass
+    job = Job.get_by_id(job_id)
+    if job:
+        return json.jsonify(job.to_dict())
+    else:
+        abort(404)
 
 @app.route('/jobs/<int:job_id>', methods=["DELETE"])
 def delete_job_action(id, job_id):
@@ -327,8 +326,8 @@ def delete_job_action(id, job_id):
     job = Job.get_by_id(job_id)
     if job:
         if job.position == 0:
-			# TODO stop current job
-			return {"NOT_IMPLEMENTED": "NOT_IMPLEMENTED"}
-		else:
-			printer = Printer.get_by_id(job.printer_id)
+            # TODO stop current job
+            return {"NOT_IMPLEMENTED": "NOT_IMPLEMENTED"}
+        else:
+            printer = Printer.get_by_id(job.printer_id)
     pass

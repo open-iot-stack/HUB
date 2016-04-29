@@ -91,7 +91,7 @@ def register_peripheral():
                         + " was not registered, are you updating?"
                     })
     abort(405)
-	
+        
 @app.route('/')
 def index():
     id=0
