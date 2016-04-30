@@ -9,8 +9,8 @@ from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
-from dealer import upload_job
 from dealer import PrinterCollector
+from tasks import JobUploader, Command
 from models import Printer, Job, File
 import octopifunctions as octopi
 from hub import app
@@ -137,47 +137,19 @@ def print_action(id, action):
             ext = job.file.name.rsplit('.', 1)[1]
             fpath = os.path.join(app.config['UPLOAD_FOLDER'],
                                     job.id+'.'+ext)
-            thread.start_new_thread(start_new_job,(printer,job_id,fpath))
+            #TODO add Command.start() here
         else:
             abort(400)
 #        thread.start_new_thread(job_data_collector, (printer,))
         pass
 
     elif action == "pause":
-        thread.start_new_thread(octopi.pause_unpause_command, (url, key))
+        #TODO add Command.pause() here
         pass
 
     elif action == "cancel":
-        thread.start_new_thread(octopi.cancel_command, (url, key))
+        #TODO add Command.cancel() here
         pass
-
-    elif action == "upload":
-        # get file from the post request
-        # and place it in the upload folder
-        #TODO make sure there is enough space on the device
-        f = request.files.get('file', None)
-        if f:
-            webid = request.form.get('id')
-            job = Job.get_by_webid(webid)
-            if not job:
-                job = Job(int(webid))
-                ext = f.filename.rsplit(".", 1)[1]
-                name = str(job.id) + "." + ext
-                fpath = os.path.join(app.config['UPLOAD_FOLDER'],name)
-                f.save(fpath)
-                file = File(f.filename, fpath)
-                job.set_file(file)
-                t = threading.Thread(target=upload_job, args=(id, job.id))
-                t.start()
-
-            #TODO Fix this to start a new job
-            start = request.form.get('start', 'false')
-            if start.lower() == "true":
-                thread.start_new_thread(start_new_job,
-                                        (printer_id,job.id,fpath))
-        else:
-            abort(400)
-        # check if start is true, then make sure it is equal to true
     return json.jsonify({"message": action
                         + " successfully sent to the printer."})
 
@@ -252,9 +224,13 @@ def jobs_post(id):
             file = File(f.filename, fpath)
             job.set_file(file)
         elif job.file == None:
-            abort(400)
-        t = threading.Thread(target=upload_job,
-                            args=(id, job.id))
+            ext = f.filename.rsplit(".", 1)[1]
+            name = str(job.id) + "." + ext
+            fpath = os.path.join(app.config['UPLOAD_FOLDER'],name)
+            f.save(fpath)
+            file = File(f.filename, fpath)
+            job.set_file(file)
+        t = JobUploader(id, job.id, hub.log)
         t.start()
     else:
         abort(400)
