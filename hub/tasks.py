@@ -4,7 +4,7 @@
 import threading
 import requests
 import octopifunctions as octopi
-from time import slee
+from time import sleep
 from models import Printer, Node, Job
 
 class Command(threading.Thread):
