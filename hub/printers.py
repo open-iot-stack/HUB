@@ -99,7 +99,7 @@ def add_printer():
 
 
 
-@app.route('/printers/<int:id>/<action>',methods=['POST'])
+@app.route('/printers/<int:id>/commands',methods=['POST'])
 def print_action(id, action):
     """Post request to do a print action.
     :id: ID of the printer to command
@@ -116,8 +116,6 @@ def print_action(id, action):
             description: Returns "(action) successfully sent to the printer."
         """
 
-    if not hub.printer_listeners.is_alive(id):
-        abort(400)
     printer = Printer.get_by_id(id)
     ip   = printer.ip
     port = printer.port
@@ -125,31 +123,21 @@ def print_action(id, action):
     jobs = printer.jobs
     url = ip + ":" + str(port)
     log = hub.log
+    command_id = request.args.get("id")
+    action = request.args.get("type")
 
     #TODO make helper function for actions to respond the web api
     # with the actual success as the command. For now just spawn command
     # as new thread
     if action == "start":
-        job = printer.current_job()
-        if job:
-            #TODO fix this to either unpause current job or start
-            # a new job if applicable
-            ext = job.file.name.rsplit('.', 1)[1]
-            fpath = os.path.join(app.config['UPLOAD_FOLDER'],
-                                    job.id+'.'+ext)
-            #TODO add Command.start() here
-        else:
-            abort(400)
-#        thread.start_new_thread(job_data_collector, (printer,))
-        pass
-
+        t = Command.start(id, log,
+                webapi=hub.webapi, command_id=command_id)
     elif action == "pause":
-        #TODO add Command.pause() here
-        pass
-
+        t = Command.pause(id, log,
+                webapi=hub.webapi, command_id=command_id)
     elif action == "cancel":
-        #TODO add Command.cancel() here
-        pass
+        t = Command.cancel(id, log,
+                webapi=hub.webapi, command_id=command_id)
     return json.jsonify({"message": action
                         + " successfully sent to the printer."})
 
