@@ -261,9 +261,10 @@ def get_one_file_info(url, api_key, name, path = local):
 #   retVal: result of the http_request, On success, returns response status 204 (no content)
 #       On fail, it returns the response code and response reason
  #########################################################################
-def delete_file(url, api_key, path):
+def delete_file(url, api_key, file_name, path=local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}    
-    return http_request(url, files_extension + path, type_delete, header)
+    endpoint = files_extension + path + "/" + file_name
+    return http_request(url, endpoint, type_delete, header)
     
     
  #########################################################################
@@ -306,7 +307,7 @@ def command_select(url, api_key, path):
 #   retVal: result of the http_request, On success, returns response status 200 
 #       On fail, it returns the response code and response reason
  #########################################################################  
-def select_and_print(url, api_key, path):
+def select_and_print(url, api_key, file_name, path = local):
     header = {
         'Host': 'example.com',
         'X-Api-Key': api_key,
@@ -317,8 +318,8 @@ def select_and_print(url, api_key, path):
         'print': 'true'
     }
     params = json.dumps(data)
-    return http_request(url, files_extension + path, type_post, header,
-                            data=data)
+    endpoint = files_extension + path + "/" + file_name
+    return http_request(url, endpoint, type_post, header, data=data)
     
     
  #########################################################################
@@ -411,7 +412,7 @@ def restart_command(url, api_key):
 #   retVal: result of the http_request, On success, returns response status 204 (no content)
 #       On fail, it returns the response code and response reason
  #########################################################################      
-def pause_unpause_command(url, api_key):
+def toggle_pause(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     payload = {'command': 'pause'}
     return http_request(url, jobs_extension, type_post, header,
@@ -429,7 +430,7 @@ def pause_unpause_command(url, api_key):
 #   retVal: result of the http_request, On success, returns response status 204 (no content)
 #       On fail, it returns the response code and response reason
  #########################################################################     
-def cancel_command(url, api_key):
+def cancel(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     payload = {'command': 'cancel'}
     return http_request(url, jobs_extension, type_post, header, 
