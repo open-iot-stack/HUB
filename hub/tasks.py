@@ -130,7 +130,10 @@ class Command(threading.Thread):
                 d['status'] = 'executed'
             else:
                 d['status'] = 'errored'
-            self.webapi.callback_command(d)
+            i = 0
+            while self.webapi.callback_command(d) or i < 10:
+                i += 1
+        return 0
 
 class JobUploader(threading.Thread):
 
