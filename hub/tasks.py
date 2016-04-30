@@ -237,7 +237,8 @@ class JobUploader(threading.Thread):
         printer = Printer.get_by_id(id)
         printer.add_job(job)
         if printer.current_job().id == job.id:
-            Command.start(printer.id, log)
+            t = Command(printer.id, "start", log)
+            t.start()
         self.success = True
         return True
 

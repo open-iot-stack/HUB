@@ -130,14 +130,15 @@ def print_action(id, action):
     # with the actual success as the command. For now just spawn command
     # as new thread
     if action == "start":
-        t = Command.start(id, log,
+        t = Command(id, log, "start",
                 webapi=hub.webapi, command_id=command_id)
     elif action == "pause":
-        t = Command.pause(id, log,
+        t = Command(id, log, "pause",
                 webapi=hub.webapi, command_id=command_id)
     elif action == "cancel":
-        t = Command.cancel(id, log,
+        t = Command(id, log, "cancel",
                 webapi=hub.webapi, command_id=command_id)
+    t.start()
     return json.jsonify({"message": action
                         + " successfully sent to the printer."})
 
