@@ -60,6 +60,7 @@ for opt, arg in opts:
 
 hub.log = Log(print_enabled=print_enabled)
 hub.Webapi = WebAPI(hub.WEB_API_URL, hub.WEB_API_KEY, hub.log)
+hub.Webapi.sign_in()
 hub.log.log("Starting up HUB webserver")
 
 init_db()
