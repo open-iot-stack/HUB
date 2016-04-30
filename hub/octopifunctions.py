@@ -119,10 +119,16 @@ def http_request(address, api_extension,
     url = "http://" + address + api_extension
     try:
         if method == type_get:
-            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response = requests.get(url, headers=headers,
+                                        params=params, timeout=10)
         elif method == type_post:
-            response = requests.post(url, headers=headers, params=params, timeout=10,
-                                        files=files, json=json, data=data)
+            response = requests.post(url, headers=headers,
+                                        params=params, timeout=10,
+                                        files=files, json=json,
+                                        data=data)
+        elif method == type_delete:
+            response = requests.delete(url, headers=headers,
+                                        params=params, timeout=10)
     except requests.ConnectionError:
         hub.log.log("ERROR: Could not connect to " + url)
         return None
