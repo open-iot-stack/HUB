@@ -77,13 +77,14 @@ class File(Base):
 class Job(Base):
     __tablename__="jobs"
 
-    id         = Column(Integer, primary_key=True)
-    webid      = Column(Integer, unique=True)
-    position   = Column(Integer)
-    status     = Column(String)
-    print_time = Column(Integer)
-    printer_id = Column(Integer, ForeignKey("printers.id"))
-    file       = relationship("File", uselist=False)
+    id           = Column(Integer, primary_key=True)
+    webid        = Column(Integer, unique=True)
+    position     = Column(Integer)
+    status       = Column(String)
+    print_time   = Column(Integer)
+    printer_id   = Column(Integer, ForeignKey("printers.id"))
+    remote_name  = Column(String)
+    file         = relationship("File", uselist=False)
 
     @staticmethod
     def get_by_id(id):
@@ -175,6 +176,16 @@ class Job(Base):
         db_session.commit()
         return True
 
+    def set_remote_name(self, remote_name):
+        """Sets the remote name of the job.
+        :remote_name: name that is on the octopi
+        :returns: boolean of success
+
+        """
+        self.remote_name = remote_name
+        db_session.commit()
+        return True
+
     def to_web(self, job):
         """Properly formats data to be sent to the web api 
         
@@ -196,7 +207,7 @@ class Job(Base):
             return None
         id = self.id
         webid = self.webid
-        if jf.get('name').split('.',1)[0] != str(id):
+        if jf.get('name') != self.remote_name:
             return None
         unix_date = jf.get("date")
         filament = job.get("job").get("filament")
