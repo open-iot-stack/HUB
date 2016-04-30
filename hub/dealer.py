@@ -68,8 +68,10 @@ class PrinterCollector(threading.Thread):
                 if printer.state("completed"):
                     # TODO Send signal to node. Talk to nolan
                     if job_thread.is_alive():
-                        job_thread.stop()
-                        job_thread.join()
+                        job_thread.join(10)
+                        if job_thread.is_alive():
+                            log.log("ERROR: Job completed but "
+                                    + "JobCollector is still running.")
                     sleep(5)
                     webapi.patch_printer(printer.to_web())
                 self.completed = False
@@ -80,8 +82,10 @@ class PrinterCollector(threading.Thread):
                     # TODO Send signal to node. Talk to Nolan
                     if job_thread.is_alive():
                         job_thread.status("cancelled")
-                        job_thread.stop()
-                        job_thread.join()
+                        job_thread.join(10)
+                        if job_thread.is_alive():
+                            log.log("ERROR: Job completed but "
+                                    + "JobCollector is still running.")
                     webapi.patch_printer(printer.to_web())
                     sleep(5)
                 self.cancelled = False
@@ -214,16 +218,31 @@ class JobCollector(threading.Thread):
             #If printer status is set to completed, cancelled,
             #or errored, exit. a new job thread will be spawned
             #by printer collector when needed
-            if status == "completed":
+            if status == "completed"\
+                and prev_data.get("progress").get("completion") == 100:
+                # this ensures it will have updated to the web api
                 cjob.state("completed")
-                webapi.patch_job(None)
+                i = 0
+                # Try to update to web api 10 times
+                while not webapi.patch_job(prev_data) and i < 10:
+                    i+=1
+                    sleep(5)
                 return 0
             if status == "cancelled":
                 cjob.state("errored")
-                webapi.patch_job(None)
+                i = 0
+                # Try to update to web api 10 times
+                while not webapi.patch_job(prev_data) and i < 10:
+                    i+=1
+                    sleep(5)
                 return 0
             if status == "errored":
                 cjob.state("errored")
+                i = 0
+                # Try to update to web api 10 times
+                while not webapi.patch_job(prev_data) and i < 10:
+                    i+=1
+                    sleep(5)
                 return 0
             if status == "paused":
                 cjob.state("paused")
@@ -353,75 +372,6 @@ def node_data_collector(id, ip):
             #})
     """
     time.sleep(1)
-
-def upload_job(id,job_id,loc=octopi.local):
-    """Function that will upload a new file, slice it if needed,
-    and delete stl files from the octopi. Should be used whenever
-    a new job is uploaded to the hub
-    :id: printer id to upload file to
-    :job_id: job id of job to be uploaded
-    :returns: boolean of success
-
-    """
-    printer = Printer.get_by_id(id)
-    ip   = printer.ip
-    port = printer.port
-    key  = printer.key
-    log  = hub.log
-    job  = Job.get_by_id(job_id)
-    log.log("Starting job upload to " + str(id)
-            + " for job " + str(job.id))
-    fpath = job.file.path
-    job.state("processing")
-    url = ip + ":" + str(port)
-    r = octopi.upload_file(url, key, fpath, loc)
-    if r == None:
-        log.log("ERROR: Did not have a response from " + str(id)
-                + ". File upload canceled for " + fpath + ".")
-        return False
-    if r.status_code != 201:
-        log.log("ERROR: Could not upload file " + fpath
-                + ". Return code from printer " + str(r.status_code))
-        return False
-    data = r.json()
-    fname = data['files']['local']['name']
-    ext = get_extension(fname)
-    if ext in ['stl']:
-        job.state("slicing")
-        r = octopi.slice(url, key, fname, loc)
-        if r == None:
-            log.log("ERROR: Did not have a response from " + str(id)
-                    + ". Job upload canceled for job "
-                    + str(job_id) + ".")
-            return False
-        if r.status_code != 202:
-            log.log("ERROR: Job start failed for " + str(job_id)
-                    + ". Return code from printer " + str(r.status_code))
-            return False
-        j = r.json()
-        fname = j.get('name')
-        #TODO somehow delete stl file as well
-        r = octopi.get_one_file_info(url, key, fname, loc)
-        while r == None or r.status_code != 200:
-            #This is really fucking hacky
-            log.log("Could not retrieve file info for " + str(job.id))
-            sleep(10)
-            r = octopi.get_one_file_info(url, key, fname, loc)
-    elif ext in ['gcode', 'gco']:
-        r = octopi.get_one_file_info(url, key, fname, loc)
-        while r == None or r.status_code != 200:
-            #This is really fucking hacky
-            log.log("Could not retrieve file info for " + str(job.id))
-            sleep(10)
-            r = octopi.get_one_file_info(url, key, fname, loc)
-    else:
-        return False
-    j = r.json()
-    print_time = j.get("gcodeAnalysis").get("estimatedPrintTime")
-    job.set_print_time(print_time)
-    printer = Printer.get_by_id(id)
-    printer.add_job(job)
-    return True
 
 def get_extension(name):
     """Returns the extension of a file.
