@@ -12,7 +12,7 @@ class Command(threading.Thread):
     """Sends a command to a printer as a task"""
 
     @staticmethod
-    def start(id, log, command_id=None):
+    def start(id, log, webapi=None, command_id=None):
         """Creates a Command object that will send a start signal,
         or if paused, will unpause the job
         :id: id of the printer to start
@@ -20,35 +20,38 @@ class Command(threading.Thread):
         :returns: a started Command Object that is running as a thread
             
         """
-        c = Command(id, "start", log, command_id=command_id)
+        c = Command(id, "start", log,
+                        webapi=webapi, command_id=command_id)
         c.start()
         return c
 
     @staticmethod
-    def pause(id, log, command_id=None):
+    def pause(id, log, webapi=None, command_id=None):
         """Creates a Command object that will send a pause signal
         :id: id of printer to pause
         :log: Log object to log errors
         :returns: a started Command object that is running as a thread
 
         """
-        c = Command(id, "pause", log, command_id=command_id)
+        c = Command(id, "pause", log,
+                        webapi=webapi, command_id=command_id)
         c.start()
         return c
 
     @staticmethod
-    def cancel(id, log, command_id=None):
+    def cancel(id, log, webapi=None, command_id=None):
         """Creates a Command object that will send a cancel signal
         :id: id of printer to cancel
         :log: Log object to log errors
         :returns: a started Command object that is running as a thread
 
         """
-        c = Command(id, "cancel", log, command_id=command_id)
+        c = Command(id, "cancel", log,
+                        webapi=webapi, command_id=command_id)
         c.start()
         return c
 
-    def __init__(self, id, command, log, command_id=None):
+    def __init__(self, id, command, log, webapi=None, command_id=None):
         """Create a new thread object to issue a command to a printer
 
         :id: TODO
@@ -62,6 +65,7 @@ class Command(threading.Thread):
         self.success    = False
         self.log        = log
         self.command_id = command_id
+        self.webapi     = webapi
 
     def run(self):
         id      = self.id
@@ -106,7 +110,7 @@ class Command(threading.Thread):
                     i += 1
                 if r and r.status_code == 204:
                     self.success = True
-        elif command == "cancelled":
+        elif command == "cancel":
             if status in ["printing", "paused"]:
                 if printer.state("cancelled"):
                     i = 0
@@ -117,9 +121,16 @@ class Command(threading.Thread):
                         i += 1
                     if r and r.status_code == 204:
                         self.success = True
-
-
-
+        if self.command_id != None and self.webapi != None:
+            d = {
+                "id": self.command_id,
+                "type": command
+            }
+            if self.success == True:
+                d['status'] = 'executed'
+            else:
+                d['status'] = 'errored'
+            self.webapi.callback_command(d)
 
 class JobUploader(threading.Thread):
 
@@ -222,6 +233,8 @@ class JobUploader(threading.Thread):
             return False
         printer = Printer.get_by_id(id)
         printer.add_job(job)
+        if printer.current_job().id == job.id:
+            Command.start(printer.id, log)
         self.success = True
         return True
 

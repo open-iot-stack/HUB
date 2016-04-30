@@ -584,3 +584,48 @@ class WebAPI(object):
             return False
         log.log('Added printer ' + str(node_id) + ' to ' + url )
         return True
+
+    def callback_command(self, data):
+        """Calls back to the web api for a command that was updated
+
+        :data: TODO
+        :returns: TODO
+
+        """
+        id      = data.get('id')
+        log     = self.log
+        headers = self.headers
+        web_url = self.url
+
+        try:
+            r = requests.post(url, headers=headers,
+                                json=data, timeout=3)
+        except requests.ConnectionError:
+            log.log('ERROR: Could not connect to ' + url 
+                    + '. Unable to callback command ' 
+                    + str(id) + '.')
+            return False
+        except requests.exceptions.Timeout:
+            log.log('ERROR: Timeout when contacting ' + url
+                    + '. Unable to callback command '
+                    + str(id) + '.')
+            return False
+        code = r.status_code
+        # Handle error codes from web api
+        if code == 401:
+            # Not authorized. Fix headers and try again
+            log.log('ERROR: Callback command '
+                    + str(id) + ' not updated.'
+                    + ' Server responded with ' + str(code) 
+                    + ' on ' + url)
+            ret = self.update_headers()
+            return self.callback_command(data, node_id)
+        if code != 200:
+            # Catch all for if bad status codes
+            log.log('ERROR: Callback command '
+                    + str(id) + ' not updated.'
+                    + ' Server responded with ' + str(code) 
+                    + ' on ' + url)
+            return False
+        log.log('Updated command ' + str(id) + ' on ' + url )
+        return True
