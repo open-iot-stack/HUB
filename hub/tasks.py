@@ -3,7 +3,7 @@
 
 import threading
 import requests
-#import octopifunctions as octopi
+import octopifunctions as octopi
 from time import sleep
 from models import Printer, Node, Job
 
@@ -11,7 +11,8 @@ class Command(threading.Thread):
 
     """Sends a command to a printer as a task"""
 
-    def __init__(self, id, command, log, webapi, command_id):
+    def __init__(self, id, command, log,
+                    webapi=None, command_id=None):
         """Create a new thread object to issue a command to a printer
 
         :id: TODO
@@ -30,7 +31,6 @@ class Command(threading.Thread):
     def run(self):
         id      = self.id
         log     = self.log
-        job_id  = self.job_id
         command = self.command
         loc     = octopi.local
         printer = Printer.get_by_id(id)
@@ -38,49 +38,68 @@ class Command(threading.Thread):
         port    = printer.port
         key     = printer.key
         status  = printer.status
-        url     = ip + ":" + port
+        url     = ip + ":" + str(port)
 
         if command == "start":
             if status == "paused":
                 i = 0
                 r = octopi.toggle_pause(url, key)
-                while r == None or i < 10:
+                while r == None and i < 10:
+                    log.log("ERROR: Could not pause printer " + str(id))
                     sleep(1)
                     r = octopi.toggle_pause(url, key)
                     i += 1
                 if r and r.status_code == 204:
                     self.success = True
+                elif r:
+                    log.log("ERROR: Could not start printer " + str(id)
+                            + ". Status code was " + str(r.status_code))
             elif status == "ready":
                 cjob = printer.current_job()
                 i = 0
-                r = octopi.select_and_print(cjob.remote_name)
-                while r == None or i < 10:
+                r = octopi.select_and_print(url, key, cjob.remote_name)
+                while r == None and i < 10:
+                    log.log("ERROR: Could not start printer " + str(id))
                     sleep(1)
-                    r = octopi.select_and_print(cjob.remote_name)
+                    r = octopi.select_and_print(url, key,
+                                    cjob.remote_name)
                     i += 1
                 if r and r.status_code == 204:
                     self.success = True
+                elif r:
+                    log.log("ERROR: Could not start printer " + str(id)
+                            + ". Status code was " + str(r.status_code))
         elif command == "pause":
             if status == "printing":
                 i = 0
                 r = octopi.toggle_pause(url, key)
-                while r == None or i < 10:
+                while r == None and i < 10:
+                    log.log("ERROR: Could not pause printer " + str(id))
                     sleep(1)
                     r = octopi.toggle_pause(url, key)
                     i += 1
                 if r and r.status_code == 204:
                     self.success = True
+                elif r:
+                    log.log("ERROR: Could not pause printer " + str(id)
+                            + ". Status code was " + str(r.status_code))
         elif command == "cancel":
             if status in ["printing", "paused"]:
                 if printer.state("cancelled"):
                     i = 0
                     r = octopi.cancel(url, key)
-                    while r == None or i < 10:
+                    while r == None and i < 10:
+                        log.log("ERROR: Could not cancel printer "
+                                + str(id))
                         sleep(1)
                         r = octopi.cancel(url, key)
                         i += 1
                     if r and r.status_code == 204:
                         self.success = True
+                    elif r:
+                        log.log("ERROR: Could not cancel printer "
+                                + str(id) + ". Status code was "
+                                + str(r.status_code))
         if self.command_id != None and self.webapi != None:
             d = {
                 "id": self.command_id,
@@ -91,7 +110,7 @@ class Command(threading.Thread):
             else:
                 d['status'] = 'errored'
             i = 0
-            while self.webapi.callback_command(d) or i < 10:
+            while self.webapi.callback_command(d) and i < 10:
                 i += 1
         return 0
 
