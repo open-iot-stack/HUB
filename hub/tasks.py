@@ -3,7 +3,7 @@
 
 import threading
 import requests
-import octopifunctions as octopi
+#import octopifunctions as octopi
 from time import sleep
 from models import Printer, Node, Job
 
@@ -11,47 +11,7 @@ class Command(threading.Thread):
 
     """Sends a command to a printer as a task"""
 
-    @staticmethod
-    def start(id, log, webapi=None, command_id=None):
-        """Creates a Command object that will send a start signal,
-        or if paused, will unpause the job
-        :id: id of the printer to start
-        :log: Log object to log errors
-        :returns: a started Command Object that is running as a thread
-            
-        """
-        c = Command(id, "start", log,
-                        webapi=webapi, command_id=command_id)
-        c.start()
-        return c
-
-    @staticmethod
-    def pause(id, log, webapi=None, command_id=None):
-        """Creates a Command object that will send a pause signal
-        :id: id of printer to pause
-        :log: Log object to log errors
-        :returns: a started Command object that is running as a thread
-
-        """
-        c = Command(id, "pause", log,
-                        webapi=webapi, command_id=command_id)
-        c.start()
-        return c
-
-    @staticmethod
-    def cancel(id, log, webapi=None, command_id=None):
-        """Creates a Command object that will send a cancel signal
-        :id: id of printer to cancel
-        :log: Log object to log errors
-        :returns: a started Command object that is running as a thread
-
-        """
-        c = Command(id, "cancel", log,
-                        webapi=webapi, command_id=command_id)
-        c.start()
-        return c
-
-    def __init__(self, id, command, log, webapi=None, command_id=None):
+    def __init__(self, id, command, log, webapi, command_id):
         """Create a new thread object to issue a command to a printer
 
         :id: TODO
@@ -250,4 +210,3 @@ def get_extension(name):
     """
     ext = name.rsplit('.', 1)[1]
     return ext
-    
