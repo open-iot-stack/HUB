@@ -319,13 +319,13 @@ def select_and_print(url, api_key, file_name, path = local):
         'X-Api-Key': api_key,
         'Content-Type': 'application/json'
     }
-    data = {
+    payload = {
         'command': 'select',
         'print': 'true'
     }
-    params = json.dumps(data)
     endpoint = files_extension + path + "/" + file_name
-    return http_request(url, endpoint, type_post, header, data=data)
+    hub.log.log("Select and print sending!")
+    return http_request(url, endpoint, type_post, header, json=payload)
     
     
  #########################################################################
