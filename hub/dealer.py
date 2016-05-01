@@ -196,6 +196,7 @@ class JobCollector(threading.Thread):
         failures     = 0
         #url          = "http://" + ip + ":" + port
         prev_data    = {}
+        recent_json  = None
         while(True):
             if self.stopped:
                 log.log("JobCollector stop signal received for "
@@ -219,28 +220,32 @@ class JobCollector(threading.Thread):
             #or errored, exit. a new job thread will be spawned
             #by printer collector when needed
             if status == "completed"\
-                and prev_data.get("progress").get("completion") == 100:
+                and prev_data.get("data")\
+                    .get("progress").get("completion") == 100:
                 # this ensures it will have updated to the web api
                 cjob.state("completed")
+                data = cjob.to_web(recent_json)
                 i = 0
                 # Try to update to web api 10 times
-                while not webapi.patch_job(prev_data) and i < 10:
+                while not webapi.patch_job(data) and i < 10:
                     i+=1
                     sleep(5)
                 return 0
             if status == "cancelled":
                 cjob.state("errored")
+                data = cjob.to_web(recent_json)
                 i = 0
                 # Try to update to web api 10 times
-                while not webapi.patch_job(prev_data) and i < 10:
+                while not webapi.patch_job(data) and i < 10:
                     i+=1
                     sleep(5)
                 return 0
             if status == "errored":
                 cjob.state("errored")
+                data = cjob.to_web(recent_json)
                 i = 0
                 # Try to update to web api 10 times
-                while not webapi.patch_job(prev_data) and i < 10:
+                while not webapi.patch_job(data) and i < 10:
                     i+=1
                     sleep(5)
                 return 0
@@ -272,14 +277,15 @@ class JobCollector(threading.Thread):
                         + str(response.status_code) + " on "
                         + url)
             else:
-                data = cjob.to_web(response.json())
+                recent_json = response.json()
+                data = cjob.to_web(recent_json)
                 if data != None:
                     # Check to see if data is the same as last collected
                     # if so, do not send it
                     if cmp(prev_data, data):
                         prev_data = data.copy()
                         webapi.patch_job(data)
-                        log.log(data)
+                        #print(data)
                 else:
                     log.log("ERROR: Did not get proper job data from "
                             + str(id))
