@@ -100,7 +100,7 @@ def add_printer():
 
 
 @app.route('/printers/<int:id>/commands',methods=['POST'])
-def print_action(id, action):
+def print_action(id):
     """Post request to do a print action.
     :id: ID of the printer to command
     :action: Action to perform
@@ -123,6 +123,7 @@ def print_action(id, action):
     jobs = printer.jobs
     url = ip + ":" + str(port)
     log = hub.log
+#TODO fix these to be handled as json
     command_id = request.args.get("id")
     action = request.args.get("type")
 
