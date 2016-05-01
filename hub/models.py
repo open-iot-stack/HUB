@@ -450,15 +450,18 @@ class Printer(Base):
             if j.id == job.id:
                 return False
         if position == -1:
+            job.state("queued")
             self.jobs.append(job)
             db_session.commit()
             print self
             return True
         if position >= len(self.jobs):
+            job.state("queued")
             self.jobs.append(job)
             db_session.commit()
             return True
         else:
+            job.state("queued")
             self.jobs.insert(position, job)
             db_session.commit()
             return True
