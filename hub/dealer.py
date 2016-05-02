@@ -100,7 +100,7 @@ class PrinterCollector(threading.Thread):
                         +" Exiting PrinterCollector.")
                 return 0
             # If status is set to completed, don't do anyting else
-            if status == "completed":
+            if status in ["completed", "cancelled"]:
                 continue
             if not job_thread.is_alive() and cjob != None\
                     and status != "errored":
