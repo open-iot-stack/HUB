@@ -19,13 +19,46 @@ from hub import app
 def printers_list():
     """
         Printers List
-        Returns a json of currently active printers
+        Returns a json of printers
         ---
         tags:
           - printer
+        definitions:
+          - schema:
+              id: Web_Printer
+              properties:
+                id: 
+                  type: integer
+                  description: id of the printer on web api
+                friendly_id: 
+                  type: string
+                  description: friendly_id of the printer
+                manufacturer: 
+                  type: string
+                  description: manufacturer of the printer
+                model: 
+                  type: string
+                  description: model of the printer
+                num_jobs: 
+                  type: integer
+                  description: number of jobs the printer current has
+                description: 
+                  type: string
+                  description: user description of the printer
+                status: 
+                  type: string
+                  description: status of the printer
+        produces:
+        - application/json
         responses:
           200:
             description: Returns a list of printers
+            schema:
+              properties:
+                printers:
+                  type: array
+                  items:
+                    $ref: "#/definitions/Web_Printer"
         """
 
     log = hub.log
@@ -55,13 +88,37 @@ def printers_list():
 def add_printer():
     """
         Add Printer
-                Adds or updates printer
+        Adds or updates printer
         ---
         tags:
           - printer
+        parameters:
+          - in: body
+            name: Printer
+            description: Printer object to be added/activated
+            required: true
+            schema:
+              id: Post_Printer
+              required:
+                - id
+                - ip
+                - key
+              properties:
+                ip:
+                  type: string
+                  description: ip address of connecting printer
+                key:
+                  type: string
+                  description: api key for octopi
+                id:
+                  type: integer
+                  description: uid of the printer activating
+                port:
+                  type: integer
+                  description: port number to communicate on
         responses:
-          200:
-            description: Returns printer status
+          201:
+            description: Returns 201 created
         """
 
     log = hub.log
@@ -95,27 +152,44 @@ def add_printer():
         t.start()
         listener.add_thread(id, t)
         return json.jsonify({'message': 'Printer ' + str(id)
-                                + ' has been added and is online.'})
+                                + ' has been added and is online.'}),201
 
 
 
 @app.route('/printers/<int:id>/commands',methods=['POST'])
 def print_action(id):
-    """Post request to do a print action.
-    :id: ID of the printer to command
-    :action: Action to perform
-    """
     """
         Print Action
         Add print action
         ---
         tags:
           - printer
+        parameters:
+          - in: path
+            required: true
+            name: id
+            description: ID of printer
+            type: integer
+          - in: body
+            name: Command
+            description: Command to be excecuted
+            required: true
+            schema:
+              required:
+                - id
+                - type
+              properties:
+                id:
+                  type: integer
+                  description: id of the command
+                type:
+                  type: string
+                  description: type of command to send [start, pause, cancel]
         responses:
           200:
             description: Returns "(action) successfully sent to the printer."
-        """
 
+        """
     printer = Printer.get_by_id(id)
     ip   = printer.ip
     port = printer.port
@@ -151,11 +225,19 @@ def print_status(id):
         ---
         tags:
           - printer
+        parameters:
+          - in: path
+            description: ID of the printer
+            required: true
+            type: integer
+            name: id
         responses:
           200:
             description: returns printer information
-        """
-    #id = str(id)
+            schema:
+              $ref: "#/definitions/Web_Printer"
+
+    """
     internal = request.args.get("internal", "false")
     if internal.lower() == "true":
         printer = Printer.get_by_id(id)
@@ -172,11 +254,58 @@ def jobs_list(id):
         ---
         tags:
           - printer
+        parameters:
+          - in: path
+            description: ID of the printer
+            required: true
+            type: integer
+            name: id
+        definitions:
+          - schema:
+              id: Web_Job
+              required:
+                - id
+              properties:
+                id:
+                  type: integer
+                  description: ID of the printer
+                data:
+                  schema:
+                    id: Web_Job_Data
+                    properties:
+                      estimated_print_time:
+                        type: integer
+                        description: size of the job in bytes
+                      status:
+                        type: string
+                        description: status of the job
+                      file:
+                        schema:
+                          id: Web_Job_File
+                          properties:
+                            name:
+                              type: string
+                              description: name of the file
+                            origin:
+                              type: string
+                              description: origin of the file
+                            size:
+                              type: integer
+                              description: size of the file in bytes
+                            date:
+                              type: string
+                              description: date the file was created
         responses:
           200:
             description: returns json of queued jobs
-        """
+            schema:
+              properties:
+                jobs:
+                  type: array
+                  items:
+                    $ref: "#/definitions/Web_Job"
 
+    """
     printer = Printer.get_by_webid(id)
     if printer:
         jobs = {
@@ -193,9 +322,25 @@ def jobs_post(id):
         ---
         tags:
           - printer
+        parameters:
+          - in: path
+            description: ID of the printer
+            required: true
+            type: integer
+            name: id
+          - in: body
+            description: Job to add to the printer
+            required: true
+            name: Job
+            schema:
+              $ref: "#/definitions/Web_Job"
         responses:
-          200:
+          201:
             description: returns "(job) has been uploaded successfully"
+          400:
+            description: no file was provided
+          404:
+            description: printer isn't found
         """
     printer = Printer.get_by_webid(id)
     if printer == None:
@@ -229,19 +374,23 @@ def jobs_post(id):
 
 @app.route('/printers/<int:id>/jobs/current', methods=["GET"])
 def jobs_current(id):
-    """Returns a json of the current job
-    :id: id of printer to get the job from
-    :returns: current status of the job
-    """
     """
         Jobs Current
         Get current job information
         ---
         tags:
           - printer
+        parameters:
+          - in: path
+            description: ID of the printer
+            required: true
+            type: integer
+            name: id
         responses:
           200:
             description: Returns current status of job
+            schema:
+              $ref: "#/definitions/Web_Job"
         """
 
     printer = Printer.get_by_id(id)
@@ -262,9 +411,17 @@ def get_job(job_id):
         ---
         tags:
           - printer
+        parameters:
+          - in: path
+            description: ID of the job
+            required: true
+            type: integer
+            name: id
         responses:
           200:
             description: Returns current status of job
+            schema:
+              $ref: "#/definitions/Web_Job"
         """
 
     job = Job.get_by_webid(job_id)
@@ -281,6 +438,12 @@ def delete_job(job_id):
         ---
         tags:
           - printer
+        parameters:
+          - in: path
+            type: integer
+            name: id
+            description: ID of the Job
+            required: true
         responses:
           200:
             description: TODO
