@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import thread
 import threading
 import hub
 from chest import Chest
@@ -12,7 +11,6 @@ from flask import abort
 from dealer import PrinterCollector
 from tasks import JobUploader, Command
 from models import Printer, Job, File
-import octopifunctions as octopi
 from hub import app
 
 @app.route('/printers', methods=['GET'])
@@ -197,13 +195,10 @@ def print_action(id):
     jobs = printer.jobs
     url = ip + ":" + str(port)
     log = hub.log
-#TODO fix these to be handled as json
-    command_id = request.args.get("id")
-    action = request.args.get("type")
+    data = request.get_json()
+    command_id = data.get("id")
+    action = data.get("type")
 
-    #TODO make helper function for actions to respond the web api
-    # with the actual success as the command. For now just spawn command
-    # as new thread
     if action == "start":
         t = Command(id, log, "start",
                 webapi=hub.webapi, command_id=command_id)
@@ -241,9 +236,12 @@ def print_status(id):
     internal = request.args.get("internal", "false")
     if internal.lower() == "true":
         printer = Printer.get_by_id(id)
+        if printer == None:
+            abort(404)
         return json.jsonify(printer.to_dict())
     printer = Printer.get_by_webid(id)
-    #TODO return the actual data that's useful for the web api
+    if printer == None:
+        abort(404)
     return json.jsonify(printer.to_web())
 
 @app.route('/printers/<int:id>/jobs', methods=['GET'])
@@ -397,7 +395,7 @@ def jobs_current(id):
     if printer:
         job = printer.current_job()
         if job:
-            return json.jsonify(job.to_dict())
+            return json.jsonify(job.to_web(None))
         else:
             return json.jsonify({})
     abort(404)
