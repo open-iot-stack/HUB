@@ -94,13 +94,4 @@ def register_peripheral():
         
 @app.route('/')
 def index():
-    id=0
-
-    return "0 represents the UUID" + '<br>'\
-         + url_for('register_peripheral') + '<br>'\
-         + url_for('activate_node') + '<br>'\
-         + url_for('print_action' ,id=id, action='start') + '<br>'\
-         + url_for('print_action' ,id=id, action='cancel') + '<br>'\
-         + url_for('print_action' ,id=id, action='pause') + '<br>'\
-         + url_for('print_status' ,id=id) + '<br>'\
-         + url_for('node_data'  ,id=id) + '<br>'
+    return 0
