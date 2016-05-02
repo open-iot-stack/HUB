@@ -52,14 +52,11 @@ def activate_node(payload = None):
     conf_data = hub.conf.read_data()
     log = hub.log
 
-    anode = Node(id, ip)
-    db_session.add(anode)
-    db_session.commit()
-
-    result = Node.query.filter_by(id=id).first()
-    if result:
-        thread.start_new_thread(node_data_collector, (id, ip))
-        return json.jsonify({"message": str(id) + " has been activated."})
+    node = Node.get_by_id(id)
+    if node == None:
+        node = Node(id, ip)
+    thread.start_new_thread(node_data_collector, (id, ip))
+    return json.jsonify({"message": str(id) + " has been activated."})
 
     log.log("ERROR: Node " + str(id) + " tried to activate but was never registered")
     abort(400)
@@ -98,8 +95,9 @@ def nodes_trigger_callback():
           200:
             description: Returns node data
         """
-    id   = int(request.json.get('id'))
-    data = int(request.json.get("data"))
+    payload = request.get_json()
+    id   = int(payload.get("id"))
+    data = payload.get("data")
 
     d = {'id': id,
          'data': data}
