@@ -93,6 +93,7 @@ class Job(Base):
         :returns: Job if id is found, None if didn't exist
 
         """
+        #TODO find a better way than removing every time
         db_session.remove()
         job =\
             db_session.query(Job).filter(Job.id == id).one_or_none()
@@ -105,6 +106,7 @@ class Job(Base):
         :returns: Job if webid is found, None if didn't exist
 
         """
+        #TODO find a better way than removing every time
         db_session.remove()
         job =\
             db_session.query(Job).\
@@ -273,6 +275,7 @@ class Printer(Base):
         :returns: Printer if id is found, None if didn't exist
 
         """
+        #TODO find a better way than removing every time
         db_session.remove()
         printer =\
             db_session.query(Printer).\
@@ -286,6 +289,7 @@ class Printer(Base):
         :returns: Printer if webid is found, None if didn't exist
 
         """
+        #TODO find a better way than removing every time
         db_session.remove()
         printer =\
             db_session.query(Printer).\
@@ -298,6 +302,7 @@ class Printer(Base):
         :returns: TODO
 
         """
+        #TODO find a better way than removing every time
         db_session.remove()
         l = []
         for printer in db_session.query(Printer):
@@ -429,7 +434,7 @@ class Printer(Base):
         elif self.status == "cancelled":
             return False
         if state in ["ready", "paused", "printing", "errored",
-                        "offline", "completed"]:
+                        "offline", "completed", "cancelled"]:
             self.status = state
             db_session.commit()
             return True
@@ -453,7 +458,6 @@ class Printer(Base):
             job.state("queued")
             self.jobs.append(job)
             db_session.commit()
-            print self
             return True
         if position >= len(self.jobs):
             job.state("queued")
@@ -474,6 +478,8 @@ class Printer(Base):
 
         """
         job = Job.get_by_id(job_id)
+        if job.printer_id != self.id:
+            return False
         if job:
             if job.position == 0:
                 return False
@@ -488,6 +494,8 @@ class Printer(Base):
 
         """
         job = self.current_job()
+        if job == None:
+            return False
         if self.status != "cancelled":
             return False
         self.jobs.remove(job)
@@ -501,6 +509,8 @@ class Printer(Base):
 
         """
         job = self.current_job()
+        if job == None:
+            return False
         if self.status != "completed":
             return False
         self.jobs.remove(job)
@@ -594,11 +604,12 @@ class Node(Base):
         :returns: Node if id is found, None if didn't exist
 
         """
+        #TODO find a better way than removing every time
         db_session.remove()
         node =\
             db_session.query(Node).\
                 filter(Node.id == id).one_or_none()
-        return none
+        return node
 
     def __init__(self, id, ip):
         self.id = id
