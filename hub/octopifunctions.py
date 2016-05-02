@@ -345,12 +345,14 @@ def slice(url, api_key, file_name, path_to_store = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     #fileName = os.path.basename(path)
     #fileNameNoExt = os.path.splitext(fileName)[0]
-    name = file_name.split('.',1)[0]
+    name = file_name.rsplit('.',1)[0]
     endpoint = files_extension + path_to_store + "/" + file_name
     payload = {
         'command': 'slice',
         'slicer': 'cura',
-        'gcode': name + '.gcode',
+        'gcode': name + '.gcode'
+        'select': 'false',
+        'print': 'false'
     }
     #data ['command'] = 'slice'
     #data ['slicer'] = 'cura'
