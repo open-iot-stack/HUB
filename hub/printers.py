@@ -182,13 +182,16 @@ def print_action(id):
                   description: id of the command
                 type:
                   type: string
-                  description: type of command to send [start, pause, cancel]
+                  description: type of command to send [start, pause, cancel, next]
         responses:
           200:
             description: Returns "(action) successfully sent to the printer."
 
         """
-    printer = Printer.get_by_id(id)
+    printer = Printer.get_by_webid(id)
+    if printer == None:
+        abort(404)
+    id   = printer.id
     ip   = printer.ip
     port = printer.port
     key  = printer.key
@@ -201,13 +204,16 @@ def print_action(id):
 
     if action == "start":
         t = Command(id, log, "start",
-                webapi=hub.webapi, command_id=command_id)
+                hub.Webapi, command_id=command_id)
     elif action == "pause":
         t = Command(id, log, "pause",
-                webapi=hub.webapi, command_id=command_id)
+                hub.Webapi, command_id=command_id)
     elif action == "cancel":
         t = Command(id, log, "cancel",
-                webapi=hub.webapi, command_id=command_id)
+                hub.Webapi, command_id=command_id)
+    elif action == "next":
+        t = Command(id, log, "next",
+                hub.Webapi, command_id=command_id)
     t.start()
     return json.jsonify({"message": action
                         + " successfully sent to the printer."})
@@ -363,8 +369,15 @@ def jobs_post(id):
             f.save(fpath)
             file = File(f.filename, fpath)
             job.set_file(file)
-        t = JobUploader(id, job.id, hub.log)
+        printer = Printer.get_by_id(id)
+        printer.add_job(job)
+        t = threading.Thread(target=hub.Webapi.patch_job,
+                            args=(job.to_web(None),))
         t.start()
+        if printer.current_job().id == job.id:
+            t = Command(printer.id, hub.log, "start",
+                        hub.Webapi)
+            t.start()
     else:
         abort(400)
     return json.jsonify({"message": "Job " + str(webid)
@@ -449,9 +462,13 @@ def delete_job(job_id):
 
     job = Job.get_by_webid(job_id)
     if job:
+        printer = Printer.get_by_id(job.printer_id)
         if job.position == 0:
-            # TODO stop current job
-            return {"NOT_IMPLEMENTED": "NOT_IMPLEMENTED"}
+            if printer.state("cancelled"):
+                printer.cancel_job()
+                payload = printer.to_web()
+                hub.Webapi.patch_printer(payload)
         else:
-            printer = Printer.get_by_id(job.printer_id)
-    pass
+            printer.remove_job(job_id)
+    return json.jsonify({"message": "Job " + str(job_id)
+                                    + " has been deleted"}),200
