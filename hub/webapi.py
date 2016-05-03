@@ -352,7 +352,7 @@ class WebAPI(object):
                     + ' Server responded with ' + str(code)
                     + ' on ' + url)
             return False
-        log.log('Updated job ' + str(job_id) + ' on ' + url)
+        #log.log('Updated job ' + str(job_id) + ' on ' + url)
         return True
 
     def delete_job(self, job):
@@ -404,7 +404,7 @@ class WebAPI(object):
                     + ' Server responded with ' + str(code)
                     + ' on ' + url)
             return False
-        log.log('Updated job ' + str(job_id) + ' on ' + url)
+        log.log('Deleted job ' + str(job_id) + ' on ' + url)
         return True
 
     def add_node(self, node):
@@ -538,7 +538,7 @@ class WebAPI(object):
                     + ' Server responded with ' + str(code) 
                     + ' on ' + url)
             return False
-        log.log('Updated Node ' + str(node_id) + ' to ' + url )
+        log.log('Deleted Node ' + str(node_id) + ' to ' + url )
         return True
 
     def add_data(self, data, node_id):
