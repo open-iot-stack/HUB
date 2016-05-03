@@ -350,7 +350,7 @@ def slice(url, api_key, file_name, path_to_store = local):
     payload = {
         'command': 'slice',
         'slicer': 'cura',
-        'gcode': name + '.gcode'
+        'gcode': name + '.gcode',
         'select': 'false',
         'print': 'false'
     }
