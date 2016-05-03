@@ -41,6 +41,7 @@ local = '/local'
 files_extension = '/api/files'
 printer_extension = '/api/printer'
 jobs_extension = '/api/job'
+conn_extension = '/api/connection'
 version_extension = '/api/version'
 printer_profile_extension = '/api/printerprofiles'
 slicer_profile_extension = '/api/slicing/cura/profiles' #Note: normally, slicer profiles are organized per Slicer but the octopi only has one Slicer (cura)
@@ -119,10 +120,16 @@ def http_request(address, api_extension,
     url = "http://" + address + api_extension
     try:
         if method == type_get:
-            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response = requests.get(url, headers=headers,
+                                        params=params, timeout=10)
         elif method == type_post:
-            response = requests.post(url, headers=headers, params=params, timeout=10,
-                                        files=files, json=json, data=data)
+            response = requests.post(url, headers=headers,
+                                        params=params, timeout=10,
+                                        files=files, json=json,
+                                        data=data)
+        elif method == type_delete:
+            response = requests.delete(url, headers=headers,
+                                        params=params, timeout=10)
     except requests.ConnectionError:
         hub.log.log("ERROR: Could not connect to " + url)
         return None
@@ -242,9 +249,10 @@ def upload_file_and_print(url, api_key, file_path, path_to_store = local):
 #   retVal: result of the http_request, On success, the file's information.
 #       On fail, it returns the response code and response reason
  #########################################################################
-def get_one_file_info(url, api_key, path = local): 
+def get_one_file_info(url, api_key, name, path = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}
-    return http_request(url, files_extension + path, type_get, header)     
+    endpoint = files_extension + path + "/" + name
+    return http_request(url, endpoint, type_get, header)
     
     
  #########################################################################
@@ -260,9 +268,10 @@ def get_one_file_info(url, api_key, path = local):
 #   retVal: result of the http_request, On success, returns response status 204 (no content)
 #       On fail, it returns the response code and response reason
  #########################################################################
-def delete_file(url, api_key, path):
+def delete_file(url, api_key, file_name, path=local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}    
-    return http_request(url, files_extension + path, type_delete, header)
+    endpoint = files_extension + path + "/" + file_name
+    return http_request(url, endpoint, type_delete, header)
     
     
  #########################################################################
@@ -293,7 +302,7 @@ def command_select(url, api_key, path):
 
 
  #########################################################################
-#   Function Name: command_select_and_print
+#   Function Name: select_and_print
 #   Function Description:
 #       -Selects a file on the octopi (or sd card in the 3D printer) and then prints it
 #   Parameter [0]: url {string} URL of pi 
@@ -305,19 +314,18 @@ def command_select(url, api_key, path):
 #   retVal: result of the http_request, On success, returns response status 200 
 #       On fail, it returns the response code and response reason
  #########################################################################  
-def command_select_and_print(url, api_key, path):
+def select_and_print(url, api_key, file_name, path = local):
     header = {
         'Host': 'example.com',
         'X-Api-Key': api_key,
         'Content-Type': 'application/json'
     }
-    data = {
+    payload = {
         'command': 'select',
         'print': 'true'
     }
-    params = json.dumps(data)
-    return http_request(url, files_extension + path, type_post, header,
-                            data=data)
+    endpoint = files_extension + path + "/" + file_name
+    return http_request(url, endpoint, type_post, header, json=payload)
     
     
  #########################################################################
@@ -333,13 +341,18 @@ def command_select_and_print(url, api_key, path):
 #   retVal: result of the http_request, On success, returns response status 202 
 #       On fail, it returns the response code and response reason
  #########################################################################  
-def command_slice(url, api_key, file_name, path_to_store = local):
+def slice(url, api_key, file_name, path_to_store = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     #fileName = os.path.basename(path)
     #fileNameNoExt = os.path.splitext(fileName)[0]
+    name = file_name.rsplit('.',1)[0]
     endpoint = files_extension + path_to_store + "/" + file_name
     payload = {
-        'command': 'slice'
+        'command': 'slice',
+        'slicer': 'cura',
+        'gcode': name + '.gcode',
+        'select': 'false',
+        'print': 'false'
     }
     #data ['command'] = 'slice'
     #data ['slicer'] = 'cura'
@@ -407,7 +420,7 @@ def restart_command(url, api_key):
 #   retVal: result of the http_request, On success, returns response status 204 (no content)
 #       On fail, it returns the response code and response reason
  #########################################################################      
-def pause_unpause_command(url, api_key):
+def toggle_pause(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     payload = {'command': 'pause'}
     return http_request(url, jobs_extension, type_post, header,
@@ -425,7 +438,7 @@ def pause_unpause_command(url, api_key):
 #   retVal: result of the http_request, On success, returns response status 204 (no content)
 #       On fail, it returns the response code and response reason
  #########################################################################     
-def cancel_command(url, api_key):
+def cancel(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     payload = {'command': 'cancel'}
     return http_request(url, jobs_extension, type_post, header, 
@@ -466,6 +479,19 @@ def slice_and_print(url, api_key, file_name, path_to_store = local):
 def get_version(url, api_key):
     headers = {'Host': 'example.com', 'X-Api-Key': api_key}
     return http_request(url, version_extension, type_get, headers)
+
+def get_connection(url, api_key):
+    headers = {'Host': 'example.com', 'X-Api-Key': api_key}
+    return http_request(url, conn_extension, type_get, headers)
+
+def connect(url, api_key, name):
+    headers = {'Host': 'example.com', 'X-Api-Key': api_key}
+    payload = {
+            "command": "connect",
+            "port": name,
+    }
+    return http_request(url, conn_extension, type_post, headers,
+                            json=payload)
 
 
 
