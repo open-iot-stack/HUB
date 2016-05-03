@@ -6,7 +6,7 @@ import hub
 from chest import Chest
 from flask import request, json, url_for
 from hub import app
-from dealer import node_data_collector,get_temp,get_gpio
+from dealer import NodeCollector, get_temp, get_gpio
 from database import db_session
 from models import Sensor, Node
 
@@ -55,7 +55,8 @@ def activate_node(payload = None):
     node = Node.get_by_id(id)
     if node == None:
         node = Node(id, ip)
-    thread.start_new_thread(node_data_collector, (id, ip))
+    t = NodeCollector(id, hub.Webapi)
+    t.start()
     return json.jsonify({"message": str(id) + " has been activated."})
 
     log.log("ERROR: Node " + str(id) + " tried to activate but was never registered")
@@ -138,15 +139,49 @@ def node_add_sensors(node_id):
         ---
         tags:
           - sensors
+        definitions:
+          - schema:
+              id: Post_Sensor
+              required:
+                - id
+                - type
+              properties:
+                id:
+                  type: integer
+                  description: id of the sensor
+                type:
+                  type: string
+                  description: type of sensor
+                  enum: ['door','temperature','trigger','led']
+        parameters:
+          - in: body
+            name: Sensor
+            description: Sensor object to be added to the hub
+            schema:
+              $ref: '#/definitions/Post_Sensor'
+
         responses:
-          200:
-            description: Returns a list of sensors
+          201:
+            description: Returns the information received about the sensor
         """
-    pin = request.json.get('pin')
-    sensor_type = request.json.get('sensor_type')
+    payload = request.json()
+    id  = payload.get("id")
+    sensor = Sensor.get_by_webid(id)
+    if sensor:
+        abort(409)
+    pin = payload.get('pin')
+    sensor_type = payload.get('type')
+    if sensor_type == "door":
+        sensor_type = "DOOR"
+    elif sensor_type == "temperature":
+        sensor_type = "TEMP"
+    elif sensor_type == "trigger":
+        sensor_type = "TRIG"
+    elif sensor_type == "led":
+        sensor_type = "LED"
+    else:
+        abort(400)
     sensor = Sensor(node_id, pin, sensor_type)
-    db_session.add(sensor)
-    db_session.commit()
     return json.jsonify({'sensor': {'node_id': node_id, 'pin': pin,
                                                     'sensor_type': sensor_type}}), 201
 
