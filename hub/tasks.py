@@ -34,7 +34,7 @@ class Command(threading.Thread):
         command = self.command
         webapi  = self.webapi
         loc     = octopi.local
-        printer = Printer.get_by_id(id)
+        printer = Printer.get_by_id(id, fresh=True)
         ip      = printer.ip
         port    = printer.port
         key     = printer.key
@@ -60,7 +60,7 @@ class Command(threading.Thread):
                 t = JobUploader(id, cjob.id, log, webapi)
                 t.start()
                 t.join()
-                printer = Printer.get_by_id(id)
+                printer = Printer.get_by_id(id, fresh=True)
                 cjob    = printer.current_job()
                 i = 0
                 r = octopi.select_and_print(url, key, cjob.remote_name)
@@ -75,6 +75,9 @@ class Command(threading.Thread):
                 elif r:
                     log.log("ERROR: Could not start printer " + str(id)
                             + ". Status code was " + str(r.status_code))
+            else:
+                log.log("ERROR: Printer " + str(id) + " was told to "
+                        + "start but wasn't paused or ready")
         elif command == "pause":
             if status == "printing":
                 i = 0
@@ -89,23 +92,30 @@ class Command(threading.Thread):
                 elif r:
                     log.log("ERROR: Could not pause printer " + str(id)
                             + ". Status code was " + str(r.status_code))
+            else:
+                log.log("ERROR: Printer " + str(id) + " was told to "
+                        + " pause but was not printing")
         elif command == "cancel":
             if status in ["printing", "paused"]:
-                if printer.state("cancelled"):
-                    i = 0
+                i = 0
+                r = octopi.cancel(url, key)
+                while r == None and i < 10:
+                    log.log("ERROR: Could not cancel printer "
+                            + str(id))
+                    sleep(1)
                     r = octopi.cancel(url, key)
-                    while r == None and i < 10:
-                        log.log("ERROR: Could not cancel printer "
-                                + str(id))
-                        sleep(1)
-                        r = octopi.cancel(url, key)
-                        i += 1
-                    if r and r.status_code == 204:
-                        self.success = True
-                    elif r:
-                        log.log("ERROR: Could not cancel printer "
-                                + str(id) + ". Status code was "
-                                + str(r.status_code))
+                    i += 1
+                if r and r.status_code == 204:
+                    self.success = True
+                    printer = Printer.get_by_id(id, fresh=True)
+                    printer.state("cancelled")
+                elif r:
+                    log.log("ERROR: Could not cancel printer "
+                            + str(id) + ". Status code was "
+                            + str(r.status_code))
+            else:
+                log.log("ERROR: Printer " + str(id) + " was told to "
+                        + " cancel but isn't printing or paused")
         elif command == "next":
             if status == "cancelled":
                 if printer.cancel_job():
@@ -114,6 +124,9 @@ class Command(threading.Thread):
                     i = 0
                     while not webapi.patch_printer(payload) and i < 10:
                         i += 1
+                    if printer.current_job() != None:
+                        c = Command(printer.id, log, "start", webapi)
+                        c.start()
             elif status == "completed":
                 if printer.complete_job():
                     self.success = True
@@ -122,6 +135,9 @@ class Command(threading.Thread):
                     i = 0
                     while not webapi.patch_printer(payload) and i < 10:
                         i += 1
+                    if printer.current_job() != None:
+                        c = Command(printer.id, log, "start", webapi)
+                        c.start()
             else:
                 log.log("ERROR: Printer " + str(id)
                         + " received call to go to next print job "
@@ -170,7 +186,7 @@ class JobUploader(threading.Thread):
         job_id  = self.job_id
         webapi  = self.webapi
         loc     = octopi.local
-        printer = Printer.get_by_id(id)
+        printer = Printer.get_by_id(id, fresh=True)
         ip      = printer.ip
         port    = printer.port
         key     = printer.key
@@ -195,6 +211,7 @@ class JobUploader(threading.Thread):
         ext = get_extension(fname)
         if ext in ['stl']:
             job.state("slicing")
+            webapi.patch_job(job.to_web(None))
             r = octopi.slice(url, key, fname, loc)
             if r == None:
                 log.log("ERROR: Did not have a response from " + str(id)
@@ -210,7 +227,7 @@ class JobUploader(threading.Thread):
                 return False
             j = r.json()
             rname = j.get('name')
-            r = octopi.get_one_file_info(url, key, rname, loc)
+            r = None
             while r == None or r.status_code != 200:
                 #This is really fucking hacky
                 log.log("Could not retrieve file info for "
