@@ -324,7 +324,6 @@ def select_and_print(url, api_key, file_name, path = local):
         'print': 'true'
     }
     endpoint = files_extension + path + "/" + file_name
-    hub.log.log("Select and print sending!")
     return http_request(url, endpoint, type_post, header, json=payload)
     
     
