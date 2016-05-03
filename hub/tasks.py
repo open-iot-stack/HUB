@@ -11,8 +11,8 @@ class Command(threading.Thread):
 
     """Sends a command to a printer as a task"""
 
-    def __init__(self, id, command, log,
-                    webapi=None, command_id=None):
+    def __init__(self, id, log, command,
+                    webapi, command_id=None):
         """Create a new thread object to issue a command to a printer
 
         :id: TODO
@@ -32,6 +32,7 @@ class Command(threading.Thread):
         id      = self.id
         log     = self.log
         command = self.command
+        webapi  = self.webapi
         loc     = octopi.local
         printer = Printer.get_by_id(id)
         ip      = printer.ip
@@ -56,6 +57,11 @@ class Command(threading.Thread):
                             + ". Status code was " + str(r.status_code))
             elif status == "ready":
                 cjob = printer.current_job()
+                t = JobUploader(id, cjob.id, log, webapi)
+                t.start()
+                t.join()
+                printer = Printer.get_by_id(id)
+                cjob    = printer.current_job()
                 i = 0
                 r = octopi.select_and_print(url, key, cjob.remote_name)
                 while r == None and i < 10:
@@ -100,6 +106,26 @@ class Command(threading.Thread):
                         log.log("ERROR: Could not cancel printer "
                                 + str(id) + ". Status code was "
                                 + str(r.status_code))
+        elif command == "next":
+            if status == "cancelled":
+                if printer.cancel_job():
+                    self.success = True
+                    payload = printer.to_web()
+                    i = 0
+                    while not webapi.patch_printer(payload) and i < 10:
+                        i += 1
+            elif status == "completed":
+                if printer.complete_job():
+                    self.success = True
+                    self.success = True
+                    payload = printer.to_web()
+                    i = 0
+                    while not webapi.patch_printer(payload) and i < 10:
+                        i += 1
+            else:
+                log.log("ERROR: Printer " + str(id)
+                        + " received call to go to next print job "
+                        + " but current print wasn't finished.")
         if self.command_id != None and self.webapi != None:
             d = {
                 "id": self.command_id,
@@ -110,7 +136,7 @@ class Command(threading.Thread):
             else:
                 d['status'] = 'errored'
             i = 0
-            while self.webapi.callback_command(d) and i < 10:
+            while webapi.callback_command(d) and i < 10:
                 i += 1
         return 0
 
@@ -118,7 +144,7 @@ class JobUploader(threading.Thread):
 
     """JobUploader will upload a job to the printer"""
 
-    def __init__(self, id, job_id, log):
+    def __init__(self, id, job_id, log, webapi):
         """Create a new thread object for upload jobs to a printer
         :id: printer id to upload file to
         :job_id: job id of job to be uploaded
@@ -130,6 +156,7 @@ class JobUploader(threading.Thread):
         self.job_id  = job_id
         self.success = False
         self.log     = log
+        self.webapi  = webapi
         
     def run(self):
         """Function that will upload a new file, slice it if needed,
@@ -141,6 +168,7 @@ class JobUploader(threading.Thread):
         id      = self.id
         log     = self.log
         job_id  = self.job_id
+        webapi  = self.webapi
         loc     = octopi.local
         printer = Printer.get_by_id(id)
         ip      = printer.ip
@@ -175,23 +203,26 @@ class JobUploader(threading.Thread):
                 self.success = False
                 return False
             if r.status_code != 202:
-                log.log("ERROR: Job start failed for " + str(job_id)
+                log.log("ERROR: Job upload failed for " + str(job_id)
                         + ". Return code from printer "
                         + str(r.status_code))
                 self.success = False
                 return False
             j = r.json()
             rname = j.get('name')
-            #TODO somehow delete stl file as well
             r = octopi.get_one_file_info(url, key, rname, loc)
             while r == None or r.status_code != 200:
                 #This is really fucking hacky
-                log.log("Could not retrieve file info for " + str(job.id))
+                log.log("Could not retrieve file info for "
+                        + str(job.id))
                 sleep(10)
                 r = octopi.get_one_file_info(url, key, rname, loc)
+                payload = r.json()
+                if payload and payload.get("gcodeAnalysis") == None:
+                    r = None
 
-            j = r.json()
-            print_time = j.get("gcodeAnalysis").get("estimatedPrintTime")
+            print_time = payload.get("gcodeAnalysis")\
+                                .get("estimatedPrintTime")
             job.set_print_time(print_time)
             job.set_remote_name(rname)
             r = octopi.delete_file(url, key, fname, loc)
@@ -202,7 +233,8 @@ class JobUploader(threading.Thread):
             r = octopi.get_one_file_info(url, key, fname, loc)
             while r == None or r.status_code != 200:
                 #This is really fucking hacky
-                log.log("Could not retrieve file info for " + str(job.id))
+                log.log("Could not retrieve file info for "
+                        + str(job.id))
                 sleep(10)
                 r = octopi.get_one_file_info(url, key, fname, loc)
 
@@ -213,11 +245,8 @@ class JobUploader(threading.Thread):
         else:
             self.success = False
             return False
-        printer = Printer.get_by_id(id)
-        printer.add_job(job)
-        if printer.current_job().id == job.id:
-            t = Command(printer.id, "start", log)
-            t.start()
+        log.log("Completed job upload to " + str(id)
+                + " for job " + str(job.id))
         self.success = True
         return True
 
