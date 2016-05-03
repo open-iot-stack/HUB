@@ -663,6 +663,9 @@ class Sensor(Base):
         self.pin = pin
         self.sensor_type = sensor_type
 
+    def to_web(self, data):
+        pass
+
     def __repr__(self):
         return "<Sensor='%d' node_id='%d', pin='%d', sensor_type='%s')>"\
                 % (self.node_id, self.pin, self.type)
