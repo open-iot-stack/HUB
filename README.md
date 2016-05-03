@@ -1,13 +1,19 @@
 # HUB
 Communication layer for peripherals and web-api
 
-Usage: Server.py
-             -a/--apikey <apikey> for web api
-             -p/--port   <port> to run flask server on
-                --pass   <password> password for gmail account
-                --host   <ip address> ip address to run on (defaults to 127.0.0.1)
-             -d/--debug to run flask in debug mode
-             -h/--help to display the help screen
-             -t/--threaded enable threading in flask
-             -v/--verbose to print as well as log data
-
+##Starting Server
+###Arguments
+####-c/--config arguments.config
+Load a config file instead along with command line arguments. See arguments.config as an example, modify as needed
+####-w/--weburl 'http://...'
+Set the URL for contacting the WebAPI
+####-a/--apikey key
+Set the API key to use when contacting the WebAPI
+####-p/--port port
+Set the port for Flask to run on
+####-d/--debug
+Run Flask in debug mode
+####-t/--threaded
+Run Flask in threaded mode (recommended)
+####-v/--verbose
+Run in verbose mode, all logging will be printed to stdout as well as the output from Flask
