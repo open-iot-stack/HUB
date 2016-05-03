@@ -229,6 +229,7 @@ class JobCollector(threading.Thread):
                 log.log("ERROR: Could not collect"
                        + " job data from printer " + str(id)
                        + " on " + url )
+                continue
                 if failures > 5:
                     cjob.state("errored")
                     webapi.patch_job(cjob.to_web(recent_json))
