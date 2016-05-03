@@ -41,6 +41,7 @@ local = '/local'
 files_extension = '/api/files'
 printer_extension = '/api/printer'
 jobs_extension = '/api/job'
+conn_extension = '/api/connection'
 version_extension = '/api/version'
 printer_profile_extension = '/api/printerprofiles'
 slicer_profile_extension = '/api/slicing/cura/profiles' #Note: normally, slicer profiles are organized per Slicer but the octopi only has one Slicer (cura)
@@ -478,6 +479,19 @@ def slice_and_print(url, api_key, file_name, path_to_store = local):
 def get_version(url, api_key):
     headers = {'Host': 'example.com', 'X-Api-Key': api_key}
     return http_request(url, version_extension, type_get, headers)
+
+def get_connection(url, api_key):
+    headers = {'Host': 'example.com', 'X-Api-Key': api_key}
+    return http_request(url, conn_extension, type_get, headers)
+
+def connect(url, api_key, name):
+    headers = {'Host': 'example.com', 'X-Api-Key': api_key}
+    payload = {
+            "command": "connect",
+            "port": name,
+    }
+    return http_request(url, conn_extension, type_post, headers,
+                            json=payload)
 
 
 
