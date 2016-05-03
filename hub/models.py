@@ -659,6 +659,15 @@ class Sensor(Base):
     endpoint = Column(String)
     webid = Column(Integer, unique=True)
 
+    @staticmethod
+    def get_by_webid(id, fresh=False):
+        if fresh == True:
+            db_session.remove()
+        sensor =\
+            db_session.query(Sensor).\
+                filter(Sensor.id == id).one_or_none()
+        return sensor
+
     def __init__(self, node_id, pin, sensor_type):
         self.node_id = node_id
         self.pin = pin
