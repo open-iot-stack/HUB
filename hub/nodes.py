@@ -145,6 +145,7 @@ def node_add_sensors(node_id):
               required:
                 - id
                 - type
+                - pin
               properties:
                 id:
                   type: integer
@@ -153,6 +154,9 @@ def node_add_sensors(node_id):
                   type: string
                   description: type of sensor
                   enum: ['door','temperature','trigger','led']
+                pin:
+                  type: integer
+                  description: the gpio pin number the sensor is on
         parameters:
           - in: body
             name: Sensor

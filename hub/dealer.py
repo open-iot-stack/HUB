@@ -182,12 +182,14 @@ class JobCollector(threading.Thread):
                 log.log("No current job exists for " + str(id)
                         + ". JobCollector exiting.")
                 return 0
+            if cjob.status == "completed":
+                return 0
             #If printer status is set to completed, cancelled,
             #or errored, exit. a new job thread will be spawned
             #by printer collector when needed
             if status == "offline":
                 return 0
-            if status == "completed"\
+            if status == "completed" and prev_data\
                 and prev_data.get("data")\
                     .get("progress").get("completion") == 100:
                 # this ensures it will have updated to the web api
