@@ -87,27 +87,27 @@ class Job(Base):
     file         = relationship("File", uselist=False)
 
     @staticmethod
-    def get_by_id(id):
+    def get_by_id(id, fresh=False):
         """Returns a job based on id
         :id: ID of job to be found
         :returns: Job if id is found, None if didn't exist
 
         """
-        #TODO find a better way than removing every time
-        db_session.remove()
+        if fresh == True:
+            db_session.remove()
         job =\
             db_session.query(Job).filter(Job.id == id).one_or_none()
         return job
 
     @staticmethod
-    def get_by_webid(webid):
+    def get_by_webid(webid, fresh=False):
         """Returns a job based on webid
         :webid: WebID of job to be found
         :returns: Job if webid is found, None if didn't exist
 
         """
-        #TODO find a better way than removing every time
-        db_session.remove()
+        if fresh == True:
+            db_session.remove()
         job =\
             db_session.query(Job).\
                 filter(Job.webid == webid).one_or_none()
@@ -216,7 +216,10 @@ class Job(Base):
         progress = job.get("progress")
         if progress:
             prog = {}
-            prog["completion"] = int(progress.get("completion"))
+            completion = progress.get("completion")
+            if completion == None:
+                completion = 0
+            prog["completion"] = int(completion)
             prog["file_position"] = progress.get("filepos")
             prog["print_time"] = progress.get("printTime")
             prog["print_time_left"] = progress.get("printTimeLeft")
@@ -254,43 +257,44 @@ class Job(Base):
 class Printer(Base):
     __tablename__="printers"
 
-    id   = Column(Integer, primary_key=True)
-    webid = Column(Integer, unique=True)
-    status = Column(String)
-    jobs = relationship("Job", order_by=Job.position,
-            collection_class=ordering_list("position"))
-    key  = Column(String)
-    ip   = Column(String)
-    port = Column(Integer)
-    friendly_id = Column(String)
+    id           = Column(Integer, primary_key=True)
+    webid        = Column(Integer, unique=True)
+    status       = Column(String)
+    prev_status  = Column(String)
+    jobs         = relationship("Job", order_by=Job.position,
+                     collection_class=ordering_list("position"))
+    key          = Column(String)
+    ip           = Column(String)
+    port         = Column(Integer)
+    friendly_id  = Column(String)
     manufacturer = Column(String)
-    model = Column(String)
-    description = Column(String)
-    button = relationship("Node", uselist=False)
+    model        = Column(String)
+    description  = Column(String)
+    button       = relationship("Node", uselist=False)
 
     @staticmethod
-    def get_by_id(id):
+    def get_by_id(id, fresh=False):
         """Returns a printer based on id
         :id: ID of printer to be found
         :returns: Printer if id is found, None if didn't exist
 
         """
-        #TODO find a better way than removing every time
-        db_session.remove()
+        if fresh == True:
+            db_session.remove()
         printer =\
             db_session.query(Printer).\
                 filter(Printer.id == id).one_or_none()
         return printer
 
     @staticmethod
-    def get_by_webid(webid):
+    def get_by_webid(webid, fresh=False):
         """Returns a printer based on webid
         :webid: ID that the web interface uses
         :returns: Printer if webid is found, None if didn't exist
 
         """
-        #TODO find a better way than removing every time
-        db_session.remove()
+        if fresh == True:
+            db_session.remove()
         printer =\
             db_session.query(Printer).\
                 filter(Printer.webid == webid).one_or_none()
@@ -302,7 +306,6 @@ class Printer(Base):
         :returns: TODO
 
         """
-        #TODO find a better way than removing every time
         db_session.remove()
         l = []
         for printer in db_session.query(Printer):
@@ -429,12 +432,27 @@ class Printer(Base):
         :returns: boolean of success
 
         """
+        # if setting to offline, store the previous state
+        if state == "offline":
+            if self.status != "offline":
+                self.prev_status = self.status
+                self.status = "offline"
+                db_session.commit()
+            return True
+        #If the printer was offline, load the prev status
+        # and try setting the state. Makes sure cancelled and completed
+        # still stay in that mode
+        if self.status == "offline":
+            self.status = self.prev_status
+            db_session.commit()
+            return self.state(state)
+
         if self.status == "completed":
             return False
         elif self.status == "cancelled":
             return False
         if state in ["ready", "paused", "printing", "errored",
-                        "offline", "completed", "cancelled"]:
+                        "completed", "cancelled"]:
             self.status = state
             db_session.commit()
             return True
@@ -598,14 +616,14 @@ class Node(Base):
     printer_id = Column(Integer, ForeignKey("printers.id"))
 
     @staticmethod
-    def get_by_id(id):
+    def get_by_id(id, fresh=False):
         """Returns a node based on id
         :id: ID of node to be found
         :returns: Node if id is found, None if didn't exist
 
         """
-        #TODO find a better way than removing every time
-        db_session.remove()
+        if fresh == True:
+            db_session.remove()
         node =\
             db_session.query(Node).\
                 filter(Node.id == id).one_or_none()
