@@ -300,8 +300,8 @@ class NodeCollector(threading.Thread):
                 sensor_type = sensor.sensor_type
                 if pin == None or webid == None or sensor_type == None:
                     continue
-                url = "http://" + ip + "/gpio/"
-                            + str(pin) + "/" + str(sensor_type)
+                if sensor_type in ["TEMP", "DOOR", "TRIG"]:
+                    url = sensor.get_url()
                 try:
                     response = requests.get(url, timeout=10)
                 except requests.ConnectionError:
