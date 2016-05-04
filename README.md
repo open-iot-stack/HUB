@@ -17,3 +17,16 @@ Run Flask in debug mode
 Run Flask in threaded mode (recommended)
 ####-v/--verbose
 Run in verbose mode, all logging will be printed to stdout as well as the output from Flask
+
+##arguments.config example
+-w https://dev.api.stratusprint.com
+
+-p 5000
+
+-t
+
+-d
+
+-v
+
+--host 0.0.0.0
