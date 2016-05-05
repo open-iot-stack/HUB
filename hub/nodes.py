@@ -123,7 +123,7 @@ def nodes_trigger_callback():
     if node.printer_id:
         printer = Printer.get_by_id(node.printer_id)
         if printer.status in ["completed", "cancelled"]:
-            t = Command(printer.id, hub.log, "next", hub.Webapi)
+            t = Command(printer.id, hub.log, "clear", hub.Webapi)
         else:
             t = Command(printer.id, hub.log, "cancel", hub.Webapi)
         t.start()

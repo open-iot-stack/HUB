@@ -116,7 +116,7 @@ class Command(threading.Thread):
             else:
                 log.log("ERROR: Printer " + str(id) + " was told to "
                         + " cancel but isn't printing or paused")
-        elif command == "next":
+        elif command == "clear":
             if status == "cancelled":
                 if printer.cancel_job():
                     self.success = True
@@ -140,8 +140,8 @@ class Command(threading.Thread):
                         c.start()
             else:
                 log.log("ERROR: Printer " + str(id)
-                        + " received call to go to next print job "
-                        + " but current print wasn't finished.")
+                        + " received command bed is clear"
+                        + " but current print isn't finished.")
         if self.command_id != None and self.webapi != None:
             d = {
                 "id": self.command_id,

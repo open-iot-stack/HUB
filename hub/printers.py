@@ -186,7 +186,7 @@ def print_action(id):
                   description: id of the command
                 name:
                   type: string
-                  description: name of command to send [start, pause, cancel, next]
+                  description: name of command to send [start, pause, cancel, clear]
         responses:
           201:
             description: Returns "(action) successfully sent to the printer."
@@ -215,8 +215,8 @@ def print_action(id):
     elif action == "cancel":
         t = Command(id, log, "cancel",
                 hub.Webapi, command_id=command_id)
-    elif action == "next":
-        t = Command(id, log, "next",
+    elif action in ["clear", "next"]:
+        t = Command(id, log, "clear",
                 hub.Webapi, command_id=command_id)
     t.start()
     return json.jsonify({"message": action
