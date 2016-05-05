@@ -152,7 +152,7 @@ class Command(threading.Thread):
             else:
                 d['status'] = 'errored'
             i = 0
-            while webapi.callback_command(d) and i < 10:
+            while webapi.callback_command(d) == False and i < 10:
                 i += 1
         return 0
 
