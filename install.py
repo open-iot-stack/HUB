@@ -19,7 +19,7 @@ def systemd_setup(config):
             line = line.replace("<DIRECTORY>",cwd)
             line = line.replace("<COMMAND>", command)
             new.append(line)
-    with open("/usr/lib/systemd/system/stratusprint-hub.service", "w+") as f:
+    with open("/lib/systemd/system/stratusprint-hub.service", "w+") as f:
         f.writelines(new)
     with open("/dev/null","w") as out:
         subprocess.call(['systemctl','daemon-reload'],stdout=out)
