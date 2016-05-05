@@ -135,7 +135,7 @@ def add_printer():
     if printer:
         printer.update(box=box, ip=ip, port=port, key=key)
         if not listener.is_alive(id):
-            t = PrinterCollector(id, hub.Webapi)
+            t = PrinterCollector(id, hub.Webapi, hub.log)
             t.start()
             listener.add_thread(id, t)
             log.log("Printer " + str(id) + " is now online.")
@@ -150,7 +150,7 @@ def add_printer():
     else:
         #Add printer to database
         printer = Printer(id, box, key=key, ip=ip, port=port)
-        t = PrinterCollector(id, hub.Webapi)
+        t = PrinterCollector(id, hub.Webapi, hub.log)
         t.start()
         listener.add_thread(id, t)
         return json.jsonify({'message': 'Printer ' + str(id)
