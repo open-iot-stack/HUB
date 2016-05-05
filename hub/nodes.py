@@ -4,7 +4,7 @@
 import thread
 import hub
 from chest import Chest
-from flask import request, json, url_for
+from flask import request, json, url_for, abort
 from hub import app
 from dealer import NodeCollector, get_temp, get_gpio
 from database import db_session
@@ -57,7 +57,7 @@ def activate_node(payload = None):
     if node:
         node.update(ip=ip)
         if not listener.is_alive(id):
-            t = NodeCollector(id, hub.Webapi)
+            t = NodeCollector(id, hub.Webapi, hub.log)
             t.start()
             listener.add_thread(id, t)
             log.log("Node " + str(id) + " is now online.")
@@ -71,7 +71,7 @@ def activate_node(payload = None):
                                             + " was already online"}),201
     else:
         node = Node(id, ip)
-        t = NodeCollector(id, hub.Webapi)
+        t = NodeCollector(id, hub.Webapi, hub.log)
         t.start()
         listener.add_thread(id, t)
         return json.jsonify({"message": str(id) + " has been activated."}),201
