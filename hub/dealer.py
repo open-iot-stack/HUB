@@ -23,18 +23,7 @@ class PrinterCollector(threading.Thread):
         status = printer.status
         self.stopped = False
         self.webapi = webapi
-        self.cancelled = status == "cancelled"
-        self.completed = status == "completed"
         self.lock = threading.Lock()
-
-    def cancel(self):
-        self.cancelled = True
-
-    def complete(self):
-        self.completed = True
-
-    def status(self, status):
-        self.status = status
 
     def run(self):
         id = self.printer_id
@@ -43,7 +32,7 @@ class PrinterCollector(threading.Thread):
         # loop until the printer has a webid,
         # otherwise we can't update
         while printer.webid == None:
-            webid = webapi.add_printer(printer.to_web())
+            webid = webapi.add_printer(printer.first_web())
             if webid:
                 printer.set_webid(webid)
             else:
@@ -84,7 +73,34 @@ class PrinterCollector(threading.Thread):
                     if cmp(prev_data,data):
                         prev_data = data.copy()
                         webapi.patch_printer(printer.to_web())
+                    for sensor in printer.blackbox.sensors:
+                        if sensor.sensor_type == "LED":
+                            url = sensor.led_flash()
+                        elif sensor.sensor_type == "TRIG":
+                            url = sensor.trigger()
+                            if url:
+                                try:
+                                    response = requests.get(url, timeout=10)
+                                except requests.ConnectionError:
+                                    log.log("ERROR: Could not connect to " + url)
+                                    response = None
+                                except requests.exceptions.Timeout:
+                                    log.log("ERROR: Timeout occured on " + url)
+                                    response = None
+                                if response == None:
+                                    failures += 1
+                                    if failures > 10:
+                                        log.log("ERROR: Could not set"
+                                                + " sensor data on node "
+                                                + str(id) + " on url " + url)
+                                    continue
+                                if response.status_code != 200:
+                                    log.log("ERROR Response from " 
+                                            + str(id) + " returned status code "
+                                            + str(response.status_code) + " on "
+                                            + response.url)
                     sleep(5)
+
             if not job_thread.is_alive() and cjob != None\
                     and status not in ["errored", "cancelled",
                                                     "completed"]:
@@ -285,8 +301,10 @@ class NodeCollector(threading.Thread):
         """
         id     = self.node_id
         webapi = self.webapi
+        log    = hub.log
         node   = Node.get_by_id(id)
         log.log("NodeCollector starting for node " + str(id))
+        sleep(10)
         failures = 0
         while(True):
             node    = Node.get_by_id(id, fresh=True)
@@ -302,8 +320,10 @@ class NodeCollector(threading.Thread):
                 sensor_type = sensor.sensor_type
                 if pin == None or webid == None or sensor_type == None:
                     continue
-                if sensor_type in ["TEMP", "DOOR", "TRIG"]:
+                if sensor_type in ["TEMP", "DOOR", "HUMI", "TRIG"]:
                     url = sensor.get_url()
+                else:
+                    continue
                 try:
                     response = requests.get(url, timeout=10)
                 except requests.ConnectionError:
@@ -317,7 +337,7 @@ class NodeCollector(threading.Thread):
                     if failures > 10:
                         log.log("ERROR: Could not collect"
                                 + " sensor data from node " + str(id)
-                                + " on url " + url)
+                                + ". NodeCollector exiting...")
                         return -1
                     continue
                 if response.status_code != 200:
@@ -330,8 +350,8 @@ class NodeCollector(threading.Thread):
                     data = sensor.to_web(recent_json)
                     if data != None:
                         webapi.add_data(data)
-                sleep(1)
-            sleep(1)
+                sleep(5)
+            sleep(5)
 
 
 def get_temp(node_ip, gpio):
