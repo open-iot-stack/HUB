@@ -9,13 +9,14 @@ import octopifunctions as octopi
 from time import sleep
 from flask import json
 from models import Printer, Node, Job
+from tasks import Command
 from hub import app
 
 class PrinterCollector(threading.Thread):
 
     """Printer Collector will continue to grab """
 
-    def __init__(self, printer_id, webapi):
+    def __init__(self, printer_id, webapi, log):
         """TODO: to be defined1. """
         threading.Thread.__init__(self)
         self.printer_id = printer_id
@@ -23,11 +24,13 @@ class PrinterCollector(threading.Thread):
         status = printer.status
         self.stopped = False
         self.webapi = webapi
+        self.log    = log
         self.lock = threading.Lock()
 
     def run(self):
         id = self.printer_id
         webapi = self.webapi
+        log          = self.log
         printer = Printer.get_by_id(id, fresh=True)
         # loop until the printer has a webid,
         # otherwise we can't update
@@ -38,9 +41,8 @@ class PrinterCollector(threading.Thread):
             else:
                 sleep(10)
             printer = Printer.get_by_id(id, fresh=True)
-        job_thread = JobCollector(id, webapi)
+        job_thread = JobCollector(id, webapi, log)
         job_thread.start()
-        log          = hub.log
         log.log("PrinterCollector starting for printer " + str(id))
         failures     = 0
         #url          = "http://" + ip + ":" + port
@@ -67,18 +69,17 @@ class PrinterCollector(threading.Thread):
                 if job_thread.is_alive():
                     job_thread.join(10)
                     if job_thread.is_alive():
-                        log.log("ERROR: Printer is " + status 
-                                + " but JobCollector is still running")
-                    data = printer.to_web()
-                    if cmp(prev_data,data):
-                        prev_data = data.copy()
-                        webapi.patch_printer(printer.to_web())
+                        job_thread.stop()
+                data = printer.to_web()
+                if cmp(prev_data,data):
+                    prev_data = data.copy()
+                    webapi.patch_printer(printer.to_web())
             if not job_thread.is_alive() and cjob != None\
                     and status not in ["errored", "cancelled",
                                                     "completed"]:
                 log.log("JobCollector thread died for "
                         + str(id) + ". Starting new JobCollector.")
-                job_thread = JobCollector(id, webapi)
+                job_thread = JobCollector(id, webapi, log)
                 job_thread.start()
             url    = ip + ":" + str(port)
             response = octopi.get_printer_info(url, key)
@@ -86,7 +87,7 @@ class PrinterCollector(threading.Thread):
                 failures = 0
             else:
                 failures += 1
-                if failures > 5:
+                if failures > 2:
                     printer = Printer.get_by_id(id, fresh=True)
                     if printer.state("offline"):
                         data = printer.to_web()
@@ -130,7 +131,7 @@ class JobCollector(threading.Thread):
 
     """Job Collector will continue to grab """
 
-    def __init__(self, printer_id, webapi):
+    def __init__(self, printer_id, webapi, log):
         """TODO: to be defined1. """
         threading.Thread.__init__(self)
         self.printer_id = printer_id
@@ -141,11 +142,12 @@ class JobCollector(threading.Thread):
             self.status = job.status
         else:
             self.status = None
+        self.log = log
 
     def run(self):
         id = self.printer_id
         webapi = self.webapi
-        log          = hub.log
+        log          = self.log
         log.log("JobCollector starting for printer " + str(id))
         failures     = 0
         #url          = "http://" + ip + ":" + port
@@ -172,10 +174,22 @@ class JobCollector(threading.Thread):
                 return 0
             if cjob.status == "completed":
                 return 0
+            if cjob.status == "queued":
+                t = Command(id, log, "start", webapi)
+                t.start()
             #If printer status is set to completed, cancelled,
             #or errored, exit. a new job thread will be spawned
             #by printer collector when needed
             if status == "offline":
+                cjob.state("errored")
+                data = cjob.to_web(recent_json)
+                if data == None:
+                    data = cjob.to_web(None)
+                i = 0
+                # Try to update to web api 10 times
+                while not webapi.patch_job(data) and i < 10:
+                    i+=1
+                    sleep(5)
                 return 0
             if status == "completed" and prev_data\
                 and prev_data.get("data")\
@@ -192,6 +206,8 @@ class JobCollector(threading.Thread):
             if status == "cancelled":
                 cjob.state("errored")
                 data = cjob.to_web(recent_json)
+                if data == None:
+                    data = cjob.to_web(None)
                 i = 0
                 # Try to update to web api 10 times
                 while not webapi.patch_job(data) and i < 10:
@@ -254,7 +270,7 @@ class NodeCollector(threading.Thread):
     """NodeCollector will collect sensor information
     from the sensors associated with it"""
 
-    def __init__(self, node_id, webapi):
+    def __init__(self, node_id, webapi, log):
         """TODO: to be defined1.
 
         """
@@ -262,6 +278,7 @@ class NodeCollector(threading.Thread):
         self.node_id = node_id
         self.webapi = webapi
         self.stopped = False
+        self.log = log
 
     def stop(self):
         self.stopped = True
@@ -273,7 +290,7 @@ class NodeCollector(threading.Thread):
         """
         id     = self.node_id
         webapi = self.webapi
-        log    = hub.log
+        log    = self.log
         node   = Node.get_by_id(id)
         log.log("NodeCollector starting for node " + str(id))
         sleep(10)
@@ -333,8 +350,8 @@ class NodeCollector(threading.Thread):
                     data = sensor.to_web(recent_json)
                     if data != None:
                         webapi.add_data(data)
-                sleep(5)
-            sleep(5)
+                sleep(1)
+            sleep(1)
 
 
 def get_temp(node_ip, gpio):
