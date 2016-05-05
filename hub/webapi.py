@@ -597,8 +597,10 @@ class WebAPI(object):
         headers = self.headers
         web_url = self.url
 
+        url = web_url + "/commands/" + str(id)
+
         try:
-            r = requests.post(url, headers=headers,
+            r = requests.patch(url, headers=headers,
                                 json=data, timeout=3)
         except requests.ConnectionError:
             log.log('ERROR: Could not connect to ' + url 
