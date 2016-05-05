@@ -912,9 +912,12 @@ class Sensor(Base):
             }
             d = {
                 "id": self.webid,
-                "type": types.get(self.sensor_type)
+                "type": types.get(self.sensor_type),
+                "pin": self.pin
             }
             return d
+        if self.webid == None:
+            return None
         if self.sensor_type == "DOOR":
             return self.door_to_web(data)
         elif self.sensor_type == "TEMP":
