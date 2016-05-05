@@ -8,7 +8,8 @@ from flask import request, json, url_for
 from hub import app
 from dealer import NodeCollector, get_temp, get_gpio
 from database import db_session
-from models import Sensor, Node
+from models import Sensor, Node, Printer
+from tasks import Command
 
 nodes = Chest()
 
@@ -118,6 +119,14 @@ def nodes_trigger_callback():
     payload = request.get_json()
     id   = int(payload.get("id"))
     data = payload.get("data")
+    node = Node.get_by_id(id)
+    if node.printer_id:
+        printer = Printer.get_by_id(node.printer_id)
+        if printer.status in ["completed", "cancelled"]:
+            t = Command(printer.id, hub.log, "next", hub.Webapi)
+        else:
+            t = Command(printer.id, hub.log, "cancel", hub.Webapi)
+        t.start()
 
     d = {'id': id,
          'data': data}
