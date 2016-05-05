@@ -180,11 +180,11 @@ def print_action(id):
                 id:
                   type: integer
                   description: id of the command
-                type:
+                name:
                   type: string
-                  description: type of command to send [start, pause, cancel, next]
+                  description: name of command to send [start, pause, cancel, next]
         responses:
-          200:
+          201:
             description: Returns "(action) successfully sent to the printer."
 
         """
@@ -200,7 +200,7 @@ def print_action(id):
     log = hub.log
     data = request.get_json()
     command_id = data.get("id")
-    action = data.get("type")
+    action = data.get("name")
 
     if action == "start":
         t = Command(id, log, "start",
@@ -216,7 +216,7 @@ def print_action(id):
                 hub.Webapi, command_id=command_id)
     t.start()
     return json.jsonify({"message": action
-                        + " successfully sent to the printer."})
+                        + " successfully sent to the printer."}),201
 
 @app.route('/printers/<int:id>', methods=['GET'])
 def print_status(id):
