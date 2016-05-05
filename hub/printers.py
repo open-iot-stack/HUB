@@ -64,6 +64,7 @@ def printers_list():
     internal = request.args.get("internal", "false")
 
     online = request.args.get('online_only', 'false')
+    online = request.args.get("online", online)
     data = {"printers": []}
     printers = data.get("printers")
     for printer in Printer.get_printers():
@@ -114,6 +115,9 @@ def add_printer():
                 port:
                   type: integer
                   description: port number to communicate on
+                box:
+                  type: integer
+                  description: UID of black box that pairs with the printer
         responses:
           201:
             description: Returns 201 created
@@ -125,24 +129,24 @@ def add_printer():
     ip   = request.form.get("ip")
     port = int(request.form.get("port", 80))
     key  = request.form.get("key")
-    printer = Printer.get_by_id(id)
+    box  = request.form.get("box")
+    printer = Printer.get_by_id(id, box)
     listener = hub.printer_listeners
     if printer:
-        printer.update(ip=ip, port=port, key=key)
+        printer.update(box=box, ip=ip, port=port, key=key)
         if not listener.is_alive(id):
             t = PrinterCollector(id, hub.Webapi)
             t.start()
             listener.add_thread(id, t)
             log.log("Printer " + str(id) + " is now online.")
             return json.jsonify({'message': 'Printer ' + str(id)
-                                            + ' is now online.'})
+                                            + ' is now online.'}),201
         if listener.is_alive(id):
             log.log("Printer " + str(id)
                     + " is already online but tried"
                     + " to activate again. Updated it's data")
-            return json.jsonify({'message': 'Printer '
-                                    + str(id)
-                                    + ' was already online.'})
+            return json.jsonify({'message': 'Printer ' + str(id)
+                                    + ' was already online.'}),201
     else:
         #Add printer to database
         printer = Printer(id, key=key, ip=ip, port=port)
