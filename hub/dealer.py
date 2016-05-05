@@ -73,34 +73,6 @@ class PrinterCollector(threading.Thread):
                     if cmp(prev_data,data):
                         prev_data = data.copy()
                         webapi.patch_printer(printer.to_web())
-                    for sensor in printer.blackbox.sensors:
-                        if sensor.sensor_type == "LED":
-                            url = sensor.led_flash()
-                        elif sensor.sensor_type == "TRIG":
-                            url = sensor.trigger()
-                            if url:
-                                try:
-                                    response = requests.get(url, timeout=10)
-                                except requests.ConnectionError:
-                                    log.log("ERROR: Could not connect to " + url)
-                                    response = None
-                                except requests.exceptions.Timeout:
-                                    log.log("ERROR: Timeout occured on " + url)
-                                    response = None
-                                if response == None:
-                                    failures += 1
-                                    if failures > 10:
-                                        log.log("ERROR: Could not set"
-                                                + " sensor data on node "
-                                                + str(id) + " on url " + url)
-                                    continue
-                                if response.status_code != 200:
-                                    log.log("ERROR Response from " 
-                                            + str(id) + " returned status code "
-                                            + str(response.status_code) + " on "
-                                            + response.url)
-                    sleep(5)
-
             if not job_thread.is_alive() and cjob != None\
                     and status not in ["errored", "cancelled",
                                                     "completed"]:
@@ -322,6 +294,17 @@ class NodeCollector(threading.Thread):
                     continue
                 if sensor_type in ["TEMP", "DOOR", "HUMI", "TRIG"]:
                     url = sensor.get_url()
+                elif sensor_type in ["LED"]:
+                    printer = Printer.get_by_id(node.printer_id)
+                    if printer:
+                        if printer.status in ["completed", "cancelled"]:
+                            url = sensor.led_flash()
+                        else:
+                            url = sensor.led_on()
+                    else:
+                        continue
+                elif sensor_type in ["POWER"]:
+                    url = sensor.power_on()
                 else:
                     continue
                 try:
