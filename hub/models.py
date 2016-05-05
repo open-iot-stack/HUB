@@ -364,10 +364,8 @@ class Printer(Base):
 
         """
         if status:
-            if status in ["ready", "paused", "printing", "errored",
-                            "offline", "cancelled", "completed"]:
-                self.status = status
-            else:
+            ret = self.state(status)
+            if ret == False:
                 return False
         if key:
             self.key = key
@@ -454,10 +452,12 @@ class Printer(Base):
         :returns: boolean of success
 
         """
+        if self.status == state:
+            return True
         # if setting to offline, store the previous state
         if state == "offline":
             if self.status != "offline":
-                if self.status == "printing":
+                if self.status in ["printing", "paused"]:
                     self.status = "cancelled"
                 self.prev_status = self.status
                 self.status = "offline"
