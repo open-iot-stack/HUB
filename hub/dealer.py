@@ -318,7 +318,7 @@ class NodeCollector(threading.Thread):
                 pin         = sensor.pin
                 webid       = sensor.webid
                 sensor_type = sensor.sensor_type
-                if pin == None or webid == None or sensor_type == None:
+                if pin == None or sensor_type == None:
                     continue
                 if sensor_type in ["TEMP", "DOOR", "HUMI", "TRIG"]:
                     url = sensor.get_url()
