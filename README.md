@@ -5,9 +5,9 @@ Communication layer for peripherals and web-api
 ###Prerequisites
 ####Currently installation is configured for systemd only, which is enabled in the latest version of raspbian
 ####Packages:
-dnsmasq
-hostapd
-    --install these through your distro's package manager
+<p>dnsmasq</p>
+hostapd</p>
+<p>    --install these through your distro's package manager</p>
 ###Configuration
 ####Steps
 clone this repo to where you see fit, for example: /home/$USER/git/
