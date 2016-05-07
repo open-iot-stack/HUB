@@ -174,6 +174,8 @@ class JobCollector(threading.Thread):
                 return 0
             if cjob.status == "completed":
                 return 0
+            if cjob.status == "cancelled":
+                return 0
             if cjob.status == "queued":
                 t = Command(id, log, "start", webapi)
                 t.start()
@@ -206,7 +208,7 @@ class JobCollector(threading.Thread):
                     sleep(5)
                 return 0
             if status == "cancelled":
-                cjob.state("errored")
+                cjob.state("cancelled")
                 data = cjob.to_web(recent_json)
                 if data == None:
                     data = cjob.to_web(None)
