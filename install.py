@@ -94,10 +94,10 @@ if __name__ == "__main__":
     config     = raw_input("Config File["+dconfig+"]:")
     url        = raw_input("WebAPI URL["+durl+"]:")
     apikey     = raw_input("WebAPI Key[REQUIRED]:")
-    interface  = raw_input("Interface["+dinterface+"]:")
-    ip         = raw_input("Interface IP["+dip+"]:")
     ssid       = raw_input("Access Point SSID["+dssid+"]:")
     password   = raw_input("Access Point Password[REQUIRED]:")
+    interface  = raw_input("Interface["+dinterface+"]:")
+    ip         = raw_input("Interface IP["+dip+"]:")
     port       = raw_input("Port ["+dport+"]:")
     host       = raw_input("Host ["+dhost+"]:")
     if apikey == "":
