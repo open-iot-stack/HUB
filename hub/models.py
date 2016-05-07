@@ -83,7 +83,10 @@ class Job(Base):
     status       = Column(String)
     printer_id   = Column(Integer, ForeignKey("printers.id"))
     remote_name  = Column(String)
+    filament     = Column(String)
+    progress     = Column(String)
     file         = relationship("File", uselist=False)
+    estimated_print_time = Column(String)
 
     @staticmethod
     def get_by_id(id, fresh=False):
@@ -181,32 +184,13 @@ class Job(Base):
         db_session.commit()
         return True
 
-    def to_web(self, job):
-        """Properly formats data to be sent to the web api 
-        
-        """
-
-        if job == None:
-            d = {
-                "id": self.webid,
-                "data": {
-                    "status": self.status,
-                    "file": self.file.to_web()
-                }
-            }
-            return d
-
+    def set_meta(self, job):
         jf = job.get("job").get("file")
         if jf.get('name') == None:
-            return None
-        id = self.id
-        webid = self.webid
-        if jf.get('name') != self.remote_name:
-            return None
-        unix_date = jf.get("date")
+            return False
         filament = job.get("job").get("filament")
         progress = job.get("progress")
-        estim_print_time = job.get("job").get("estimatedPrintTime")
+        estimated_print_time = job.get("job").get("estimatedPrintTime")
         if progress:
             prog = {}
             completion = progress.get("completion")
@@ -216,15 +200,25 @@ class Job(Base):
             prog["file_position"] = progress.get("filepos")
             prog["print_time"] = progress.get("printTime")
             prog["print_time_left"] = progress.get("printTimeLeft")
-            progress = prog
+            progress = str(prog)
+        self.filament = str(filament)
+        self.progress = str(progress)
+        self.estimated_print_time = str(estimated_print_time)
+        db_session.commit()
+        return True
+
+    def to_web(self):
+        """Properly formats data to be sent to the web api 
+        
+        """
         njob = {
-            "id": webid,
+            "id": self.webid,
             "data": {
                 "status": self.status,
                 "file": self.file.to_web(),
-                "estimated_print_time": estim_print_time,
-                "filament": filament,
-                "progress": progress
+                "estimated_print_time": self.estimated_print_time,
+                "filament": self.filament,
+                "progress": self.progress
             }
         }
         return njob
@@ -685,7 +679,7 @@ class Node(Base):
         d = {
             "id": self.id,
             "ip": self.ip,
-            "sensors": [sensor.to_web(None) for sensor in self.sensors]
+            "sensors": [sensor.to_web() for sensor in self.sensors]
         }
         return d
 
@@ -701,8 +695,8 @@ class Sensor(Base):
     node_id = Column(Integer, ForeignKey('nodes.id'))
     pin  = Column(Integer)
     sensor_type = Column(String)
-    endpoint = Column(String)
     webid = Column(Integer, unique=True)
+    value = Column(String)
 
     @staticmethod
     def get_by_webid(id, fresh=False):
@@ -845,76 +839,94 @@ class Sensor(Base):
             return self.humi_status()
         return None
 
-    def humi_to_web(self, data):
+    def set_humi(self, data):
+        if self.sensor_type != "HUMI":
+            return False
+        self.value = str(data.get("humi"))
+        db_session.commit()
+        return True
+
+    def set_temp(self, data):
+        if self.sensor_type != "TEMP":
+            return False
+        self.value = str((float(data.get("temp")) * 9/5.0) + 32.0)
+        db_session.commit()
+        return True
+
+    def set_door(self, data):
+        if self.sensor_type != "DOOR":
+            return False
+        self.value = str(data.get("data"))
+        db_session.commit()
+        return True
+
+    def set_value(self, data):
+        if self.sensor_type == "HUMI":
+            return self.set_humi(data)
+        if self.sensor_type == "TEMP":
+            return self.set_temp(data)
+        if self.sensor_type == "DOOR":
+            return self.set_door(data)
+
+    def humi_to_web(self):
         if self.sensor_type != "HUMI":
             return None
-        humi = float(data['humi'])
-        id = self.webid
         d = {
-            "id": id,
-            "value": str(humi)
+            "id": webid
+            "value": str(self.value)
         }
         return d
 
-    def temp_to_web(self, data):
+    def temp_to_web(self):
         """Parses the output of a sensor of type TEMP to work
         with the web api.
         returns a list of data to be sent, empty list if wrong type
         """
         if self.sensor_type != "TEMP":
             return None
-        temp = float(data['temp'])
-        temp = (temp * 9/5.0) + 32.0
-        id = self.webid
         d = {
-            "id": id,
-            "value": str(temp)
+            "id": self.webid,
+            "value": str(self.value)
         }
         return d
-
-    def door_to_web(self, data):
+    
+    def door_to_web(self):
         """Parses the output of a sensor of type DOOR to work
         with the web api.
         returns a list of data to be sent, empty list if wrong type
         """
         if self.sensor_type != "DOOR":
             return None
-        status = data['data']
         d = {
             "id": self.webid,
-            "value": int(status)
+            "value": int(self.value)
         }
         return d
 
-    def to_web(self, data):
+    def to_web(self):
         """Parses the output of a sensor's data to work with
         the web api. Parsing is based on sensor type
         returns a list of data to send to webapi
         """
-        if data == None:
-            types = {
-                "TEMP" : "temperature",
-                "HUMI" : "humidity",
-                "DOOR" : "door",
-                "LED"  : "led",
-                "POWER": "power",
-                "TRIG" : "trigger"
-            }
-            d = {
-                "id": self.webid,
-                "type": types.get(self.sensor_type),
-                "pin": self.pin
-            }
-            return d
         if self.webid == None:
             return None
         if self.sensor_type == "DOOR":
-            return self.door_to_web(data)
+            return self.door_to_web()
         elif self.sensor_type == "TEMP":
-            return self.temp_to_web(data)
+            return self.temp_to_web()
         elif self.sensor_type == "HUMI":
-            return self.humi_to_web(data)
+            return self.humi_to_web()
         return None
+    
+    def to_dict(self):
+        d = {
+            "id": self.webid,
+            "type": self.sensor_type,
+            "pin": self.pin,
+            "value": self.value
+            }
+        return d
+
 
     def __repr__(self):
         return "<Sensor='%d' node_id='%d', pin='%d', sensor_type='%s')>"\
