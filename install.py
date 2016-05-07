@@ -14,16 +14,50 @@ def systemd_setup(config):
     new = []
     cwd = os.getcwd()
     command = "/usr/bin/python2 " + cwd + "/runserver.py -c " + config
-    with open("systemd.unit", "r") as f:
+    with open(support_dir + "systemd.unit", "r") as f:
         for line in f:
             line = line.replace("<DIRECTORY>",cwd)
             line = line.replace("<COMMAND>", command)
             new.append(line)
     with open("/lib/systemd/system/stratusprint-hub.service", "w+") as f:
         f.writelines(new)
+    print("Finished installing webserver, now conifiguring hostapd and dnsmasq")
+    new = []
+    with open(support_dir + "hostapd.conf", "r") as f:
+        for line in f:
+            line = line.replace("<SSID>", ssid)
+            line = line.replace("<INTERFACE>", interface)
+            line = line.replace("<PASSWORD>", password)
+            new.append(line)
+    with open("/etc/hostapd/hostapd.conf", "w+") as f:
+        f.writelines(new)
+    new = []
+    sub_ip = ip.rsplit(".", 1)[0]
+    with open(support_dir + "dnsmasq.conf", "r") as f:
+        for line in f:
+            line = line.replace("<INTERFACE>",interface)
+            line = line.replace("<SUB_IP>", sub_ip)
+            new.append(line)
+    with open("/etc/dnsmasq.conf", "w+") as f:
+        f.writelines(new)
     with open("/dev/null","w") as out:
         subprocess.call(['systemctl','daemon-reload'],stdout=out)
         subprocess.call(['systemctl','enable','stratusprint-hub.service'],stdout=out)
+        subprocess.call(['systemctl','enable','dnsmasq.service'],stdout=out)
+        subprocess.call(['systemctl','enable','hostapd.service'],stdout=out)
+    new = []
+    with open(support_dir + "interfaces") as f:
+        for line in f:
+            line = line.replace("<IP>", ip)
+            new.append(line)
+    try:
+        with open("/etc/network/interfaces", "a") as f:
+            f.writelines(new)
+    except OSError:
+        print("Was unable to set the IP of " + interface + ".")
+        print("Please set the IP manually using these settings:")
+        for line in new:
+            print(line)
     return True
 
 def initd_setup(config):
@@ -48,14 +82,22 @@ if __name__ == "__main__":
         print("Must be run as root...")
         exit(1)
 
-    dconfig = "arguments.config"
-    durl = "https://dev.api.stratusprint.com/v1"
-    dport = "5000"
-    dhost = "0.0.0.0"
-    dthreaded = "true"
-    config = raw_input("Config File["+dconfig+"]:")
-    url = raw_input("WebAPI URL["+durl+"]:")
+    support_dir = "support_files/"
+    dconfig    = "arguments.config"
+    durl       = "https://dev.api.stratusprint.com/v1"
+    dport      = "5000"
+    dhost      = "0.0.0.0"
+    dthreaded  = "true"
+    dinterface = "wlan0"
+    dip        = "192.168.0.1"
+    dssid      = "StratusPrint"
+    config     = raw_input("Config File["+dconfig+"]:")
+    url        = raw_input("WebAPI URL["+durl+"]:")
     apikey     = raw_input("WebAPI Key[REQUIRED]:")
+    interface  = raw_input("Interface["+dinterface+"]:")
+    ip         = raw_input("Interface IP["+dip+"]:")
+    ssid       = raw_input("Access Point SSID["+dssid+"]:")
+    password   = raw_input("Access Point Password[REQUIRED]:")
     port       = raw_input("Port ["+dport+"]:")
     host       = raw_input("Host ["+dhost+"]:")
     if apikey == "":
@@ -69,6 +111,12 @@ if __name__ == "__main__":
         port = dport
     if host == "":
         host = dhost
+    if interface == "":
+        interface = dinterface
+    if ip == "":
+        ip = dip
+    if ssid == "":
+        ssid = dssid
 
     with open(config, "w+") as f:
         f.writelines(["-w "     + str(url)    + "\n",
@@ -81,8 +129,11 @@ if __name__ == "__main__":
         run = raw_input("All set, run now and test? [y/n]:")
         if run.lower() in ["y", "yes"]:
             subprocess.call(['systemctl','start','stratusprint-hub'])
-    elif initd_setup(config):
-        print("Finished initd setup")
-        run = raw_input("All set, run now and test? [y/n]:")
-        if run.lower() in ["y", "yes"]:
-            subprocess.call(['service','stratusprint-hub','start'])
+    else:
+        print("Installation on non-systemd linux is not supported...Exiting")
+        exit(1)
+    #elif initd_setup(config):
+    #    print("Finished initd setup")
+    #    run = raw_input("All set, run now and test? [y/n]:")
+    #    if run.lower() in ["y", "yes"]:
+    #        subprocess.call(['service','stratusprint-hub','start'])
