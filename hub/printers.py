@@ -475,7 +475,7 @@ def delete_job(job_id):
                     hub.Webapi.patch_printer(payload)
             else:
                 printer.remove_job(job.id)
-        if job.state("errored"):
+        if job.state("cancelled"):
             payload = job.to_web(None)
             hub.Webapi.patch_job(payload)
     return json.jsonify({"message": "Job " + str(job_id)
