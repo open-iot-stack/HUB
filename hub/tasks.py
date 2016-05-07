@@ -227,44 +227,26 @@ class JobUploader(threading.Thread):
                 return False
             j = r.json()
             rname = j.get('name')
-            r = None
-            payload = None
+            r = octopi.get_one_file_info(url, key, rname, loc)
             while r == None or r.status_code != 200:
                 #This is really fucking hacky
                 log.log("Could not retrieve file info for "
                         + str(job.id))
                 sleep(10)
                 r = octopi.get_one_file_info(url, key, rname, loc)
-                if r:
-                    payload = r.json()
-                if payload and payload.get("gcodeAnalysis") == None:
-                    r = None
-
-            print_time = payload.get("gcodeAnalysis")\
-                                .get("estimatedPrintTime")
-            job.set_print_time(print_time)
             job.set_remote_name(rname)
             r = octopi.delete_file(url, key, fname, loc)
             while r == None:
                 sleep(10)
                 r = octopi.delete_file(url, key, fname, loc)
         elif ext in ['gcode', 'gco']:
-            r = None
-            payload = None
+            r = octopi.get_one_file_info(url, key, fname, loc)
             while r == None or r.status_code != 200:
                 #This is really fucking hacky
                 log.log("Could not retrieve file info for "
                         + str(job.id))
                 sleep(10)
                 r = octopi.get_one_file_info(url, key, fname, loc)
-                if r:
-                    payload = r.json()
-                if payload and payload.get("gcodeAnalysis") == None:
-                    r = None
-
-            j = r.json()
-            print_time = j.get("gcodeAnalysis").get("estimatedPrintTime")
-            job.set_print_time(print_time)
             job.set_remote_name(fname)
         else:
             self.success = False
