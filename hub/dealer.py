@@ -177,6 +177,8 @@ class JobCollector(threading.Thread):
             if cjob.status == "queued":
                 t = Command(id, log, "start", webapi)
                 t.start()
+            if cjob.status == "errored" and status == "ready":
+                printer.remove_job(cjob.id)
             #If printer status is set to completed, cancelled,
             #or errored, exit. a new job thread will be spawned
             #by printer collector when needed
@@ -350,8 +352,8 @@ class NodeCollector(threading.Thread):
                     data = sensor.to_web(recent_json)
                     if data != None:
                         webapi.add_data(data)
-                sleep(1)
-            sleep(1)
+                sleep(3)
+            sleep(3)
 
 
 def get_temp(node_ip, gpio):

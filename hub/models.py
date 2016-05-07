@@ -524,6 +524,10 @@ class Printer(Base):
             return False
         if job:
             if job.position == 0:
+                if self.status == "ready" and job.status == "errored":
+                    self.jobs.remove(job)
+                    db_session.commit()
+                    return True
                 return False
             self.jobs.remove(job)
             db_session.commit()
@@ -714,7 +718,7 @@ class Sensor(Base):
             db_session.remove()
         sensor =\
             db_session.query(Sensor).\
-                filter(Sensor.id == id).one_or_none()
+                filter(Sensor.webid == id).one_or_none()
         return sensor
 
     def __init__(self, node_id, pin, sensor_type, webid=None):
@@ -758,9 +762,7 @@ class Sensor(Base):
         node = Node.get_by_id(self.node_id)
         ip = node.ip
         pin  = self.pin
-        #use once node has been updated
-        #url = "http://" + ip + "/gpio/" + str(pin) + "/pwm"
-        url = "http://" + ip + "/gpio/" + str(pin) + "/pon"
+        url = "http://" + ip + "/gpio/" + str(pin) + "/pwm"
         return url
 
     def power_on(self):
@@ -820,7 +822,7 @@ class Sensor(Base):
         node = Node.get_by_id(self.node_id)
         ip   = node.ip
         pin  = self.pin
-        url = "http://" + ip + "/gpio/" + str(pin) + "/temp"
+        url = "http://" + ip + "/gpio/" + str(pin) + "/humi"
         return url
 
     def trigger(self):
@@ -854,11 +856,11 @@ class Sensor(Base):
     def humi_to_web(self, data):
         if self.sensor_type != "HUMI":
             return None
-        humi = data['humi']
+        humi = float(data['humi'])
         id = self.webid
         d = {
             "id": id,
-            "reading": str(humi)
+            "value": str(humi)
         }
         return d
 
@@ -869,11 +871,12 @@ class Sensor(Base):
         """
         if self.sensor_type != "TEMP":
             return None
-        temp = data['temp']
+        temp = float(data['temp'])
+        temp = (temp * 9/5.0) + 32.0
         id = self.webid
         d = {
             "id": id,
-            "reading": str(temp)
+            "value": str(temp)
         }
         return d
 
@@ -889,9 +892,9 @@ class Sensor(Base):
             "id": self.webid,
         }
         if status == 0:
-            d['reading'] = 'open'
+            d['value'] = 'open'
         elif status == 1:
-            d['reading'] = 'closed'
+            d['value'] = 'closed'
         else:
             return None
         return d

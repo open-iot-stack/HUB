@@ -378,10 +378,10 @@ def jobs_post(id):
         t = threading.Thread(target=hub.Webapi.patch_job,
                             args=(job.to_web(None),))
         t.start()
-        if printer.current_job().id == job.id:
-            t = Command(printer.id, hub.log, "start",
-                        hub.Webapi)
-            t.start()
+#        if printer.current_job().id == job.id:
+#            t = Command(printer.id, hub.log, "start",
+#                        hub.Webapi)
+#            t.start()
     else:
         abort(400)
     return json.jsonify({"message": "Job " + str(webid)
@@ -474,7 +474,7 @@ def delete_job(job_id):
                     payload = printer.to_web()
                     hub.Webapi.patch_printer(payload)
             else:
-                printer.remove_job(job_id)
+                printer.remove_job(job.id)
         if job.state("errored"):
             payload = job.to_web(None)
             hub.Webapi.patch_job(payload)

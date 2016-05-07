@@ -228,13 +228,15 @@ class JobUploader(threading.Thread):
             j = r.json()
             rname = j.get('name')
             r = None
+            payload = None
             while r == None or r.status_code != 200:
                 #This is really fucking hacky
                 log.log("Could not retrieve file info for "
                         + str(job.id))
                 sleep(10)
                 r = octopi.get_one_file_info(url, key, rname, loc)
-                payload = r.json()
+                if r:
+                    payload = r.json()
                 if payload and payload.get("gcodeAnalysis") == None:
                     r = None
 
@@ -247,13 +249,18 @@ class JobUploader(threading.Thread):
                 sleep(10)
                 r = octopi.delete_file(url, key, fname, loc)
         elif ext in ['gcode', 'gco']:
-            r = octopi.get_one_file_info(url, key, fname, loc)
+            r = None
+            payload = None
             while r == None or r.status_code != 200:
                 #This is really fucking hacky
                 log.log("Could not retrieve file info for "
                         + str(job.id))
                 sleep(10)
                 r = octopi.get_one_file_info(url, key, fname, loc)
+                if r:
+                    payload = r.json()
+                if payload and payload.get("gcodeAnalysis") == None:
+                    r = None
 
             j = r.json()
             print_time = j.get("gcodeAnalysis").get("estimatedPrintTime")
