@@ -317,7 +317,7 @@ def jobs_list(id):
     printer = Printer.get_by_webid(id)
     if printer:
         jobs = {
-                "jobs": [ job.to_web(None) for job in printer.jobs]
+                "jobs": [ job.to_web() for job in printer.jobs]
         }
         return json.jsonify(jobs)
     abort(404)
@@ -376,7 +376,7 @@ def jobs_post(id):
         printer = Printer.get_by_id(id)
         printer.add_job(job)
         t = threading.Thread(target=hub.Webapi.patch_job,
-                            args=(job.to_web(None),))
+                            args=(job.to_web(),))
         t.start()
 #        if printer.current_job().id == job.id:
 #            t = Command(printer.id, hub.log, "start",
@@ -412,7 +412,7 @@ def jobs_current(id):
     if printer:
         job = printer.current_job()
         if job:
-            return json.jsonify(job.to_web(None))
+            return json.jsonify(job.to_web())
         else:
             return json.jsonify({})
     abort(404)
@@ -476,7 +476,7 @@ def delete_job(job_id):
             else:
                 printer.remove_job(job.id)
         if job.state("cancelled"):
-            payload = job.to_web(None)
+            payload = job.to_web()
             hub.Webapi.patch_job(payload)
     return json.jsonify({"message": "Job " + str(job_id)
                                     + " has been deleted"}),200
