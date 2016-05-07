@@ -186,9 +186,7 @@ class JobCollector(threading.Thread):
             #by printer collector when needed
             if status == "offline":
                 cjob.state("errored")
-                data = cjob.to_web(recent_json)
-                if data == None:
-                    data = cjob.to_web(None)
+                data = cjob.to_web()
                 i = 0
                 # Try to update to web api 10 times
                 while not webapi.patch_job(data) and i < 10:
@@ -200,7 +198,7 @@ class JobCollector(threading.Thread):
                     .get("progress").get("completion") == 100:
                 # this ensures it will have updated to the web api
                 cjob.state("completed")
-                data = cjob.to_web(recent_json)
+                data = cjob.to_web()
                 i = 0
                 # Try to update to web api 10 times
                 while not webapi.patch_job(data) and i < 10:
@@ -209,9 +207,7 @@ class JobCollector(threading.Thread):
                 return 0
             if status == "cancelled":
                 cjob.state("cancelled")
-                data = cjob.to_web(recent_json)
-                if data == None:
-                    data = cjob.to_web(None)
+                data = cjob.to_web()
                 i = 0
                 # Try to update to web api 10 times
                 while not webapi.patch_job(data) and i < 10:
@@ -220,7 +216,7 @@ class JobCollector(threading.Thread):
                 return 0
             if status == "errored":
                 cjob.state("errored")
-                data = cjob.to_web(recent_json)
+                data = cjob.to_web()
                 i = 0
                 # Try to update to web api 10 times
                 while not webapi.patch_job(data) and i < 10:
@@ -242,7 +238,7 @@ class JobCollector(threading.Thread):
                        + " on " + url )
                 if failures > 5:
                     cjob.state("errored")
-                    webapi.patch_job(cjob.to_web(recent_json))
+                    webapi.patch_job(cjob.to_web())
                     return -1
                 continue
             if response.status_code != 200:
@@ -252,7 +248,8 @@ class JobCollector(threading.Thread):
                         + response.url)
             else:
                 recent_json = response.json()
-                data = cjob.to_web(recent_json)
+                ret = cjob.set_meta(recent_json)
+                data = cjob.to_web()
                 if data != None:
                     # Check to see if data is the same as last collected
                     # if so, do not send it
@@ -351,7 +348,8 @@ class NodeCollector(threading.Thread):
                             + response.url)
                 else:
                     recent_json = response.json()
-                    data = sensor.to_web(recent_json)
+                    ret = sensor.set_value(recent_json)
+                    data = sensor.to_web()
                     if data != None:
                         webapi.add_data(data)
                 sleep(3)
