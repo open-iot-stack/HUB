@@ -81,7 +81,6 @@ class Job(Base):
     webid        = Column(Integer, unique=True)
     position     = Column(Integer)
     status       = Column(String)
-    print_time   = Column(Integer)
     printer_id   = Column(Integer, ForeignKey("printers.id"))
     remote_name  = Column(String)
     file         = relationship("File", uselist=False)
@@ -113,7 +112,7 @@ class Job(Base):
                 filter(Job.webid == webid).one_or_none()
         return job
 
-    def __init__(self, webid, print_time=0, status="queued"):
+    def __init__(self, webid, status="queued"):
         """Create a job object. A file object should be created first.
         :id: id of the job
         :file: file that the job refers to
@@ -149,9 +148,13 @@ class Job(Base):
         :returns: boolean of success
 
         """
+        if state == self.status:
+            return True
+        if self.status == "cancelled":
+            return False
         if state in ["processing", "slicing", "printing",
                         "completed", "paused", "errored",
-                        "queued"]:
+                        "queued", "cancelled"]:
             self.status = state
             db_session.commit()
             return True
@@ -165,16 +168,6 @@ class Job(Base):
 
         """
         self.webid = webid
-        db_session.commit()
-        return True
-
-    def set_print_time(self, print_time):
-        """Sets the estimated print time for the job.
-        :print_time: Integer of print time in seconds
-        :returns: boolean of success
-
-        """
-        self.print_time = print_time
         db_session.commit()
         return True
 
@@ -198,7 +191,6 @@ class Job(Base):
                 "id": self.webid,
                 "data": {
                     "status": self.status,
-                    "estimated_print_time": self.print_time,
                     "file": self.file.to_web()
                 }
             }
@@ -214,6 +206,7 @@ class Job(Base):
         unix_date = jf.get("date")
         filament = job.get("job").get("filament")
         progress = job.get("progress")
+        estim_print_time = job.get("job").get("estimatedPrintTime")
         if progress:
             prog = {}
             completion = progress.get("completion")
@@ -229,7 +222,7 @@ class Job(Base):
             "data": {
                 "status": self.status,
                 "file": self.file.to_web(),
-                "estimated_print_time": self.print_time,
+                "estimated_print_time": estim_print_time,
                 "filament": filament,
                 "progress": progress
             }
@@ -244,7 +237,6 @@ class Job(Base):
         d = {
                 "id": self.id,
                 "webid": self.webid,
-                "estimated_print_time": self.print_time,
                 "file": self.file.to_dict(),
                 "status": self.status
         }
@@ -890,13 +882,8 @@ class Sensor(Base):
         status = data['data']
         d = {
             "id": self.webid,
+            "value": int(status)
         }
-        if status == 0:
-            d['value'] = 'open'
-        elif status == 1:
-            d['value'] = 'closed'
-        else:
-            return None
         return d
 
     def to_web(self, data):
