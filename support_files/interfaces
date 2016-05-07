@@ -1,0 +1,3 @@
+iface wlan0 inet static
+address <IP>
+netmaks 255.255.255.0
