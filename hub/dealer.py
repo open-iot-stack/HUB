@@ -350,7 +350,7 @@ class NodeCollector(threading.Thread):
                     recent_json = response.json()
                     ret = sensor.set_value(recent_json)
                     data = sensor.to_web()
-                    if data != None:
+                    if data != None and data.get("id") != None:
                         webapi.add_data(data)
                 sleep(3)
             sleep(3)
