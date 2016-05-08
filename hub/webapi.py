@@ -642,6 +642,7 @@ class WebAPI(object):
         log     = self.log
         headers = self.headers
         web_url = self.url
+        data["status"] = "online"
 
         url = web_url + "/hubs/" + str(id)
         try:
