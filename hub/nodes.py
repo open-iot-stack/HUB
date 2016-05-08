@@ -74,6 +74,13 @@ def activate_node(payload = None):
         t = NodeCollector(id, hub.Webapi, hub.log)
         t.start()
         listener.add_thread(id, t)
+        updates = {"nodes": []}
+        node_updates = updates.get("nodes")
+        for node in Node.get_all(fresh=True):
+            if node.printer_id == None:
+                node_updates.append(node.id)
+        t = threading.Thread(target=hub.Webapi.update_nodes,args=updates)
+        t.start()
         return json.jsonify({"message": str(id) + " has been activated."}),201
 
 @app.route('/nodes', methods=['GET'])
