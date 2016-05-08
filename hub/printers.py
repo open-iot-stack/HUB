@@ -441,7 +441,7 @@ def get_job(job_id):
 
     job = Job.get_by_webid(job_id)
     if job:
-        return json.jsonify(job.to_dict())
+        return json.jsonify(job.to_web())
     else:
         abort(404)
 
@@ -466,15 +466,17 @@ def delete_job(job_id):
 
     job = Job.get_by_webid(job_id)
     if job:
-        printer = Printer.get_by_id(job.printer_id)
-        if printer != None:
-            if job.position == 0:
-                if printer.state("cancelled"):
-                    printer.cancel_job()
-                    payload = printer.to_web()
-                    hub.Webapi.patch_printer(payload)
-            else:
-                printer.remove_job(job.id)
+        printer_id = job.printer_id
+        if printer_id != None:
+            printer = Printer.get_by_id(printer_id)
+            if printer != None:
+                if job.position == 0:
+                    if printer.state("cancelled"):
+                        printer.cancel_job()
+                        payload = printer.to_web()
+                        hub.Webapi.patch_printer(payload)
+                else:
+                    printer.remove_job(job.id)
         if job.state("cancelled"):
             payload = job.to_web()
             hub.Webapi.patch_job(payload)
