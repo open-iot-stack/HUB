@@ -134,7 +134,13 @@ def nodes_trigger_callback():
         else:
             t = Command(printer.id, hub.log, "cancel", hub.Webapi)
         t.start()
-
+        for sensor in node.sensors:
+            if sensor.sensor_type == "LED":
+                url = sensor.led_on()
+                t = threading.Thread(target=requests.get,
+                                     args=(url,))
+                t.start()
+        #r = requests.get(url, timeout=10)
     d = {'id': id,
          'data': data}
     return json.jsonify(d)
@@ -276,8 +282,9 @@ def sensor_delete(sensor_id):
           200:
             description: Returns "Deleted"
         """
-    Sensor.query.filter(Sensor.id == sensor_id).delete()
-    db.session.commit()
+    sensor = Sensor.get_by_webid(sensor_id)
+    node   = Node.get_by_id(sensor.node_id)
+    node.remove_sensor(sensor.id)
     return json.jsonify({'message': 'Deleted'}), 201
 
 
