@@ -8,6 +8,7 @@ from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.orderinglist import ordering_list
 from database import Base, db_session
+from flask import json
 
 class PrinterExists(Exception):
     pass
@@ -189,6 +190,8 @@ class Job(Base):
         if jf.get('name') == None:
             return False
         filament = job.get("job").get("filament")
+        if filament:
+            filament = json.dumps(filament)
         progress = job.get("progress")
         estimated_print_time = job.get("job").get("estimatedPrintTime")
         if progress:
@@ -200,7 +203,7 @@ class Job(Base):
             prog["file_position"] = progress.get("filepos")
             prog["print_time"] = progress.get("printTime")
             prog["print_time_left"] = progress.get("printTimeLeft")
-            progress = str(prog)
+            progress = json.dumps(prog)
         self.filament = str(filament)
         self.progress = str(progress)
         self.estimated_print_time = str(estimated_print_time)
@@ -211,14 +214,22 @@ class Job(Base):
         """Properly formats data to be sent to the web api 
         
         """
+        if self.progress != None:
+            progress = json.loads(self.progress)
+        else:
+            progress = None
+        if self.filament != None:
+            filament = json.loads(self.filament)
+        else:
+            filament = None
         njob = {
             "id": self.webid,
             "data": {
                 "status": self.status,
                 "file": self.file.to_web(),
                 "estimated_print_time": self.estimated_print_time,
-                "filament": self.filament,
-                "progress": self.progress
+                "filament": filament,
+                "progress": progress
             }
         }
         return njob
@@ -872,7 +883,7 @@ class Sensor(Base):
         if self.sensor_type != "HUMI":
             return None
         d = {
-            "id": webid,
+            "id": self.webid,
             "value": str(self.value)
         }
         return d
@@ -908,15 +919,13 @@ class Sensor(Base):
         the web api. Parsing is based on sensor type
         returns a list of data to send to webapi
         """
-        if self.webid == None:
-            return None
         if self.sensor_type == "DOOR":
             return self.door_to_web()
         elif self.sensor_type == "TEMP":
             return self.temp_to_web()
         elif self.sensor_type == "HUMI":
             return self.humi_to_web()
-        return None
+        return self.to_dict()
     
     def to_dict(self):
         d = {
