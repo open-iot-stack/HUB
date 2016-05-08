@@ -211,7 +211,7 @@ class JobUploader(threading.Thread):
         ext = get_extension(fname)
         if ext in ['stl']:
             job.state("slicing")
-            webapi.patch_job(job.to_web()
+            webapi.patch_job(job.to_web())
             r = octopi.slice(url, key, fname, loc)
             if r == None:
                 log.log("ERROR: Did not have a response from " + str(id)

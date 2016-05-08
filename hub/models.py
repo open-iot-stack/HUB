@@ -872,7 +872,7 @@ class Sensor(Base):
         if self.sensor_type != "HUMI":
             return None
         d = {
-            "id": webid
+            "id": webid,
             "value": str(self.value)
         }
         return d
