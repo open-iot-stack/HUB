@@ -262,5 +262,5 @@ def get_extension(name):
     :returns: file extension
 
     """
-    ext = name.rsplit('.', 1)[1]
+    ext = name.rsplit('.', 1)[1].lower()
     return ext
