@@ -116,7 +116,7 @@ class Command(threading.Thread):
             else:
                 log.log("ERROR: Printer " + str(id) + " was told to "
                         + " cancel but isn't printing or paused")
-        elif command == "next":
+        elif command == "clear":
             if status == "cancelled":
                 if printer.cancel_job():
                     self.success = True
@@ -140,8 +140,8 @@ class Command(threading.Thread):
                         c.start()
             else:
                 log.log("ERROR: Printer " + str(id)
-                        + " received call to go to next print job "
-                        + " but current print wasn't finished.")
+                        + " received command bed is clear"
+                        + " but current print isn't finished.")
         if self.command_id != None and self.webapi != None:
             d = {
                 "id": self.command_id,
@@ -152,7 +152,7 @@ class Command(threading.Thread):
             else:
                 d['status'] = 'errored'
             i = 0
-            while webapi.callback_command(d) and i < 10:
+            while webapi.callback_command(d) == False and i < 10:
                 i += 1
         return 0
 
@@ -211,7 +211,7 @@ class JobUploader(threading.Thread):
         ext = get_extension(fname)
         if ext in ['stl']:
             job.state("slicing")
-            webapi.patch_job(job.to_web(None))
+            webapi.patch_job(job.to_web())
             r = octopi.slice(url, key, fname, loc)
             if r == None:
                 log.log("ERROR: Did not have a response from " + str(id)
@@ -227,20 +227,13 @@ class JobUploader(threading.Thread):
                 return False
             j = r.json()
             rname = j.get('name')
-            r = None
+            r = octopi.get_one_file_info(url, key, rname, loc)
             while r == None or r.status_code != 200:
                 #This is really fucking hacky
                 log.log("Could not retrieve file info for "
                         + str(job.id))
                 sleep(10)
                 r = octopi.get_one_file_info(url, key, rname, loc)
-                payload = r.json()
-                if payload and payload.get("gcodeAnalysis") == None:
-                    r = None
-
-            print_time = payload.get("gcodeAnalysis")\
-                                .get("estimatedPrintTime")
-            job.set_print_time(print_time)
             job.set_remote_name(rname)
             r = octopi.delete_file(url, key, fname, loc)
             while r == None:
@@ -254,10 +247,6 @@ class JobUploader(threading.Thread):
                         + str(job.id))
                 sleep(10)
                 r = octopi.get_one_file_info(url, key, fname, loc)
-
-            j = r.json()
-            print_time = j.get("gcodeAnalysis").get("estimatedPrintTime")
-            job.set_print_time(print_time)
             job.set_remote_name(fname)
         else:
             self.success = False
@@ -273,5 +262,5 @@ def get_extension(name):
     :returns: file extension
 
     """
-    ext = name.rsplit('.', 1)[1]
+    ext = name.rsplit('.', 1)[1].lower()
     return ext

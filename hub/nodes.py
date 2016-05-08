@@ -4,11 +4,12 @@
 import thread
 import hub
 from chest import Chest
-from flask import request, json, url_for
+from flask import request, json, url_for, abort
 from hub import app
 from dealer import NodeCollector, get_temp, get_gpio
 from database import db_session
-from models import Sensor, Node
+from models import Sensor, Node, Printer
+from tasks import Command
 
 nodes = Chest()
 
@@ -47,20 +48,40 @@ def activate_node(payload = None):
 
     global nodes
     id   = int(request.args.get("id"))
-    ip   = request.args.get("ip")
+    ip   = str(request.args.get("ip"))
     port = int(request.args.get("port", 80))
-    conf_data = hub.conf.read_data()
     log = hub.log
+    listener = hub.node_listeners
 
     node = Node.get_by_id(id)
-    if node == None:
+    if node:
+        node.update(ip=ip)
+        if not listener.is_alive(id):
+            t = NodeCollector(id, hub.Webapi, hub.log)
+            t.start()
+            listener.add_thread(id, t)
+            log.log("Node " + str(id) + " is now online.")
+            return json.jsonify({'message': "Node " + str(id)
+                                            + " is now online."}),201
+        if listener.is_alive(id):
+            log.log("Node " + str(id)
+                    + " is already online but tried"
+                    + " to activate again, Updated it's data")
+            return json.jsonify({'message': "Node " + str(id)
+                                            + " was already online"}),201
+    else:
         node = Node(id, ip)
-    t = NodeCollector(id, hub.Webapi)
-    t.start()
-    return json.jsonify({"message": str(id) + " has been activated."})
-
-    log.log("ERROR: Node " + str(id) + " tried to activate but was never registered")
-    abort(400)
+        t = NodeCollector(id, hub.Webapi, hub.log)
+        t.start()
+        listener.add_thread(id, t)
+        updates = {"nodes": []}
+        node_updates = updates.get("nodes")
+        for node in Node.get_all(fresh=True):
+            if node.printer_id == None:
+                node_updates.append(node.id)
+        t = threading.Thread(target=hub.Webapi.update_nodes,args=updates)
+        t.start()
+        return json.jsonify({"message": str(id) + " has been activated."}),201
 
 @app.route('/nodes', methods=['GET'])
 def nodes_list():
@@ -75,13 +96,19 @@ def nodes_list():
             description: Returns a list of nodes
         """
 
-    results = Node.query.all()
-    json_results = []
-    for result in results:
-        d = {'id': result.id,
-             'ip': result.ip}
-        json_results.append(d)
-    return json.jsonify(nodes = json_results)
+    log = hub.log
+    listener = hub.node_listeners
+    internal = request.args.get("internal", "false")
+    online   = request.args.get("online", "false")
+    data = {"nodes": []}
+    nodes = data.get("nodes")
+    for node in Node.get_all():
+        if internal.lower() != "true" and node.printer_id != None:
+            continue
+        if online.lower() == "true" and not listener.is_alive(node.id):
+            continue
+        nodes.append(node.to_web())
+    return json.jsonify(data)
 
 
 @app.route('/nodes/trigger/callback', methods=['POST'])
@@ -99,7 +126,21 @@ def nodes_trigger_callback():
     payload = request.get_json()
     id   = int(payload.get("id"))
     data = payload.get("data")
-
+    node = Node.get_by_id(id)
+    if node.printer_id:
+        printer = Printer.get_by_id(node.printer_id)
+        if printer.status in ["completed", "cancelled"]:
+            t = Command(printer.id, hub.log, "clear", hub.Webapi)
+        else:
+            t = Command(printer.id, hub.log, "cancel", hub.Webapi)
+        t.start()
+        for sensor in node.sensors:
+            if sensor.sensor_type == "LED":
+                url = sensor.led_on()
+                t = threading.Thread(target=requests.get,
+                                     args=(url,))
+                t.start()
+        #r = requests.get(url, timeout=10)
     d = {'id': id,
          'data': data}
     return json.jsonify(d)
@@ -168,9 +209,9 @@ def node_add_sensors(node_id):
           201:
             description: Returns the information received about the sensor
         """
-    payload = request.json()
-    id  = payload.get("id")
-    sensor = Sensor.get_by_webid(id)
+    payload = request.get_json()
+    webid  = payload.get("id")
+    sensor = Sensor.get_by_webid(webid)
     if sensor:
         abort(409)
     pin = payload.get('pin')
@@ -179,13 +220,15 @@ def node_add_sensors(node_id):
         sensor_type = "DOOR"
     elif sensor_type == "temperature":
         sensor_type = "TEMP"
+    elif sensor_type == "humidity":
+        sensor_type = "HUMI"
     elif sensor_type == "trigger":
         sensor_type = "TRIG"
     elif sensor_type == "led":
         sensor_type = "LED"
     else:
         abort(400)
-    sensor = Sensor(node_id, pin, sensor_type)
+    sensor = Sensor(node_id, pin, sensor_type, webid=webid)
     return json.jsonify({'sensor': {'node_id': node_id, 'pin': pin,
                                                     'sensor_type': sensor_type}}), 201
 
@@ -239,8 +282,9 @@ def sensor_delete(sensor_id):
           200:
             description: Returns "Deleted"
         """
-    Sensor.query.filter(Sensor.id == sensor_id).delete()
-    db.session.commit()
+    sensor = Sensor.get_by_webid(sensor_id)
+    node   = Node.get_by_id(sensor.node_id)
+    node.remove_sensor(sensor.id)
     return json.jsonify({'message': 'Deleted'}), 201
 
 

@@ -541,7 +541,7 @@ class WebAPI(object):
         log.log('Deleted Node ' + str(node_id) + ' to ' + url )
         return True
 
-    def add_data(self, data, node_id):
+    def add_data(self, data):
         """Adds data to web api
         :web_url: Base webaddress of server, or ip
         :node_id: id of node the data is from
@@ -552,37 +552,38 @@ class WebAPI(object):
         log = self.log
         headers = self.headers
         web_url = self.url
+        id = data.get("id")
         #TODO sensor data parsing, category will be [temperature,humidity,door], for door send open or closed
-        url = web_url + '/sensors/' + node_id + '/data'
+        url = web_url + '/sensors/' + str(id) + '/data'
         try:
             r = requests.post(url, headers=headers,
                                 json=data, timeout=3)
         except requests.ConnectionError:
             log.log('ERROR: Could not connect to ' + url 
-                    + '. Unable to add data from node ' 
-                    + str(node_id) + '.')
+                    + '. Unable to add data from sensor ' 
+                    + str(id) + '.')
             return False
         except requests.exceptions.Timeout:
             log.log('ERROR: Timeout when contacting ' + url
-                    + '. Unable to add data from node '
-                    + str(node_id) + '.')
+                    + '. Unable to add data from sensor '
+                    + str(id) + '.')
             return False
         code = r.status_code
         # Handle error codes from web api
         if code == 401:
             # Not authorized. Fix headers and try again
-            log.log('ERROR: Data from node ' + str(node_id) + ' not added.'
+            log.log('ERROR: Data from sensor ' + str(id) + ' not added.'
                     + ' Server responded with ' + str(code) 
                     + ' on ' + url)
             ret = self.update_headers()
-            return self.add_data(data, node_id)
+            return self.add_data(data)
         if code != 201:
             # Catch all for if bad status codes
-            log.log('ERROR: Data from node ' + str(node_id) + ' not added.'
+            log.log('ERROR: Data from sensor ' + str(id) + ' not added.'
                     + ' Server responded with ' + str(code) 
                     + ' on ' + url)
             return False
-        log.log('Added printer ' + str(node_id) + ' to ' + url )
+        #log.log('Added data from sensor ' + str(id) + ' to ' + url )
         return True
 
     def callback_command(self, data):
@@ -597,8 +598,10 @@ class WebAPI(object):
         headers = self.headers
         web_url = self.url
 
+        url = web_url + "/commands/" + str(id)
+
         try:
-            r = requests.post(url, headers=headers,
+            r = requests.patch(url, headers=headers,
                                 json=data, timeout=3)
         except requests.ConnectionError:
             log.log('ERROR: Could not connect to ' + url 
@@ -628,4 +631,49 @@ class WebAPI(object):
                     + ' on ' + url)
             return False
         log.log('Updated command ' + str(id) + ' on ' + url )
+        return True
+
+    def update_nodes(self, data):
+        """Updates the list of nodes on the web api
+        :returns: boolean of success
+
+        """
+        id      = self.id
+        log     = self.log
+        headers = self.headers
+        web_url = self.url
+        data["status"] = "online"
+
+        url = web_url + "/hubs/" + str(id)
+        try:
+            r = requests.patch(url, headers=headers,
+                                json=data, timeout=3)
+        except requests.ConnectionError:
+            log.log('ERROR: Could not connect to ' + url 
+                    + '. Unable to update nodes on hub ' 
+                    + str(id) + '.')
+            return False
+        except requests.exceptions.Timeout:
+            log.log('ERROR: Timeout when contacting ' + url
+                    + '. Unable to update nodes on hub '
+                    + str(id) + '.')
+            return False
+        code = r.status_code
+        # Handle error codes from web api
+        if code == 401:
+            # Not authorized. Fix headers and try again
+            log.log('ERROR: Node update for hub '
+                    + str(id) + ' not updated.'
+                    + ' Server responded with ' + str(code) 
+                    + ' on ' + url)
+            ret = self.update_headers()
+            return self.callback_command(data)
+        if code != 200:
+            # Catch all for if bad status codes
+            log.log('ERROR: Node update for hub '
+                    + str(id) + ' not updated.'
+                    + ' Server responded with ' + str(code) 
+                    + ' on ' + url)
+            return False
+        log.log('Updated nodes for hub ' + str(id) + ' on ' + url )
         return True

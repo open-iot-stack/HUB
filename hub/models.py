@@ -8,6 +8,7 @@ from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.orderinglist import ordering_list
 from database import Base, db_session
+from flask import json
 
 class PrinterExists(Exception):
     pass
@@ -81,10 +82,12 @@ class Job(Base):
     webid        = Column(Integer, unique=True)
     position     = Column(Integer)
     status       = Column(String)
-    print_time   = Column(Integer)
     printer_id   = Column(Integer, ForeignKey("printers.id"))
     remote_name  = Column(String)
+    filament     = Column(String)
+    progress     = Column(String)
     file         = relationship("File", uselist=False)
+    estimated_print_time = Column(String)
 
     @staticmethod
     def get_by_id(id, fresh=False):
@@ -113,7 +116,7 @@ class Job(Base):
                 filter(Job.webid == webid).one_or_none()
         return job
 
-    def __init__(self, webid, print_time=0, status="queued"):
+    def __init__(self, webid, status="queued"):
         """Create a job object. A file object should be created first.
         :id: id of the job
         :file: file that the job refers to
@@ -149,9 +152,13 @@ class Job(Base):
         :returns: boolean of success
 
         """
+        if state == self.status:
+            return True
+        if self.status == "cancelled":
+            return False
         if state in ["processing", "slicing", "printing",
                         "completed", "paused", "errored",
-                        "queued"]:
+                        "queued", "cancelled"]:
             self.status = state
             db_session.commit()
             return True
@@ -168,16 +175,6 @@ class Job(Base):
         db_session.commit()
         return True
 
-    def set_print_time(self, print_time):
-        """Sets the estimated print time for the job.
-        :print_time: Integer of print time in seconds
-        :returns: boolean of success
-
-        """
-        self.print_time = print_time
-        db_session.commit()
-        return True
-
     def set_remote_name(self, remote_name):
         """Sets the remote name of the job.
         :remote_name: name that is on the octopi
@@ -188,32 +185,15 @@ class Job(Base):
         db_session.commit()
         return True
 
-    def to_web(self, job):
-        """Properly formats data to be sent to the web api 
-        
-        """
-
-        if job == None:
-            d = {
-                "id": self.webid,
-                "data": {
-                    "status": self.status,
-                    "estimated_print_time": self.print_time,
-                    "file": self.file.to_web()
-                }
-            }
-            return d
-
+    def set_meta(self, job):
         jf = job.get("job").get("file")
         if jf.get('name') == None:
-            return None
-        id = self.id
-        webid = self.webid
-        if jf.get('name') != self.remote_name:
-            return None
-        unix_date = jf.get("date")
+            return False
         filament = job.get("job").get("filament")
+        if filament:
+            filament = json.dumps(filament)
         progress = job.get("progress")
+        estimated_print_time = job.get("job").get("estimatedPrintTime")
         if progress:
             prog = {}
             completion = progress.get("completion")
@@ -223,13 +203,31 @@ class Job(Base):
             prog["file_position"] = progress.get("filepos")
             prog["print_time"] = progress.get("printTime")
             prog["print_time_left"] = progress.get("printTimeLeft")
-            progress = prog
+            progress = json.dumps(prog)
+        self.filament = str(filament)
+        self.progress = str(progress)
+        self.estimated_print_time = str(estimated_print_time)
+        db_session.commit()
+        return True
+
+    def to_web(self):
+        """Properly formats data to be sent to the web api 
+        
+        """
+        try:
+            progress = json.loads(self.progress)
+        except:
+            progress = None
+        try:
+            filament = json.loads(self.filament)
+        except:
+            filament = None
         njob = {
-            "id": webid,
+            "id": self.webid,
             "data": {
                 "status": self.status,
                 "file": self.file.to_web(),
-                "estimated_print_time": self.print_time,
+                "estimated_print_time": self.estimated_print_time,
                 "filament": filament,
                 "progress": progress
             }
@@ -244,7 +242,6 @@ class Job(Base):
         d = {
                 "id": self.id,
                 "webid": self.webid,
-                "estimated_print_time": self.print_time,
                 "file": self.file.to_dict(),
                 "status": self.status
         }
@@ -270,7 +267,7 @@ class Printer(Base):
     manufacturer = Column(String)
     model        = Column(String)
     description  = Column(String)
-    button       = relationship("Node", uselist=False)
+    blackbox     = relationship("Node", uselist=False)
 
     @staticmethod
     def get_by_id(id, fresh=False):
@@ -312,7 +309,14 @@ class Printer(Base):
             l.append(printer)
         return l
 
-    def __init__(self, id, key=None, ip=None, port=80, status="offline",
+    @staticmethod
+    def get_all(fresh=False):
+        if fresh == True:
+            db_session.remove()
+        printers = db_session.query(Printer).all()
+        return printers
+
+    def __init__(self, id, box, key=None, ip=None, port=80, status="offline",
                 friendly_id=None, manufacturer=None, model=None
                 , description=None, webid=None):
         """Creates a new Printer, adds to database. If printer exists
@@ -332,7 +336,13 @@ class Printer(Base):
         self.friendly_id  = friendly_id
         self.description  = description
         self.manufacturer = manufacturer
-
+        node = Node.get_by_id(box)
+        if node == None:
+            node = Node(box, None)
+        power = Sensor(box, 2, "POWER")
+        trigger = Sensor(box, 3 , "TRIG")
+        led     = Sensor(box, 4, "LED")
+        self.blackbox = node
         if not status in ["ready", "paused", "printing", "errored",
                             "offline", "cancelled", "completed"]:
             status = "offline"
@@ -340,7 +350,7 @@ class Printer(Base):
         db_session.add(self)
         db_session.commit()
 
-    def update(self, ip=None, port=None, status=None, key=None):
+    def update(self, box=None, ip=None, port=None, status=None, key=None):
         """Update data on printer
         :ip: IP address to set to
         :port: Port to set to
@@ -351,10 +361,8 @@ class Printer(Base):
 
         """
         if status:
-            if status in ["ready", "paused", "printing", "errored",
-                            "offline", "cancelled", "completed"]:
-                self.status = status
-            else:
+            ret = self.state(status)
+            if ret == False:
                 return False
         if key:
             self.key = key
@@ -362,6 +370,15 @@ class Printer(Base):
             self.ip = ip
         if port:
             self.port = port
+        if box:
+            if box != self.blackbox.id:
+                node = Node.get_by_id(box)
+                if node == None:
+                    node = Node(box, None)
+                power = Sensor(box, 2, "POWER")
+                trigger = Sensor(box, 3 , "TRIG")
+                led     = Sensor(box, 4, "LED")
+                self.blackbox = node
         db_session.commit()
         return True
 
@@ -432,9 +449,13 @@ class Printer(Base):
         :returns: boolean of success
 
         """
+        if self.status == state:
+            return True
         # if setting to offline, store the previous state
         if state == "offline":
             if self.status != "offline":
+                if self.status in ["printing", "paused"]:
+                    self.status = "cancelled"
                 self.prev_status = self.status
                 self.status = "offline"
                 db_session.commit()
@@ -500,6 +521,10 @@ class Printer(Base):
             return False
         if job:
             if job.position == 0:
+                if self.status == "ready" and job.status == "errored":
+                    self.jobs.remove(job)
+                    db_session.commit()
+                    return True
                 return False
             self.jobs.remove(job)
             db_session.commit()
@@ -582,8 +607,8 @@ class Printer(Base):
         }
         return d
 
-    def to_web(self):
-        """Properly formats data to be sent to the web api
+    def first_web(self):
+        """Properly formats data to be sent to the web api for registration
 
         :state: TODO
         :returns: TODO
@@ -591,11 +616,17 @@ class Printer(Base):
         """
         d = {
             "id": self.webid,
-            "friendly_id": self.id,
-            "manufacturer": self.manufacturer,
-            "model": self.model,
-            "num_jobs": self.num_jobs(),
-            "description": self.description,
+            "friendly_id": "Printer " + str(self.id),
+            "status": self.status
+        }
+        return d
+
+    def to_web(self):
+        """Properly formats printer to be sent to the web api
+
+        """
+        d = {
+            "id": self.webid,
             "status": self.status
         }
         return d
@@ -629,20 +660,47 @@ class Node(Base):
                 filter(Node.id == id).one_or_none()
         return node
 
+    @staticmethod
+    def get_all(fresh=False):
+        """Returns all the nodes in the database
+        """
+        if fresh == True:
+            db_session.remove()
+        nodes = db_session.query(Node).all()
+        return nodes
+
     def __init__(self, id, ip):
         self.id = id
         self.ip = ip
         db_session.add(self)
         db_session.commit()
 
+    def remove_sensor(self, sensor_id):
+        sensor = Sensor.get_by_id(sensor_id)
+        if sensor.node_id != self.id:
+            return False
+        self.sensors.remove(sensor)
+        db_session.commit()
+        return True
+
+    def update(self, ip=None):
+        if ip:
+            self.ip = ip
+        db_session.commit()
+        return True
+
     def set_webid(self, webid):
         self.webid = webid
         db_session.commit()
         return True
 
-    def to_web(self, data):
-        #TODO parse data to send to web
-        return None
+    def to_web(self):
+        d = {
+            "id": self.id,
+            "ip": self.ip,
+            "sensors": [sensor.to_web() for sensor in self.sensors]
+        }
+        return d
 
     def __repr__(self):
         return "<Node='%d' ip='%s')>"\
@@ -656,8 +714,8 @@ class Sensor(Base):
     node_id = Column(Integer, ForeignKey('nodes.id'))
     pin  = Column(Integer)
     sensor_type = Column(String)
-    endpoint = Column(String)
     webid = Column(Integer, unique=True)
+    value = Column(String)
 
     @staticmethod
     def get_by_webid(id, fresh=False):
@@ -665,13 +723,23 @@ class Sensor(Base):
             db_session.remove()
         sensor =\
             db_session.query(Sensor).\
+                filter(Sensor.webid == id).one_or_none()
+        return sensor
+
+    @staticmethod
+    def get_by_id(id, fresh=False):
+        if fresh == True:
+            db_session.remove()
+        sensor =\
+            db_session.query(Sensor).\
                 filter(Sensor.id == id).one_or_none()
         return sensor
 
-    def __init__(self, node_id, pin, sensor_type):
+    def __init__(self, node_id, pin, sensor_type, webid=None):
         self.node_id = node_id
         self.pin = pin
         self.sensor_type = sensor_type
+        self.webid = webid
         db_session.add(self)
         db_session.commit()
 
@@ -683,6 +751,7 @@ class Sensor(Base):
             return None
         node = Node.get_by_id(self.node_id)
         ip = node.ip
+        pin  = self.pin
         url = "http://" + ip + "/gpio/" + str(pin) + "/high"
         return url
 
@@ -694,6 +763,7 @@ class Sensor(Base):
             return None
         node = Node.get_by_id(self.node_id)
         ip = node.ip
+        pin  = self.pin
         url = "http://" + ip + "/gpio/" + str(pin) + "/low"
         return url
 
@@ -705,9 +775,32 @@ class Sensor(Base):
             return None
         node = Node.get_by_id(self.node_id)
         ip = node.ip
-        #use once node has been updated
-        #url = "http://" + ip + "/gpio/" + str(pin) + "/pwm"
-        url = "http://" + ip + "/gpio/" + str(pin) + "/pon"
+        pin  = self.pin
+        url = "http://" + ip + "/gpio/" + str(pin) + "/pwm"
+        return url
+
+    def power_on(self):
+        """Makes a URL for making a sensor of type POWER to power on.
+        returns None if wrong sensor type
+        """
+        if self.sensor_type != "POWER":
+            return None
+        node = Node.get_by_id(self.node_id)
+        ip   = node.ip
+        pin  = self.pin
+        url  = "http://" + ip + "/gpio/" + str(pin) + "/high"
+        return url
+
+    def power_off(self):
+        """Makes a URL for making a sensor of type POWER to power off.
+        returns None if wrong sensor type
+        """
+        if self.sensor_type != "POWER":
+            return None
+        node = Node.get_by_id(self.node_id)
+        ip   = node.ip
+        pin  = self.pin
+        url  = "http://" + ip + "/gpio/" + str(pin) + "/low"
         return url
 
     def door_status(self):
@@ -717,6 +810,8 @@ class Sensor(Base):
         if self.sensor_type != "DOOR":
             return None
         node = Node.get_by_id(self.node_id)
+        ip   = node.ip
+        pin  = self.pin
         url = "http://" + ip + "/gpio/" + str(pin) + "/input"
         return url
 
@@ -727,7 +822,21 @@ class Sensor(Base):
         if self.sensor_type != "TEMP":
             return None
         node = Node.get_by_id(self.node_id)
+        ip   = node.ip
+        pin  = self.pin
         url = "http://" + ip + "/gpio/" + str(pin) + "/temp"
+        return url
+    
+    def humi_status(self):
+        """Makes a URL for getting the data from a type HUMI sensor.
+        returns None if wrong sensor type
+        """
+        if self.sensor_type != "HUMI":
+            return None
+        node = Node.get_by_id(self.node_id)
+        ip   = node.ip
+        pin  = self.pin
+        url = "http://" + ip + "/gpio/" + str(pin) + "/humi"
         return url
 
     def trigger(self):
@@ -738,6 +847,8 @@ class Sensor(Base):
         if self.sensor_type != "TRIG":
             return None
         node = Node.get_by_id(self.node_id)
+        ip   = node.ip
+        pin  = self.pin
         url = "http://" + ip + "/gpio/" + str(pin) + "/trig"
         return url
 
@@ -752,52 +863,95 @@ class Sensor(Base):
             return self.temp_status()
         elif self.sensor_type == "DOOR":
             return self.door_status()
+        elif self.sensor_type == "HUMI":
+            return self.humi_status()
         return None
 
-    def temp_to_web(self, data):
+    def set_humi(self, data):
+        if self.sensor_type != "HUMI":
+            return False
+        self.value = str(data.get("humi"))
+        db_session.commit()
+        return True
+
+    def set_temp(self, data):
+        if self.sensor_type != "TEMP":
+            return False
+        self.value = str((float(data.get("temp")) * 9/5.0) + 32.0)
+        db_session.commit()
+        return True
+
+    def set_door(self, data):
+        if self.sensor_type != "DOOR":
+            return False
+        self.value = str(data.get("data"))
+        db_session.commit()
+        return True
+
+    def set_value(self, data):
+        if self.sensor_type == "HUMI":
+            return self.set_humi(data)
+        if self.sensor_type == "TEMP":
+            return self.set_temp(data)
+        if self.sensor_type == "DOOR":
+            return self.set_door(data)
+
+    def humi_to_web(self):
+        if self.sensor_type != "HUMI":
+            return None
+        d = {
+            "id": self.webid,
+            "value": str(self.value)
+        }
+        return d
+
+    def temp_to_web(self):
         """Parses the output of a sensor of type TEMP to work
         with the web api.
         returns a list of data to be sent, empty list if wrong type
         """
-        l = []
         if self.sensor_type != "TEMP":
-            return l
-        temp = data['temp']
-        humidity = data['humi']
-        id = self.webid
-        #TODO talk to web team about how to differentiate
-        # humidity and temperature
-
-    def door_to_web(self, data):
+            return None
+        d = {
+            "id": self.webid,
+            "value": str(self.value)
+        }
+        return d
+    
+    def door_to_web(self):
         """Parses the output of a sensor of type DOOR to work
         with the web api.
         returns a list of data to be sent, empty list if wrong type
         """
-        l = []
         if self.sensor_type != "DOOR":
-            return l
-        status = data['data']
+            return None
         d = {
             "id": self.webid,
-            "category": "door",
+            "value": int(self.value)
         }
-        if status == 0:
-            d['reading'] = 'open'
-        elif status == 1:
-            d['reading'] = 'closed'
-        else:
-            return l
-        l.append(d)
-        return l
+        return d
 
-    def to_web(self, data):
+    def to_web(self):
         """Parses the output of a sensor's data to work with
         the web api. Parsing is based on sensor type
         returns a list of data to send to webapi
         """
         if self.sensor_type == "DOOR":
-            return self.door_to_web(data)
-        return None
+            return self.door_to_web()
+        elif self.sensor_type == "TEMP":
+            return self.temp_to_web()
+        elif self.sensor_type == "HUMI":
+            return self.humi_to_web()
+        return self.to_dict()
+    
+    def to_dict(self):
+        d = {
+            "id": self.webid,
+            "type": self.sensor_type,
+            "pin": self.pin,
+            "value": self.value
+            }
+        return d
 
 
     def __repr__(self):

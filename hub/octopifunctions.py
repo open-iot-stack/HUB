@@ -352,7 +352,9 @@ def slice(url, api_key, file_name, path_to_store = local):
         'slicer': 'cura',
         'gcode': name + '.gcode',
         'select': 'false',
-        'print': 'false'
+        'print': 'false',
+        'profile': 'PLA config',
+        'printerProfile': 'Robo 3D'
     }
     #data ['command'] = 'slice'
     #data ['slicer'] = 'cura'

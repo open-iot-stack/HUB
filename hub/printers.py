@@ -64,6 +64,7 @@ def printers_list():
     internal = request.args.get("internal", "false")
 
     online = request.args.get('online_only', 'false')
+    online = request.args.get("online", online)
     data = {"printers": []}
     printers = data.get("printers")
     for printer in Printer.get_printers():
@@ -114,6 +115,9 @@ def add_printer():
                 port:
                   type: integer
                   description: port number to communicate on
+                box:
+                  type: integer
+                  description: UID of black box that pairs with the printer
         responses:
           201:
             description: Returns 201 created
@@ -122,31 +126,31 @@ def add_printer():
     log = hub.log
     listener = hub.printer_listeners
     id   = int(request.form.get("id"))
-    ip   = request.form.get("ip")
+    ip   = str(request.form.get("ip"))
     port = int(request.form.get("port", 80))
-    key  = request.form.get("key")
-    printer = Printer.get_by_id(id)
+    key  = str(request.form.get("key"))
+    box  = int(request.form.get("box"))
+    printer = Printer.get_by_id(id, box)
     listener = hub.printer_listeners
     if printer:
-        printer.update(ip=ip, port=port, key=key)
+        printer.update(box=box, ip=ip, port=port, key=key)
         if not listener.is_alive(id):
-            t = PrinterCollector(id, hub.Webapi)
+            t = PrinterCollector(id, hub.Webapi, hub.log)
             t.start()
             listener.add_thread(id, t)
             log.log("Printer " + str(id) + " is now online.")
             return json.jsonify({'message': 'Printer ' + str(id)
-                                            + ' is now online.'})
+                                            + ' is now online.'}),201
         if listener.is_alive(id):
             log.log("Printer " + str(id)
                     + " is already online but tried"
                     + " to activate again. Updated it's data")
-            return json.jsonify({'message': 'Printer '
-                                    + str(id)
-                                    + ' was already online.'})
+            return json.jsonify({'message': 'Printer ' + str(id)
+                                    + ' was already online.'}),201
     else:
         #Add printer to database
-        printer = Printer(id, key=key, ip=ip, port=port)
-        t = PrinterCollector(id, hub.Webapi)
+        printer = Printer(id, box, key=key, ip=ip, port=port)
+        t = PrinterCollector(id, hub.Webapi, hub.log)
         t.start()
         listener.add_thread(id, t)
         return json.jsonify({'message': 'Printer ' + str(id)
@@ -180,11 +184,11 @@ def print_action(id):
                 id:
                   type: integer
                   description: id of the command
-                type:
+                name:
                   type: string
-                  description: type of command to send [start, pause, cancel, next]
+                  description: name of command to send [start, pause, cancel, clear]
         responses:
-          200:
+          201:
             description: Returns "(action) successfully sent to the printer."
 
         """
@@ -200,7 +204,7 @@ def print_action(id):
     log = hub.log
     data = request.get_json()
     command_id = data.get("id")
-    action = data.get("type")
+    action = data.get("name")
 
     if action == "start":
         t = Command(id, log, "start",
@@ -211,12 +215,12 @@ def print_action(id):
     elif action == "cancel":
         t = Command(id, log, "cancel",
                 hub.Webapi, command_id=command_id)
-    elif action == "next":
-        t = Command(id, log, "next",
+    elif action in ["clear", "next"]:
+        t = Command(id, log, "clear",
                 hub.Webapi, command_id=command_id)
     t.start()
     return json.jsonify({"message": action
-                        + " successfully sent to the printer."})
+                        + " successfully sent to the printer."}),201
 
 @app.route('/printers/<int:id>', methods=['GET'])
 def print_status(id):
@@ -313,7 +317,7 @@ def jobs_list(id):
     printer = Printer.get_by_webid(id)
     if printer:
         jobs = {
-                "jobs": [ job.to_web(None) for job in printer.jobs]
+                "jobs": [ job.to_web() for job in printer.jobs]
         }
         return json.jsonify(jobs)
     abort(404)
@@ -372,12 +376,12 @@ def jobs_post(id):
         printer = Printer.get_by_id(id)
         printer.add_job(job)
         t = threading.Thread(target=hub.Webapi.patch_job,
-                            args=(job.to_web(None),))
+                            args=(job.to_web(),))
         t.start()
-        if printer.current_job().id == job.id:
-            t = Command(printer.id, hub.log, "start",
-                        hub.Webapi)
-            t.start()
+#        if printer.current_job().id == job.id:
+#            t = Command(printer.id, hub.log, "start",
+#                        hub.Webapi)
+#            t.start()
     else:
         abort(400)
     return json.jsonify({"message": "Job " + str(webid)
@@ -408,7 +412,7 @@ def jobs_current(id):
     if printer:
         job = printer.current_job()
         if job:
-            return json.jsonify(job.to_web(None))
+            return json.jsonify(job.to_web())
         else:
             return json.jsonify({})
     abort(404)
@@ -437,7 +441,7 @@ def get_job(job_id):
 
     job = Job.get_by_webid(job_id)
     if job:
-        return json.jsonify(job.to_dict())
+        return json.jsonify(job.to_web())
     else:
         abort(404)
 
@@ -462,17 +466,19 @@ def delete_job(job_id):
 
     job = Job.get_by_webid(job_id)
     if job:
-        printer = Printer.get_by_id(job.printer_id)
-        if printer != None:
-            if job.position == 0:
-                if printer.state("cancelled"):
-                    printer.cancel_job()
-                    payload = printer.to_web()
-                    hub.Webapi.patch_printer(payload)
-            else:
-                printer.remove_job(job_id)
-        if job.state("errored"):
-            payload = job.to_web(None)
+        printer_id = job.printer_id
+        if printer_id != None:
+            printer = Printer.get_by_id(printer_id)
+            if printer != None:
+                if job.position == 0:
+                    if printer.state("cancelled"):
+                        printer.cancel_job()
+                        payload = printer.to_web()
+                        hub.Webapi.patch_printer(payload)
+                else:
+                    printer.remove_job(job.id)
+        if job.state("cancelled"):
+            payload = job.to_web()
             hub.Webapi.patch_job(payload)
     return json.jsonify({"message": "Job " + str(job_id)
                                     + " has been deleted"}),200
