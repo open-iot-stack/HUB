@@ -675,6 +675,14 @@ class Node(Base):
         db_session.add(self)
         db_session.commit()
 
+    def remove_sensor(self, sensor_id):
+        sensor = Sensor.get_by_id(sensor_id)
+        if sensor.node_id != self.id:
+            return False
+        self.sensors.remove(sensor)
+        db_session.commit()
+        return True
+
     def update(self, ip=None):
         if ip:
             self.ip = ip
@@ -716,6 +724,15 @@ class Sensor(Base):
         sensor =\
             db_session.query(Sensor).\
                 filter(Sensor.webid == id).one_or_none()
+        return sensor
+
+    @staticmethod
+    def get_by_id(id, fresh=False):
+        if fresh == True:
+            db_session.remove()
+        sensor =\
+            db_session.query(Sensor).\
+                filter(Sensor.id == id).one_or_none()
         return sensor
 
     def __init__(self, node_id, pin, sensor_type, webid=None):
