@@ -53,7 +53,7 @@ def systemd_setup(config):
     try:
         with open("/etc/network/interfaces", "a") as f:
             f.writelines(new)
-    except OSError:
+    except IOError:
         print("Was unable to set the IP of " + interface + ".")
         print("Please set the IP manually using these settings:")
         for line in new:
