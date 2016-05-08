@@ -214,13 +214,13 @@ class Job(Base):
         """Properly formats data to be sent to the web api 
         
         """
-        if self.progress != None:
+        try:
             progress = json.loads(self.progress)
-        else:
+        except:
             progress = None
-        if self.filament != None:
+        try:
             filament = json.loads(self.filament)
-        else:
+        except:
             filament = None
         njob = {
             "id": self.webid,
