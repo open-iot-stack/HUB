@@ -3,9 +3,9 @@
 
 import threading
 import requests
-import octopifunctions as octopi
+from . import octopifunctions as octopi
 from time import sleep
-from models import Printer, Node, Job
+from .models import Printer, Node, Job
 
 class Command(threading.Thread):
 

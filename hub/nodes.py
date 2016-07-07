@@ -1,17 +1,14 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import thread
 import hub
-from chest import Chest
 from flask import request, json, url_for, abort
 from hub import app
-from dealer import NodeCollector, get_temp, get_gpio
-from database import db_session
-from models import Sensor, Node, Printer
-from tasks import Command
+from .dealer import NodeCollector, get_temp, get_gpio
+from .database import db_session
+from .models import Sensor, Node, Printer
+from .tasks import Command
 
-nodes = Chest()
 
 @app.route('/nodes/<int:node_id>', methods=['GET'])
 def node_data(node_id):
@@ -46,7 +43,6 @@ def activate_node(payload = None):
             description: Returns a list of sensors
         """
 
-    global nodes
     id   = int(request.args.get("id"))
     ip   = str(request.args.get("ip"))
     port = int(request.args.get("port", 80))

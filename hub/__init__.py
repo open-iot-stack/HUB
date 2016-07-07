@@ -1,5 +1,4 @@
 from flask import Flask, json
-from hub.config import Config
 from hub.logger import Log
 from hub.listener import Listener
 
@@ -13,7 +12,6 @@ import hub.base
 
 printer_listeners = Listener()
 node_listeners    = Listener()
-conf = Config()
 
 # These all get defined from commandline args
 log         = None

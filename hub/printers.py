@@ -4,13 +4,12 @@
 import os
 import threading
 import hub
-from chest import Chest
 from flask import request
 from flask import json
 from flask import abort
-from dealer import PrinterCollector
-from tasks import JobUploader, Command
-from models import Printer, Job, File
+from .dealer import PrinterCollector
+from .tasks import JobUploader, Command
+from .models import Printer, Job, File
 from hub import app
 
 @app.route('/printers', methods=['GET'])

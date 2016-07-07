@@ -622,7 +622,7 @@ class WebAPI(object):
                     + ' Server responded with ' + str(code) 
                     + ' on ' + url)
             ret = self.update_headers()
-            return self.callback_command(data, node_id)
+            return self.callback_command(data)
         if code != 200:
             # Catch all for if bad status codes
             log.log('ERROR: Callback command '

@@ -7,7 +7,7 @@ from datetime import datetime as dt
 from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.orderinglist import ordering_list
-from database import Base, db_session
+from .database import Base, db_session
 from flask import json
 
 class PrinterExists(Exception):

@@ -7,9 +7,9 @@ from hub import app
 from hub.database import db_session
 from flask_swagger import swagger
 
-from models import Printer
-from models import Job
-from models import File
+from .models import Printer
+from .models import Job
+from .models import File
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):

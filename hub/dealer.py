@@ -4,12 +4,12 @@
 import hub
 import threading
 import requests
-import webapi
-import octopifunctions as octopi
+from . import webapi
+from . import octopifunctions as octopi
 from time import sleep
 from flask import json
-from models import Printer, Node, Job
-from tasks import Command
+from .models import Printer, Node, Job
+from .tasks import Command
 from hub import app
 
 class PrinterCollector(threading.Thread):

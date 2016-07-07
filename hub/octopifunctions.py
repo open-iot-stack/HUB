@@ -504,7 +504,7 @@ def connect(url, api_key, name):
 if __name__ == "__main__":
 ##################################### DELETE THESE, ONLY USED FOR TESTING #####################################
 
-    print '\n'
+    print('\n')
 #this is an stl file that will be used to test printing through the octopi
     pathToFile = 'C:\\Users\\aaron\\Projects\\octopi\\rpi2-bottom_8020_netfabb.stl'
 #print 'Valid filepath? -' + str(os.path.isfile(pathToFile))
@@ -525,14 +525,14 @@ if __name__ == "__main__":
 #print '\n'
 
 ##################### RECIEVING 400 : bad request
-    print 'testing upload_file:'
-    print upload_file(testingOctopiUrl, testingApiKey, pathToFile)
-    print '\n'
+    print('testing upload_file:')
+    print(upload_file(testingOctopiUrl, testingApiKey, pathToFile))
+    print('\n')
 
 ##################### RECIEVING 400 : bad request
-    print 'testing upload_file_and_print:'
-    print upload_file_and_print(testingOctopiUrl, testingApiKey, pathToFile, local)
-    print '\n'
+    print('testing upload_file_and_print:')
+    print(upload_file_and_print(testingOctopiUrl, testingApiKey, pathToFile, local))
+    print('\n')
 
 ###################### THIS IS WORKING 
 #print 'testing GetonOneFileInfo:'
@@ -555,33 +555,33 @@ if __name__ == "__main__":
 #print '\n'
     
 ##################### NEEDS FUTHER TESTING ############# May need a slicer? getting 405, method not allowed
-    print 'testing command_slice:'
-    print command_slice(testingOctopiUrl, testingApiKey, pathToSampleStl)
-    print '\n'
+    print('testing command_slice:')
+    print(command_slice(testingOctopiUrl, testingApiKey, pathToSampleStl))
+    print('\n')
 
 
 ############################ TESTING JOB OPERATIONS #################################
 
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-    print 'testing Start Command:'
-    print start_command(testingOctopiUrl, testingApiKey)
-    print '\n'
+    print('testing Start Command:')
+    print(start_command(testingOctopiUrl, testingApiKey))
+    print('\n')
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-    print 'testing Pause Command:'
-    print PauseCommand(testingOctopiUrl, testingApiKey)
-    print '\n'
+    print('testing Pause Command:')
+    print(PauseCommand(testingOctopiUrl, testingApiKey))
+    print('\n')
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-    print 'testing Restart Command:'
-    print restart_command(testingOctopiUrl, testingApiKey)
-    print '\n'
+    print('testing Restart Command:')
+    print(restart_command(testingOctopiUrl, testingApiKey))
+    print('\n')
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-    print 'testing Cancel Command:'
-    print cancel_command(testingOctopiUrl, testingApiKey)
-    print '\n'
+    print('testing Cancel Command:')
+    print(cancel_command(testingOctopiUrl, testingApiKey))
+    print('\n')
 
 ###################### THIS IS WORKING 
 #print 'testing Get Job Info:'

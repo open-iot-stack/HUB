@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-import thread
+import threading
 import datetime
 
 class Log(object):
@@ -14,15 +14,15 @@ class Log(object):
 
         self._print = print_enabled
         self._fname = fname
-        self._flock = thread.allocate_lock()
+        self._flock = threading.Lock()
         if not os.path.isfile(self._fname):
             try:
                 f = open(self._fname, "a")
             except IOError:
-                print("Unable to create log file."
+                print(("Unable to create log file."
                       + " Please make sure nothing named "
-                      + self._fname 
-                      + " exists.")
+                      + self._fname
+                      + " exists."))
             f.close()
 
 
