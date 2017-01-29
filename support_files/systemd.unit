@@ -1,5 +1,5 @@
 [Unit]
-Description=StratusPrint Printer Connection Manager
+Description=Open Iot Printer Connection Manager
 
 [Service]
 Type=simple

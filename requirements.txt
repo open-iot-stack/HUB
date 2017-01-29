@@ -1,3 +1,7 @@
 flask
 flask-swagger
 flask_sqlalchemy
+werkzeug
+jinja2
+itsdangerous
+click

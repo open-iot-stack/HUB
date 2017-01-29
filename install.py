@@ -89,7 +89,7 @@ if __name__ == "__main__":
     dhost      = "0.0.0.0"
     dthreaded  = "true"
     dinterface = "wlan0"
-    dip        = "192.168.0.1"
+    dip        = "192.168.42.1"
     dssid      = "IOT-HUB"
     config     = raw_input("Config File["+dconfig+"]:")
     url        = raw_input("WebAPI URL["+durl+"]:")
@@ -101,8 +101,8 @@ if __name__ == "__main__":
     port       = raw_input("Port ["+dport+"]:")
     host       = raw_input("Host ["+dhost+"]:")
     if apikey == "":
-        print("No API key was entered...Exiting")
-        exit(1)
+        print("Warning No API key was entered")
+        apikey = "NO-KEY"
     if config == "":
         config = dconfig
     if url == "":
