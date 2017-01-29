@@ -16,7 +16,7 @@ clone this repo to where you see fit, for example: /home/$USER/git/
 #####--Config File:
 The name of the file that the configuration settings should be saved. (arguments.config by default)
 #####--Web API URL:
-URL of the Web API. (https://dev.api.stratusprint.com/v1 by default)
+URL of the Web API.
 #####--Web API Key:
 The API Key for the hub assigned by the Web Control Panel. Is needed to update the Web Control Panel.
 #####--Access Point SSID:

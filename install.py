@@ -19,7 +19,7 @@ def systemd_setup(config):
             line = line.replace("<DIRECTORY>",cwd)
             line = line.replace("<COMMAND>", command)
             new.append(line)
-    with open("/lib/systemd/system/stratusprint-hub.service", "w+") as f:
+    with open("/lib/systemd/system/iot-hub.service", "w+") as f:
         f.writelines(new)
     print("Finished installing webserver, now conifiguring hostapd and dnsmasq")
     new = []
@@ -42,7 +42,7 @@ def systemd_setup(config):
         f.writelines(new)
     with open("/dev/null","w") as out:
         subprocess.call(['systemctl','daemon-reload'],stdout=out)
-        subprocess.call(['systemctl','enable','stratusprint-hub.service'],stdout=out)
+        subprocess.call(['systemctl','enable','iot-hub.service'],stdout=out)
         subprocess.call(['systemctl','enable','dnsmasq.service'],stdout=out)
         subprocess.call(['systemctl','enable','hostapd.service'],stdout=out)
     new = []
@@ -61,7 +61,7 @@ def systemd_setup(config):
     return True
 
 def initd_setup(config):
-    script_path = "/etc/init.d/stratusprint-hub"
+    script_path = "/etc/init.d/iot-hub"
     new = []
     cwd = os.getcwd()
     command = "/usr/bin/python2 " + cwd + "/runserver.py -c " + config
@@ -74,7 +74,7 @@ def initd_setup(config):
         f.writelines(new)
     os.chmod(script_path, 0755)
     with open("/dev/null","w") as out:
-        subprocess.call(["update-rc.d","stratusprint-hub","defaults"])
+        subprocess.call(["update-rc.d","iot-hub","defaults"])
     return True
 
 if __name__ == "__main__":
@@ -84,13 +84,13 @@ if __name__ == "__main__":
 
     support_dir = "support_files/"
     dconfig    = "arguments.config"
-    durl       = "https://dev.api.stratusprint.com/v1"
+    durl       = "https://home.nolanfoster.me/v1"
     dport      = "5000"
     dhost      = "0.0.0.0"
     dthreaded  = "true"
     dinterface = "wlan0"
     dip        = "192.168.0.1"
-    dssid      = "StratusPrint"
+    dssid      = "IOT-HUB"
     config     = raw_input("Config File["+dconfig+"]:")
     url        = raw_input("WebAPI URL["+durl+"]:")
     apikey     = raw_input("WebAPI Key[REQUIRED]:")
@@ -128,12 +128,7 @@ if __name__ == "__main__":
         print("Finished systemd setup")
         run = raw_input("All set, run now and test? [y/n]:")
         if run.lower() in ["y", "yes"]:
-            subprocess.call(['systemctl','start','stratusprint-hub'])
+            subprocess.call(['systemctl','start','iot-hub'])
     else:
         print("Installation on non-systemd linux is not supported...Exiting")
         exit(1)
-    #elif initd_setup(config):
-    #    print("Finished initd setup")
-    #    run = raw_input("All set, run now and test? [y/n]:")
-    #    if run.lower() in ["y", "yes"]:
-    #        subprocess.call(['service','stratusprint-hub','start'])

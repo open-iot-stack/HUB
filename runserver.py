@@ -1,11 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import os
-import hub
-import sys
-import getopt
-import thread
+import os, hub, sys, getopt, thread
 from hub import app
 from hub.logger import Log
 from hub.webapi import WebAPI
