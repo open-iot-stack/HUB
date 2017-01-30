@@ -10,6 +10,7 @@ app.config['UPLOAD_FOLDER'] = "uploads/"
 import hub.printers
 import hub.nodes
 import hub.base
+import hub.wink
 
 printer_listeners = Listener()
 node_listeners    = Listener()
@@ -19,7 +20,7 @@ conf = Config()
 log         = None
 SND_PASSWD  = None
 WEB_API_KEY = None
-WEB_API_URL = 'https://dev.api.stratusprint.com/v1'
+WEB_API_URL = 'https://home.nolanfoster.me/v1'
 ID         = 0
 Webapi = None
 #TODO get correct ID

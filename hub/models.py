@@ -99,7 +99,7 @@ class Job(Base):
         if fresh == True:
             db_session.remove()
         job =\
-            db_session.query(Job).filter(Job.id == id).one_or_none()
+            db_session.query(Job).filter(Job.id == id).first()
         return job
 
     @staticmethod
@@ -113,7 +113,7 @@ class Job(Base):
             db_session.remove()
         job =\
             db_session.query(Job).\
-                filter(Job.webid == webid).one_or_none()
+                filter(Job.webid == webid).first()
         return job
 
     def __init__(self, webid, status="queued"):
@@ -211,8 +211,8 @@ class Job(Base):
         return True
 
     def to_web(self):
-        """Properly formats data to be sent to the web api 
-        
+        """Properly formats data to be sent to the web api
+
         """
         try:
             progress = json.loads(self.progress)
@@ -280,7 +280,7 @@ class Printer(Base):
             db_session.remove()
         printer =\
             db_session.query(Printer).\
-                filter(Printer.id == id).one_or_none()
+                filter(Printer.id == id).first()
         return printer
 
     @staticmethod
@@ -294,7 +294,7 @@ class Printer(Base):
             db_session.remove()
         printer =\
             db_session.query(Printer).\
-                filter(Printer.webid == webid).one_or_none()
+                filter(Printer.webid == webid).first()
         return printer
 
     @staticmethod
@@ -354,7 +354,7 @@ class Printer(Base):
         """Update data on printer
         :ip: IP address to set to
         :port: Port to set to
-        :status: Status to set to. Must be in 
+        :status: Status to set to. Must be in
             ["ready", "paused", "printing", "errored",
             "offline", "cancelled", "completed"]:
         :returns: Boolean of sucess
@@ -443,7 +443,7 @@ class Printer(Base):
 
     def state(self, state):
         """Sets the status of the printer
-        :state: Status to set to. Must be in 
+        :state: Status to set to. Must be in
             ["ready", "paused", "printing", "errored",
             "offline", "cancelled", "completed"]:
         :returns: boolean of success
@@ -481,7 +481,7 @@ class Printer(Base):
 
     def add_job(self, job, position=-1):
         """Add a job to the printer. This will set it to the position.
-        If another job is in that location, it bumps it back. Cannot add 
+        If another job is in that location, it bumps it back. Cannot add
         to front of queue
         :job: Adds job to the the printer queue
         :position: Position to be added to the queue. If -1, appends
@@ -590,7 +590,7 @@ class Printer(Base):
     def to_dict(self):
         """Returns a dictionary object that represents the printer
         :returns: dictionary
-        
+
         """
         d = {
                 "id": self.id,
@@ -657,7 +657,7 @@ class Node(Base):
             db_session.remove()
         node =\
             db_session.query(Node).\
-                filter(Node.id == id).one_or_none()
+                filter(Node.id == id).first()
         return node
 
     @staticmethod
@@ -706,11 +706,51 @@ class Node(Base):
         return "<Node='%d' ip='%s')>"\
                 % (self.id, self.ip)
 
+class Account(Base):
+    __tablename__="accounts"
+    account_name = Column(String, primary_key=True)
+    web_token = Column(String)
+    web_refresh_token = Column(String)
+    token_endpoint = Column(String)
+
+    def __init__(self, account_name, web_token, web_refresh_token,
+                    token_endpoint):
+        self.account_name = account_name
+        self.web_token = web_token
+        self.web_refresh_token = web_refresh_token
+        self.token_endpoint = token_endpoint
+        db_session.add(self)
+        db_session.commit()
+
+    @staticmethod
+    def get_by_name(name, fresh=False):
+        if fresh == True:
+            db_session.remove()
+        account =\
+            db_session.query(Account).\
+                filter(Account.account_name == name).first()
+        return account
+
+    def update(self, web_token=None, web_refresh_token=None):
+        if web_token and web_refresh_token:
+            self.web_token = web_token
+            self.web_refresh_token = web_refresh_token
+        db_session.commit()
+        return True
+
+    def to_dict(self):
+        d = {
+            "account_name": self.account_name,
+            "web_token": self.web_token,
+            "web_refresh_token": self.web_refresh_token,
+            "token_endpoint": self.token_endpoint,
+            }
+        return d
 
 class Sensor(Base):
     __tablename__="sensors"
 
-    id   = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
     node_id = Column(Integer, ForeignKey('nodes.id'))
     pin  = Column(Integer)
     sensor_type = Column(String)
@@ -723,7 +763,7 @@ class Sensor(Base):
             db_session.remove()
         sensor =\
             db_session.query(Sensor).\
-                filter(Sensor.webid == id).one_or_none()
+                filter(Sensor.webid == id).first()
         return sensor
 
     @staticmethod
@@ -732,7 +772,7 @@ class Sensor(Base):
             db_session.remove()
         sensor =\
             db_session.query(Sensor).\
-                filter(Sensor.id == id).one_or_none()
+                filter(Sensor.id == id).first()
         return sensor
 
     def __init__(self, node_id, pin, sensor_type, webid=None):
@@ -826,7 +866,7 @@ class Sensor(Base):
         pin  = self.pin
         url = "http://" + ip + "/gpio/" + str(pin) + "/temp"
         return url
-    
+
     def humi_status(self):
         """Makes a URL for getting the data from a type HUMI sensor.
         returns None if wrong sensor type
@@ -840,7 +880,7 @@ class Sensor(Base):
         return url
 
     def trigger(self):
-        """Makes a URL for setting a sensor of type TRIG to enter 
+        """Makes a URL for setting a sensor of type TRIG to enter
         triggered mode.
         returns None if wrong sensor type
         """
@@ -917,7 +957,7 @@ class Sensor(Base):
             "value": str(self.value)
         }
         return d
-    
+
     def door_to_web(self):
         """Parses the output of a sensor of type DOOR to work
         with the web api.
@@ -943,7 +983,7 @@ class Sensor(Base):
         elif self.sensor_type == "HUMI":
             return self.humi_to_web()
         return self.to_dict()
-    
+
     def to_dict(self):
         d = {
             "id": self.webid,

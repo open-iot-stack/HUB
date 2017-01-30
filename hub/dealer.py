@@ -304,56 +304,57 @@ class NodeCollector(threading.Thread):
                 log.log("NodeCollector for node " + str(id)
                         + " was requested to stop. Exiting...")
                 return 0
-            for sensor in sensors:
-                pin         = sensor.pin
-                webid       = sensor.webid
-                sensor_type = sensor.sensor_type
-                if pin == None or sensor_type == None:
-                    continue
-                if sensor_type in ["TEMP", "DOOR", "HUMI", "TRIG"]:
-                    url = sensor.get_url()
-                elif sensor_type in ["LED"]:
-                    printer = Printer.get_by_id(node.printer_id)
-                    if printer:
-                        if printer.status in ["completed", "cancelled"]:
-                            url = sensor.led_flash()
+            if ip != '0':
+                for sensor in sensors:
+                    pin         = sensor.pin
+                    webid       = sensor.webid
+                    sensor_type = sensor.sensor_type
+                    if pin == None or sensor_type == None:
+                        continue
+                    if sensor_type in ["TEMP", "DOOR", "HUMI", "TRIG"]:
+                        url = sensor.get_url()
+                    elif sensor_type in ["LED"]:
+                        printer = Printer.get_by_id(node.printer_id)
+                        if printer:
+                            if printer.status in ["completed", "cancelled"]:
+                                url = sensor.led_flash()
+                            else:
+                                url = sensor.led_on()
                         else:
-                            url = sensor.led_on()
+                            continue
+                    elif sensor_type in ["POWER"]:
+                        url = sensor.power_on()
                     else:
                         continue
-                elif sensor_type in ["POWER"]:
-                    url = sensor.power_on()
-                else:
-                    continue
-                try:
-                    response = requests.get(url, timeout=10)
-                except requests.ConnectionError:
-                    log.log("ERROR: Could not connect to " + url)
-                    response = None
-                except requests.exceptions.Timeout:
-                    log.log("ERROR: Timeout occured on " + url)
-                    response = None
-                if response == None:
-                    failures += 1
-                    if failures > 10:
-                        log.log("ERROR: Could not collect"
-                                + " sensor data from node " + str(id)
-                                + ". NodeCollector exiting...")
-                        return -1
-                    continue
-                if response.status_code != 200:
-                    log.log("ERROR Response from " 
-                            + str(id) + " returned status code "
-                            + str(response.status_code) + " on "
-                            + response.url)
-                else:
-                    recent_json = response.json()
-                    ret = sensor.set_value(recent_json)
-                    data = sensor.to_web()
-                    if data != None and data.get("id") != None:
-                        webapi.add_data(data)
+                    try:
+                        response = requests.get(url, timeout=10)
+                    except requests.ConnectionError:
+                        log.log("ERROR: Could not connect to " + url)
+                        response = None
+                    except requests.exceptions.Timeout:
+                        log.log("ERROR: Timeout occured on " + url)
+                        response = None
+                    if response == None:
+                        failures += 1
+                        if failures > 10:
+                            log.log("ERROR: Could not collect"
+                                    + " sensor data from node " + str(id)
+                                    + ". NodeCollector exiting...")
+                            return -1
+                        continue
+                    if response.status_code != 200:
+                        log.log("ERROR Response from "
+                                + str(id) + " returned status code "
+                                + str(response.status_code) + " on "
+                                + response.url)
+                    else:
+                        recent_json = response.json()
+                        ret = sensor.set_value(recent_json)
+                        data = sensor.to_web()
+                        if data != None and data.get("id") != None:
+                            webapi.add_data(data)
+                    sleep(3)
                 sleep(3)
-            sleep(3)
 
 
 def get_temp(node_ip, gpio):

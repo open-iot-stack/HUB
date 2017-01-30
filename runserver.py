@@ -105,5 +105,5 @@ for node in Node.get_all():
     t  = NodeCollector(id, hub.Webapi, hub.log)
     t.start()
     hub.node_listeners.add_thread(id, t)
-hub.Webapi.update_nodes(updates)
+#hub.Webapi.update_nodes(updates)
 app.run(host=host, debug=debug, port=port,threaded=threaded)
