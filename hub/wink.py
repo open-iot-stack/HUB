@@ -14,10 +14,6 @@ import sys
 global log
 
 log = Log()
-@app.route("/wink", methods=['POST'])
-def test():
-    return "{'Hello!'}"
-
 
 @app.route("/wink/login", methods=['POST'])
 def login():
@@ -53,6 +49,7 @@ def login():
         devices = get_all_devices(account)
         channels = []
         sub_key = ''
+
 
         node_id = ''
         for device in devices['data']:
@@ -141,6 +138,7 @@ def subcribe_devices_to_pub_nub(sub_key, channels):
         response = json.loads(message)
         sensor = Sensor.get_by_webid(response['uuid'])
         sensor.update(message)
+        log.log("Pubnub Error: "+message)
 
     def error(message):
         log.log("Pubnub Error: "+message)

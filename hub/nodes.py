@@ -167,8 +167,11 @@ def node_sensors(node_id):
         d = {'id': result.id,
              'node_id': result.node_id,
              'pin': result.pin,
-             'sensor_type': result.sensor_type}
+             'sensor_type': result.sensor_type }
+        if result.value:
+            d.update(json.loads(result.value))
         json_results.append(d)
+
     return json.jsonify(sensors = json_results)
 
 
