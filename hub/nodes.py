@@ -1,15 +1,15 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import thread
+import threading
 import hub
-from chest import Chest
+from hub.chest import Chest
 from flask import request, json, url_for, abort
 from hub import app
-from dealer import NodeCollector, get_temp, get_gpio
-from database import db_session
-from models import Sensor, Node, Printer
-from tasks import Command
+from hub.dealer import NodeCollector, get_temp, get_gpio
+from hub.database import db_session
+from hub.models import Sensor, Node, Printer
+from hub.tasks import Command
 
 nodes = Chest()
 

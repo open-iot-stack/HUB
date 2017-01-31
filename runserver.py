@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import os, hub, sys, getopt, thread
+import os, hub, sys, getopt, _thread
 from hub import app
 from hub.logger import Log
 from hub.webapi import WebAPI
@@ -30,13 +30,13 @@ def set_args(args):
                     "port=","debug","host=",
                     "threaded","verbose","weburl=",
                     "config="])
-    except getopt.GetoptError, err:
+    except getopt.GetoptError as err:
         # Print debug info
-        print str(err)
+        print (str(err))
         sys.exit(2)
     for opt, arg in opts:
         if opt in ["-h", "--help"]:
-            print "Usage: Server.py"\
+            print ("Usage: Server.py"\
             + "\n    -c/--config <arguments.config file>"\
             + "\n           load config file for arguments. "\
             + "\n           each argument on it's own line"\
@@ -49,7 +49,7 @@ def set_args(args):
             + "\n    -d/--debug"\
             + "\n    -h/--help"\
             + "\n    -t/--threaded"\
-            + "\n    -v/--verbose"
+            + "\n    -v/--verbose")
             sys.exit(0)
         elif opt in ["-c", "--config"]:
             config = arg

@@ -6,3 +6,4 @@ jinja2
 itsdangerous
 click
 pubnub
+thread

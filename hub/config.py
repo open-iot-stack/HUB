@@ -3,10 +3,10 @@
 
 import os
 import sys
-import thread
+import _thread
 
 class Config():
-    """Config is a class that will be able to interact with 
+    """Config is a class that will be able to interact with
     the configuration. This is to add an API layer for the
     config implementation"""
 
@@ -16,7 +16,7 @@ class Config():
         if fpath:
             self._fpath = fpath
         self._fpath = ".config" # file path of the config file
-        self._flock = thread.allocate_lock() # file lock in case shared across threads
+        self._flock = _thread.allocate_lock() # file lock in case shared across threads
         self._modified = True
         self._cache = {}
 
@@ -53,7 +53,7 @@ class Config():
                 try:
                     uuid, chip_type = line.replace('\n', '').split(" ")
                 except ValueError:
-                    print "Too many spaces in config file, please check", fpath
+                    print ("Too many spaces in config file, please check", fpath)
                     exit()
                 uuid = int(uuid)
                 u_types[uuid] = chip_type
@@ -85,7 +85,7 @@ class Config():
                 try:
                     uuid, chip_type = line.replace('\n', '').split(" ")
                 except ValueError:
-                    print "Too many spaces in config file, please check", fpath
+                    print ("Too many spaces in config file, please check", fpath)
                     exit()
                 uuid = int(uuid)
                 u_types[uuid] = chip_type
@@ -166,18 +166,18 @@ def dict_shared(dict1, dict2):
 if __name__ == '__main__':
     config = Config()
     #print str(config.read_data())
-    print config.load_data()
-    print config.add_data({"21513": "camera"})
-    print str(config.read_data())
-    print config.add_data({"21141": "camera"})
-    print str(config.read_data())
-    print str(config.read_data())
-    print config.add_data({"21141": "temperature"})
-    print str(config.read_data())
-    print config.add_data({"13513": "time"})
-    print str(config.read_data())
-    print config.update_data({"21513": "temperature"})
-    print str(config.read_data())
-    print config.add_data({"21212": "camera"})
-    print config.update_data({"21212": "temperature"})
-    print str(config.read_data())
+    print (config.load_data())
+    print (config.add_data({"21513": "camera"}))
+    print (str(config.read_data()))
+    print (config.add_data({"21141": "camera"}))
+    print (str(config.read_data()))
+    print (str(config.read_data()))
+    print (config.add_data({"21141": "temperature"}))
+    print (str(config.read_data()))
+    print (config.add_data({"13513": "time"}))
+    print (str(config.read_data()))
+    print (config.update_data({"21513": "temperature"}))
+    print (str(config.read_data()))
+    print (config.add_data({"21212": "camera"}))
+    print (config.update_data({"21212": "temperature"}))
+    print (str(config.read_data()))
