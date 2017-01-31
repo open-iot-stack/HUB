@@ -138,7 +138,7 @@ def subcribe_devices_to_pub_nub(sub_key, channels):
         response = json.loads(message)
         sensor = Sensor.get_by_webid(response['uuid'])
         sensor.update(message)
-        log.log("Pubnub Error: "+message)
+        log.log("Pubnub callback: "+message)
 
     def error(message):
         log.log("Pubnub Error: "+message)

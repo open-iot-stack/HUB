@@ -1,8 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import os
-import subprocess
+import os, subprocess, stat
 from getpass import getuser
 
 def systemd_setup(config):
@@ -13,7 +12,7 @@ def systemd_setup(config):
         return False
     new = []
     cwd = os.getcwd()
-    command = "/usr/bin/python2 " + cwd + "/runserver.py -c " + config
+    command = "/usr/bin/python3 " + cwd + "/runserver.py -c " + config
     with open(support_dir + "systemd.unit", "r") as f:
         for line in f:
             line = line.replace("<DIRECTORY>",cwd)
@@ -72,7 +71,7 @@ def initd_setup(config):
             new.append(line)
     with open(script_path, "w+") as f:
         f.writelines(new)
-    os.chmod(script_path, 0755)
+    os.chmod(script_path, stat.S_IRRWXU)
     with open("/dev/null","w") as out:
         subprocess.call(["update-rc.d","iot-hub","defaults"])
     return True
@@ -91,15 +90,15 @@ if __name__ == "__main__":
     dinterface = "wlan0"
     dip        = "192.168.42.1"
     dssid      = "IOT-HUB"
-    config     = raw_input("Config File["+dconfig+"]:")
-    url        = raw_input("WebAPI URL["+durl+"]:")
-    apikey     = raw_input("WebAPI Key[REQUIRED]:")
-    ssid       = raw_input("Access Point SSID["+dssid+"]:")
-    password   = raw_input("Access Point Password[REQUIRED]:")
-    interface  = raw_input("Interface["+dinterface+"]:")
-    ip         = raw_input("Interface IP["+dip+"]:")
-    port       = raw_input("Port ["+dport+"]:")
-    host       = raw_input("Host ["+dhost+"]:")
+    config     = input("Config File["+dconfig+"]:")
+    url        = input("WebAPI URL["+durl+"]:")
+    apikey     = input("WebAPI Key[REQUIRED]:")
+    ssid       = input("Access Point SSID["+dssid+"]:")
+    password   = input("Access Point Password[REQUIRED]:")
+    interface  = input("Interface["+dinterface+"]:")
+    ip         = input("Interface IP["+dip+"]:")
+    port       = input("Port ["+dport+"]:")
+    host       = input("Host ["+dhost+"]:")
     if apikey == "":
         print("Warning No API key was entered")
         apikey = "NO-KEY"
@@ -126,7 +125,7 @@ if __name__ == "__main__":
                       "-t"                    + "\n"])
     if systemd_setup(config):
         print("Finished systemd setup")
-        run = raw_input("All set, run now and test? [y/n]:")
+        run = input("All set, run now and test? [y/n]:")
         if run.lower() in ["y", "yes"]:
             subprocess.call(['systemctl','start','iot-hub'])
     else:

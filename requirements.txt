@@ -5,5 +5,5 @@ werkzeug
 jinja2
 itsdangerous
 click
-pubnub
-thread
+'pubnub>3,<4'
+
