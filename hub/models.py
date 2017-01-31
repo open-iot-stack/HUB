@@ -7,7 +7,7 @@ from datetime import datetime as dt
 from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.orderinglist import ordering_list
-from database import Base, db_session
+from hub.database import Base, db_session
 from flask import json
 
 class PrinterExists(Exception):
@@ -775,13 +775,22 @@ class Sensor(Base):
                 filter(Sensor.id == id).first()
         return sensor
 
-    def __init__(self, node_id, pin, sensor_type, webid=None):
+    def __init__(self, node_id, pin, sensor_type, webid=None, value=None):
         self.node_id = node_id
         self.pin = pin
         self.sensor_type = sensor_type
         self.webid = webid
+        self.value
         db_session.add(self)
         db_session.commit()
+
+    def update(self, value):
+        if value:
+            self.value = value
+            db_session.commit()
+            return True
+        else:
+            return False
 
     def led_on(self):
         """Makes a URL for making a sensor of type LED to stay on.

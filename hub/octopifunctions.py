@@ -81,7 +81,7 @@ slicer_profile_extension = '/api/slicing/cura/profiles' #Note: normally, slicer 
 #           'command':'init'
 #           'command':'refresh'
 #           'command':'release'
-#       Retrieve SD State 
+#       Retrieve SD State
 #   Printer Profile API Calls:
 #       Retrieve all Printer Profiles
 #       Add new Printer Profile
@@ -102,9 +102,9 @@ slicer_profile_extension = '/api/slicing/cura/profiles' #Note: normally, slicer 
 #   Function Name: http_request
 #   Function Description:
 #       -Calls sends (any) http request to The octopi
-#   Parameter [0]: url_address {string} URL of pi 
+#   Parameter [0]: url_address {string} URL of pi
 #        ex) '169.254.212.2'
-#   Parameter [1]: apiExtension {string} URL to be added to url_address 
+#   Parameter [1]: apiExtension {string} URL to be added to url_address
 #        ex) '/api/files'
 #   Parameter [2]: params {dict} parameters passed into HTTP request
 #        ex) {'file': file_to_upload, 'print':True}
@@ -140,7 +140,7 @@ def http_request(address, api_extension,
 
 ##################################### PUBLIC METHODS #####################################
 
-    
+
 ############################ FILE OPERATIONS #################################
 
 
@@ -148,7 +148,7 @@ def http_request(address, api_extension,
 #   Function Name: GetAllFiles
 #   Function Description:
 #       -Creates http request to The octopi to view all files
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
@@ -158,13 +158,13 @@ def http_request(address, api_extension,
 def get_all_files(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}
     return http_request(url, files_extension, type_get, header)
- 
- 
+
+
  #########################################################################
 #   Function Name: GetAllFilesFromLocation
 #   Function Description:
 #       -Creates http request to The octopi to view all files in a directory
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
@@ -176,13 +176,13 @@ def get_all_files(url, api_key):
 def get_all_files_from_location(url, api_key, path = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}
     return http_request(url, files_extension + path, type_get, header)
-       
+
 
  #########################################################################
 #   Function Name: upload_file
 #   Function Description:
 #       -Uploads a File to either the Octopi, or the SD in the Printer
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
@@ -202,8 +202,8 @@ def upload_file(url, api_key, file_path, path_to_store = local):
         'print':'false',
     }
     return http_request(url, files_extension + path_to_store, type_post, header,
-                            params=params, files=files) 
-    
+                            params=params, files=files)
+
 def upload_file_and_select(url, api_key, file_path, path_to_store = local):
     """uploads a file to the octopi and selects it"""
     header = {'Host': 'example.com', 'X-Api-Key': api_key}
@@ -212,12 +212,12 @@ def upload_file_and_select(url, api_key, file_path, path_to_store = local):
     files = {'file': (fname, file_to_upload, 'application/octet-stream')}
     return http_request(url, files_extension + path_to_store, type_post, header,
                             files=files, data=data)
-    
+
  #########################################################################
 #   Function Name: upload_file_and_print
 #   Function Description:
-#       -Uploads a File to either the Octopi, or the SD in the Printer, then selects the file and prints it 
-#   Parameter [0]: url {string} URL of pi 
+#       -Uploads a File to either the Octopi, or the SD in the Printer, then selects the file and prints it
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
@@ -234,13 +234,13 @@ def upload_file_and_print(url, api_key, file_path, path_to_store = local):
     files = {'file': (fname, file_to_upload, 'application/octet-stream')}
     data = {'print': "true"}
     return http_request(url, files_extension +path_to_store, type_post, header,
-                            data=data, files=files) 
-    
+                            data=data, files=files)
+
  #########################################################################
 #   Function Name: get_one_file_info
 #   Function Description:
 #       -Retrieves information of a file
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
@@ -253,13 +253,13 @@ def get_one_file_info(url, api_key, name, path = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}
     endpoint = files_extension + path + "/" + name
     return http_request(url, endpoint, type_get, header)
-    
-    
+
+
  #########################################################################
 #   Function Name: delete_file
 #   Function Description:
 #       -deletes a file on the octopi (or sd card in the 3D printer)
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
@@ -269,26 +269,26 @@ def get_one_file_info(url, api_key, name, path = local):
 #       On fail, it returns the response code and response reason
  #########################################################################
 def delete_file(url, api_key, file_name, path=local):
-    header = { 'Host': 'example.com', 'X-Api-Key': api_key}    
+    header = { 'Host': 'example.com', 'X-Api-Key': api_key}
     endpoint = files_extension + path + "/" + file_name
     return http_request(url, endpoint, type_delete, header)
-    
-    
+
+
  #########################################################################
 #   Function Name: command_select
 #   Function Description:
 #       -Selects a file on the octopi (or sd card in the 3D printer)
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
 #   Parameter [2]: path {string} path of file to delete
 #        ex) '/local/4_1_16/rpi_case.stl'
-#   retVal: result of the http_request, On success, returns response status 200 
+#   retVal: result of the http_request, On success, returns response status 200
 #       On fail, it returns the response code and response reason
- #########################################################################  
+ #########################################################################
 def command_select(url, api_key, path):
-    header = { 
+    header = {
             'Host': 'example.com',
             'X-Api-Key': api_key,
             'Content-Type': 'application/json'
@@ -305,15 +305,15 @@ def command_select(url, api_key, path):
 #   Function Name: select_and_print
 #   Function Description:
 #       -Selects a file on the octopi (or sd card in the 3D printer) and then prints it
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
 #   Parameter [2]: path {string} path of file to delete
 #        ex) '/local/4_1_16/rpi_case.stl'
-#   retVal: result of the http_request, On success, returns response status 200 
+#   retVal: result of the http_request, On success, returns response status 200
 #       On fail, it returns the response code and response reason
- #########################################################################  
+ #########################################################################
 def select_and_print(url, api_key, file_name, path = local):
     header = {
         'Host': 'example.com',
@@ -326,21 +326,21 @@ def select_and_print(url, api_key, file_name, path = local):
     }
     endpoint = files_extension + path + "/" + file_name
     return http_request(url, endpoint, type_post, header, json=payload)
-    
-    
+
+
  #########################################################################
 #   Function Name: command_slice
 #   Function Description:
 #       -Creates a .gcode (sliced) file of the selected file on the octopi (or sd card in the 3D printer)
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
 #   Parameter [2]: path {string} path of file to delete
 #        ex) '/local/4_1_16/rpi_case.stl'
-#   retVal: result of the http_request, On success, returns response status 202 
+#   retVal: result of the http_request, On success, returns response status 202
 #       On fail, it returns the response code and response reason
- #########################################################################  
+ #########################################################################
 def slice(url, api_key, file_name, path_to_store = local):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     #fileName = os.path.basename(path)
@@ -368,7 +368,7 @@ def slice(url, api_key, file_name, path_to_store = local):
     #data ['select'] = False
     ##[OPTIONAL]
     #data ['print'] = False
-    
+
     return http_request(url, endpoint, type_post, header,
                             json=payload)
 
@@ -379,88 +379,88 @@ def slice(url, api_key, file_name, path_to_store = local):
 #   Function Name: start_command
 #   Function Description:
 #       -Starts the print of the currently selected file. if no file is selected, this will return 409
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
 #   retVal: result of the http_request, On success, returns response status 204 (no content)
 #       On fail, it returns the response code and response reason
- #########################################################################  
+ #########################################################################
 def start_command(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     payload = {'command': 'start'}
     return http_request(url, jobs_extension, type_post, header,
                             json=payload)
-    
-    
+
+
  #########################################################################
 #   Function Name: restart_command
 #   Function Description:
 #       -Restarts the print of the currently selected file And active (Paused) print job.
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
 #   retVal: result of the http_request, On success, returns response status 204 (no content)
 #       On fail, it returns the response code and response reason
- #########################################################################  
+ #########################################################################
 def restart_command(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     payload = {'command': 'restart'}
     return http_request(url, jobs_extension, type_post, header,
                             json=payload)
 
-    
+
  #########################################################################
 #   Function Name: PauseCommand
 #   Function Description:
 #       -Pauses/Unpauses current print job. If no active job, then 409 will be returned
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
 #   retVal: result of the http_request, On success, returns response status 204 (no content)
 #       On fail, it returns the response code and response reason
- #########################################################################      
+ #########################################################################
 def toggle_pause(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     payload = {'command': 'pause'}
     return http_request(url, jobs_extension, type_post, header,
                             json=payload)
-    
-    
+
+
  #########################################################################
 #   Function Name: cancel_command
 #   Function Description:
 #       -Cancels current print job. If no active job, then 409 will be returned
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
 #   retVal: result of the http_request, On success, returns response status 204 (no content)
 #       On fail, it returns the response code and response reason
- #########################################################################     
+ #########################################################################
 def cancel(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key, 'Content-Type': 'application/json'}
     payload = {'command': 'cancel'}
-    return http_request(url, jobs_extension, type_post, header, 
+    return http_request(url, jobs_extension, type_post, header,
                             json=payload)
 
-            
+
  #########################################################################
 #   Function Name: get_job_info
 #   Function Description:
 #       -Get information about the current print job.
-#   Parameter [0]: url {string} URL of pi 
+#   Parameter [0]: url {string} URL of pi
 #        ex) '169.254.212.2'
 #   Parameter [1]: api_key {string} API key required to use the Octopi's REST API
 #        ex) '059936A9790743DD8E13632F9ECE9C24'
 #   retVal: *NOTE this will always return 200 and response (even if there isn't a printer connected)
- #########################################################################  
+ #########################################################################
 def get_job_info(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}
-    return http_request(url, jobs_extension, type_get, header) 
-    
+    return http_request(url, jobs_extension, type_get, header)
+
 def get_printer_info(url, api_key):
     header = { 'Host': 'example.com', 'X-Api-Key': api_key}
     params = {"exclude": "temperature,sd"}
@@ -504,7 +504,7 @@ def connect(url, api_key, name):
 if __name__ == "__main__":
 ##################################### DELETE THESE, ONLY USED FOR TESTING #####################################
 
-    print '\n'
+    print ('\n')
 #this is an stl file that will be used to test printing through the octopi
     pathToFile = 'C:\\Users\\aaron\\Projects\\octopi\\rpi2-bottom_8020_netfabb.stl'
 #print 'Valid filepath? -' + str(os.path.isfile(pathToFile))
@@ -514,76 +514,76 @@ if __name__ == "__main__":
 ############################ TESTING FILE OPERATIONS #################################
 
 
-###################### THIS IS WORKING 
+###################### THIS IS WORKING
 #print 'testing GetAllFiles:'
 #print GetAllFiles(testingOctopiUrl, testingApiKey)
 #print '\n'
 
-###################### THIS IS WORKING 
+###################### THIS IS WORKING
 #print 'testing GetAllFilesFromLocation:'
 #print GetAllFilesFromLocation(testingOctopiUrl, testingApiKey)
 #print '\n'
 
 ##################### RECIEVING 400 : bad request
-    print 'testing upload_file:'
-    print upload_file(testingOctopiUrl, testingApiKey, pathToFile)
-    print '\n'
+    print ('testing upload_file:')
+    print (upload_file(testingOctopiUrl, testingApiKey, pathToFile))
+    print ('\n')
 
 ##################### RECIEVING 400 : bad request
-    print 'testing upload_file_and_print:'
-    print upload_file_and_print(testingOctopiUrl, testingApiKey, pathToFile, local)
-    print '\n'
+    print ('testing upload_file_and_print:')
+    print (upload_file_and_print(testingOctopiUrl, testingApiKey, pathToFile, local))
+    print ('\n')
 
-###################### THIS IS WORKING 
+###################### THIS IS WORKING
 #print 'testing GetonOneFileInfo:'
 #print get_one_file_info(testingOctopiUrl, testingApiKey, local + '/rpi2-bottom_8020_netfabb.stl')
 #print '\n'
 
-###################### THIS IS WORKING 
+###################### THIS IS WORKING
 #print 'testing delete_file:'
 #print delete_file(testingOctopiUrl, testingApiKey, local + '/rpi2-bottom_8020_netfabb.stl')
 #print '\n'
 
-###################### THIS IS WORKING 
+###################### THIS IS WORKING
 #print 'testing command_select:'
 #print command_select(testingOctopiUrl, testingApiKey, )
 #print '\n'
-    
-###################### THIS IS WORKING 
+
+###################### THIS IS WORKING
 #print 'testing command_select_and_print:'
 #print command_select(testingOctopiUrl, testingApiKey, pathToSampleStl)
 #print '\n'
-    
+
 ##################### NEEDS FUTHER TESTING ############# May need a slicer? getting 405, method not allowed
-    print 'testing command_slice:'
-    print command_slice(testingOctopiUrl, testingApiKey, pathToSampleStl)
-    print '\n'
+    print ('testing command_slice:')
+    print (command_slice(testingOctopiUrl, testingApiKey, pathToSampleStl))
+    print ('\n')
 
 
 ############################ TESTING JOB OPERATIONS #################################
 
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-    print 'testing Start Command:'
-    print start_command(testingOctopiUrl, testingApiKey)
-    print '\n'
+    print ('testing Start Command:')
+    print (start_command(testingOctopiUrl, testingApiKey))
+    print ('\n')
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-    print 'testing Pause Command:'
-    print PauseCommand(testingOctopiUrl, testingApiKey)
-    print '\n'
+    print ('testing Pause Command:')
+    print (PauseCommand(testingOctopiUrl, testingApiKey))
+    print ('\n')
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-    print 'testing Restart Command:'
-    print restart_command(testingOctopiUrl, testingApiKey)
-    print '\n'
+    print ('testing Restart Command:')
+    print (restart_command(testingOctopiUrl, testingApiKey))
+    print ('\n')
 
 ##################### NEEDS FUTHER TESTING ############# NEEDS A PRINTER!
-    print 'testing Cancel Command:'
-    print cancel_command(testingOctopiUrl, testingApiKey)
-    print '\n'
+    print ('testing Cancel Command:')
+    print (cancel_command(testingOctopiUrl, testingApiKey))
+    print ('\n')
 
-###################### THIS IS WORKING 
+###################### THIS IS WORKING
 #print 'testing Get Job Info:'
 #print get_job_info(testingOctopiUrl, testingApiKey)
 #print '\n'

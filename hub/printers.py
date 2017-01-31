@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import os
-import threading
+import _thread
 import hub
-from chest import Chest
+from hub.chest import Chest
 from flask import request
 from flask import json
 from flask import abort
-from dealer import PrinterCollector
-from tasks import JobUploader, Command
-from models import Printer, Job, File
+from hub.dealer import PrinterCollector
+from hub.tasks import JobUploader, Command
+from hub.models import Printer, Job, File
 from hub import app
 
 @app.route('/printers', methods=['GET'])
@@ -25,25 +25,25 @@ def printers_list():
           - schema:
               id: Web_Printer
               properties:
-                id: 
+                id:
                   type: integer
                   description: id of the printer on web api
-                friendly_id: 
+                friendly_id:
                   type: string
                   description: friendly_id of the printer
-                manufacturer: 
+                manufacturer:
                   type: string
                   description: manufacturer of the printer
-                model: 
+                model:
                   type: string
                   description: model of the printer
-                num_jobs: 
+                num_jobs:
                   type: integer
                   description: number of jobs the printer current has
-                description: 
+                description:
                   type: string
                   description: user description of the printer
-                status: 
+                status:
                   type: string
                   description: status of the printer
         produces:

@@ -3,9 +3,9 @@
 
 import threading
 import requests
-import octopifunctions as octopi
+import hub.octopifunctions as octopi
 from time import sleep
-from models import Printer, Node, Job
+from hub.models import Printer, Node, Job
 
 class Command(threading.Thread):
 
@@ -173,7 +173,7 @@ class JobUploader(threading.Thread):
         self.success = False
         self.log     = log
         self.webapi  = webapi
-        
+
     def run(self):
         """Function that will upload a new file, slice it if needed,
         and delete stl files from the octopi. Should be used whenever

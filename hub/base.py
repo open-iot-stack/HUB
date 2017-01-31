@@ -7,9 +7,7 @@ from hub import app
 from hub.database import db_session
 from flask_swagger import swagger
 
-from models import Printer
-from models import Job
-from models import File
+from hub.models import Printer, Job, File
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):
@@ -37,7 +35,7 @@ def list_peripherals():
           200:
             description: Returns peripherals currently registered
         """
-        
+
     return json.jsonify(hub.conf.read_data())
 
 @app.route('/register', methods=['GET'])
@@ -91,7 +89,7 @@ def register_peripheral():
                         + " was not registered, are you updating?"
                     })
     abort(405)
-        
+
 @app.route('/')
 def index():
     return 0
