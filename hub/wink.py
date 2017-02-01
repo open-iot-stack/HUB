@@ -52,22 +52,37 @@ def login():
 
 
         node_id = ''
+        node_frienly_id = ''
         for device in devices['data']:
              if 'hub_id' in device:
                  node_id = device['hub_id']
+                 node_frienly_id = device['name']
+                 break
         if node_id:
             node = Node.get_by_id(node_id)
             if node is None:
-                node = Node(node_id, '0')
+                node = Node(node_id, '0', node_frienly_id)
         #register node
         for device in devices['data']:
             sub = device['subscription']
             if sub:
                 channels.append(sub['pubnub']['channel'])
                 sub_key = sub['pubnub']['subscribe_key']
-                sensor = Sensor.get_by_webid(device['uuid'])
-                if sensor is None:
-                    Sensor(node.id, 0, 'wink', device['uuid'], json.dumps(device))
+            sensor = Sensor.get_by_webid(device['uuid'])
+            if sensor is None:
+                Sensor(node.id, 'wink',
+                webid=device['uuid'],
+                value=json.dumps(device['desired_state']),
+                raw=json.dumps(device),
+                friendly_id=json.dumps(device['name']).replace('"',''),
+                state= "CONNECTED" if json.dumps(device['last_reading']['connection']) == 'true'else "DISCONNECTED")
+            else:
+                sensor.webid = device['uuid']
+                sensor.value = json.dumps(device['desired_state'])
+                sensor.raw = json.dumps(device)
+                sensor.friendly_id = json.dumps(device['name']).replace('"','')
+                sensor.state = "CONNECTED" if json.dumps(device['last_reading']['connection']) == 'true'else "DISCONNECTED"
+                sensor.update()
 
         subcribe_devices_to_pub_nub(sub_key, channels)
         return "success"
@@ -82,7 +97,7 @@ def refresh_token():
             "client_id": "quirky_wink_android_app",
             "client_secret": "e749124ad386a5a35c0ab554a4f2c045",
             "grant_type": "refresh_token",
-            "refresh_token": account.refresh_token,
+            "refresh_token": account.web_refresh_token,
         }).encode('utf-8')
 
         headers = {"Content-Type": "application/json", "Connection": "keep-alive",
@@ -101,9 +116,22 @@ def refresh_token():
                 account.update(web_token = access_token, web_refresh_token = refresh_token)
             else:
                 account = Account('wink',access_token, refresh_token, token_endpoint)
-            return "success"
+            return account
         else:
             abort(404)
+
+def subscribe_devices(account):
+    devices = get_all_devices(account)
+    channels = []
+    sub_key = ''
+
+    for device in devices['data']:
+        sub = device['subscription']
+        if sub:
+            channels.append(sub['pubnub']['channel'])
+            sub_key = sub['pubnub']['subscribe_key']
+
+    subcribe_devices_to_pub_nub(sub_key, channels)
 
 def get_all_devices(account):
     headers = {"Authorization": "Bearer " + account.web_token}
@@ -137,8 +165,12 @@ def subcribe_devices_to_pub_nub(sub_key, channels):
     def callback(message, channel):
         response = json.loads(message)
         sensor = Sensor.get_by_webid(response['uuid'])
-        sensor.update(message)
-        log.log("Pubnub callback: "+message)
+        sensor.webid = response['uuid']
+        sensor.value = json.dumps(response['desired_state'])
+        sensor.raw = json.dumps(response)
+        sensor.friendly_id = json.dumps(response['name']).replace('"','')
+        sensor.state = "CONNECTED" if json.dumps(response['last_reading']['connection']) == 'true'else "DISCONNECTED"
+        sensor.update()
 
     def error(message):
         log.log("Pubnub Error: "+message)
