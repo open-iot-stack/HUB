@@ -72,19 +72,14 @@ def login():
                 sub_key = sub['pubnub']['subscribe_key']
             sensor = Sensor.get_by_webid(device['uuid'])
             if sensor is None:
-                Sensor(node.id, 'wink',
-                webid=device['uuid'],
-                value=json.dumps(device['desired_state']),
-                raw=json.dumps(device),
-                friendly_id=json.dumps(device['name']).replace('"',''),
-                state= "CONNECTED" if json.dumps(device['last_reading']['connection']) == 'true'else "DISCONNECTED")
-            else:
-                sensor.webid = device['uuid']
-                sensor.value = json.dumps(device['desired_state'])
-                sensor.raw = json.dumps(device)
-                sensor.friendly_id = json.dumps(device['name']).replace('"','')
-                sensor.state = "CONNECTED" if json.dumps(device['last_reading']['connection']) == 'true'else "DISCONNECTED"
-                sensor.update()
+                sensor = Sensor(node.id, 'wink')
+
+            sensor.webid = device['uuid']
+            sensor.value = json.dumps(device['desired_state'])
+            sensor.raw = json.dumps(device)
+            sensor.friendly_id = json.dumps(device['name']).replace('"','')
+            sensor.state = "CONNECTED" if json.dumps(device['last_reading']['connection']) == 'true'else "DISCONNECTED"
+            sensor.update()
 
         subcribe_devices_to_pub_nub(sub_key, channels)
         return "success"
