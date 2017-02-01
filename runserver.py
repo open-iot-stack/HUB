@@ -5,9 +5,10 @@ import os, hub, sys, getopt, _thread
 from hub import app
 from hub.logger import Log
 from hub.webapi import WebAPI
-from hub.models import Printer, Node
+from hub.models import Printer, Node, Account
 from hub.dealer import PrinterCollector, NodeCollector
 from hub.database import init_db
+from hub import wink
 
 debug         = False
 port          = None
@@ -93,11 +94,13 @@ hub.Webapi.sign_in()
 init_db()
 updates = {"nodes": []}
 node_updates = updates.get("nodes")
+
 for printer in Printer.get_all():
     id = printer.id
     t  = PrinterCollector(id, hub.Webapi, hub.log)
     t.start()
     hub.printer_listeners.add_thread(id, t)
+
 for node in Node.get_all():
     id = node.id
     if node.printer_id == None:
@@ -105,5 +108,11 @@ for node in Node.get_all():
     t  = NodeCollector(id, hub.Webapi, hub.log)
     t.start()
     hub.node_listeners.add_thread(id, t)
+#Start pubnub for accounts
+for account in Account.get_all():
+    if account.account_name == 'wink':
+        wink.subscribe_devices(wink.refresh_token())
+
+
 #hub.Webapi.update_nodes(updates)
 app.run(host=host, debug=debug, port=port,threaded=threaded)
