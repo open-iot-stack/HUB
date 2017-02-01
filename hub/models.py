@@ -642,6 +642,7 @@ class Node(Base):
 
     id = Column(Integer, primary_key=True)
     webid = Column(Integer, unique=True)
+    friendly_id = Column(String)
     ip = Column(String)
     sensors = relationship("Sensor")
     printer_id = Column(Integer, ForeignKey("printers.id"))
@@ -669,9 +670,10 @@ class Node(Base):
         nodes = db_session.query(Node).all()
         return nodes
 
-    def __init__(self, id, ip):
+    def __init__(self, id, ip, friendly_id=None):
         self.id = id
         self.ip = ip
+        self.friendly_id = friendly_id
         db_session.add(self)
         db_session.commit()
 
@@ -696,9 +698,7 @@ class Node(Base):
 
     def to_web(self):
         d = {
-            "id": self.id,
-            "ip": self.ip,
-            "sensors": [sensor.to_web() for sensor in self.sensors]
+            "id": self.id
         }
         return d
 
@@ -721,6 +721,15 @@ class Account(Base):
         self.token_endpoint = token_endpoint
         db_session.add(self)
         db_session.commit()
+
+    @staticmethod
+    def get_all(fresh=False):
+        """Returns all the nodes in the database
+        """
+        if fresh == True:
+            db_session.remove()
+        accounts = db_session.query(Account).all()
+        return accounts
 
     @staticmethod
     def get_by_name(name, fresh=False):
@@ -752,10 +761,23 @@ class Sensor(Base):
 
     id = Column(Integer, primary_key=True)
     node_id = Column(Integer, ForeignKey('nodes.id'))
-    pin  = Column(Integer)
     sensor_type = Column(String)
     webid = Column(Integer, unique=True)
     value = Column(String)
+    raw = Column(String)
+    friendly_id = Column(String)
+    state = Column(String)
+
+    def __init__(self, node_id, sensor_type, webid=None, value=None, raw=None, friendly_id=None, state='DISCONNECTED'):
+        self.node_id = node_id
+        self.sensor_type = sensor_type
+        self.webid = webid
+        self.value
+        self.raw
+        self.friendly_id
+        self.state
+        db_session.add(self)
+        db_session.commit()
 
     @staticmethod
     def get_by_webid(id, fresh=False):
@@ -775,234 +797,218 @@ class Sensor(Base):
                 filter(Sensor.id == id).first()
         return sensor
 
-    def __init__(self, node_id, pin, sensor_type, webid=None, value=None):
-        self.node_id = node_id
-        self.pin = pin
-        self.sensor_type = sensor_type
-        self.webid = webid
-        self.value
-        db_session.add(self)
-        db_session.commit()
-
-    def update(self, value):
-        if value:
-            self.value = value
+    def update(self):
             db_session.commit()
-            return True
-        else:
-            return False
-
-    def led_on(self):
-        """Makes a URL for making a sensor of type LED to stay on.
-        returns None if wrong sensor type
-        """
-        if self.sensor_type != "LED":
-            return None
-        node = Node.get_by_id(self.node_id)
-        ip = node.ip
-        pin  = self.pin
-        url = "http://" + ip + "/gpio/" + str(pin) + "/high"
-        return url
-
-    def led_off(self):
-        """Makes a URL for making a sensor of type LED to stay off.
-        returns None if wrong sensor type
-        """
-        if self.sensor_type != "LED":
-            return None
-        node = Node.get_by_id(self.node_id)
-        ip = node.ip
-        pin  = self.pin
-        url = "http://" + ip + "/gpio/" + str(pin) + "/low"
-        return url
-
-    def led_flash(self, freq=None):
-        """Makes a URL for making a sensor of type LED to flash.
-        returns None if wrong sensor type
-        """
-        if self.sensor_type != "LED":
-            return None
-        node = Node.get_by_id(self.node_id)
-        ip = node.ip
-        pin  = self.pin
-        url = "http://" + ip + "/gpio/" + str(pin) + "/pwm"
-        return url
-
-    def power_on(self):
-        """Makes a URL for making a sensor of type POWER to power on.
-        returns None if wrong sensor type
-        """
-        if self.sensor_type != "POWER":
-            return None
-        node = Node.get_by_id(self.node_id)
-        ip   = node.ip
-        pin  = self.pin
-        url  = "http://" + ip + "/gpio/" + str(pin) + "/high"
-        return url
-
-    def power_off(self):
-        """Makes a URL for making a sensor of type POWER to power off.
-        returns None if wrong sensor type
-        """
-        if self.sensor_type != "POWER":
-            return None
-        node = Node.get_by_id(self.node_id)
-        ip   = node.ip
-        pin  = self.pin
-        url  = "http://" + ip + "/gpio/" + str(pin) + "/low"
-        return url
-
-    def door_status(self):
-        """Makes a URL for getting the data from a type DOOR sensor.
-        returns None if wrong sensor type
-        """
-        if self.sensor_type != "DOOR":
-            return None
-        node = Node.get_by_id(self.node_id)
-        ip   = node.ip
-        pin  = self.pin
-        url = "http://" + ip + "/gpio/" + str(pin) + "/input"
-        return url
-
-    def temp_status(self):
-        """Makes a URL for getting the data from a type TEMP sensor.
-        returns None if wrong sensor type
-        """
-        if self.sensor_type != "TEMP":
-            return None
-        node = Node.get_by_id(self.node_id)
-        ip   = node.ip
-        pin  = self.pin
-        url = "http://" + ip + "/gpio/" + str(pin) + "/temp"
-        return url
-
-    def humi_status(self):
-        """Makes a URL for getting the data from a type HUMI sensor.
-        returns None if wrong sensor type
-        """
-        if self.sensor_type != "HUMI":
-            return None
-        node = Node.get_by_id(self.node_id)
-        ip   = node.ip
-        pin  = self.pin
-        url = "http://" + ip + "/gpio/" + str(pin) + "/humi"
-        return url
-
-    def trigger(self):
-        """Makes a URL for setting a sensor of type TRIG to enter
-        triggered mode.
-        returns None if wrong sensor type
-        """
-        if self.sensor_type != "TRIG":
-            return None
-        node = Node.get_by_id(self.node_id)
-        ip   = node.ip
-        pin  = self.pin
-        url = "http://" + ip + "/gpio/" + str(pin) + "/trig"
-        return url
-
-    def get_url(self):
-        """Makes a URL for getting data from a sensor.
-        URL is based on sensor_type. If sensor_type is not a
-        data collecting sensor, returns None
-        """
-        if self.sensor_type == "TRIG":
-            return self.trigger()
-        elif self.sensor_type == "TEMP":
-            return self.temp_status()
-        elif self.sensor_type == "DOOR":
-            return self.door_status()
-        elif self.sensor_type == "HUMI":
-            return self.humi_status()
-        return None
-
-    def set_humi(self, data):
-        if self.sensor_type != "HUMI":
-            return False
-        self.value = str(data.get("humi"))
-        db_session.commit()
-        return True
-
-    def set_temp(self, data):
-        if self.sensor_type != "TEMP":
-            return False
-        self.value = str((float(data.get("temp")) * 9/5.0) + 32.0)
-        db_session.commit()
-        return True
-
-    def set_door(self, data):
-        if self.sensor_type != "DOOR":
-            return False
-        self.value = str(data.get("data"))
-        db_session.commit()
-        return True
-
-    def set_value(self, data):
-        if self.sensor_type == "HUMI":
-            return self.set_humi(data)
-        if self.sensor_type == "TEMP":
-            return self.set_temp(data)
-        if self.sensor_type == "DOOR":
-            return self.set_door(data)
-
-    def humi_to_web(self):
-        if self.sensor_type != "HUMI":
-            return None
-        d = {
-            "id": self.webid,
-            "value": str(self.value)
-        }
-        return d
-
-    def temp_to_web(self):
-        """Parses the output of a sensor of type TEMP to work
-        with the web api.
-        returns a list of data to be sent, empty list if wrong type
-        """
-        if self.sensor_type != "TEMP":
-            return None
-        d = {
-            "id": self.webid,
-            "value": str(self.value)
-        }
-        return d
-
-    def door_to_web(self):
-        """Parses the output of a sensor of type DOOR to work
-        with the web api.
-        returns a list of data to be sent, empty list if wrong type
-        """
-        if self.sensor_type != "DOOR":
-            return None
-        d = {
-            "id": self.webid,
-            "value": int(self.value)
-        }
-        return d
-
-    def to_web(self):
-        """Parses the output of a sensor's data to work with
-        the web api. Parsing is based on sensor type
-        returns a list of data to send to webapi
-        """
-        if self.sensor_type == "DOOR":
-            return self.door_to_web()
-        elif self.sensor_type == "TEMP":
-            return self.temp_to_web()
-        elif self.sensor_type == "HUMI":
-            return self.humi_to_web()
-        return self.to_dict()
 
     def to_dict(self):
         d = {
             "id": self.webid,
             "type": self.sensor_type,
-            "pin": self.pin,
-            "value": self.value
+            "webid": self.webid,
+            "value": self.value,
+            "raw": self.raw,
+            "friendly_id": self.friendly_id,
+            "state": self.state
             }
         return d
 
-
-    def __repr__(self):
-        return "<Sensor='%d' node_id='%d', pin='%d', sensor_type='%s')>"\
-                % (self.node_id, self.pin, self.type)
+    # def led_on(self):
+    #     """Makes a URL for making a sensor of type LED to stay on.
+    #     returns None if wrong sensor type
+    #     """
+    #     if self.sensor_type != "LED":
+    #         return None
+    #     node = Node.get_by_id(self.node_id)
+    #     ip = node.ip
+    #     value  = self.value
+    #     url = "http://" + ip + "/gpio/" + str(pin) + "/high"
+    #     return url
+    #
+    # def led_off(self):
+    #     """Makes a URL for making a sensor of type LED to stay off.
+    #     returns None if wrong sensor type
+    #     """
+    #     if self.sensor_type != "LED":
+    #         return None
+    #     node = Node.get_by_id(self.node_id)
+    #     ip = node.ip
+    #     pin  = self.pin
+    #     url = "http://" + ip + "/gpio/" + str(pin) + "/low"
+    #     return url
+    #
+    # def led_flash(self, freq=None):
+    #     """Makes a URL for making a sensor of type LED to flash.
+    #     returns None if wrong sensor type
+    #     """
+    #     if self.sensor_type != "LED":
+    #         return None
+    #     node = Node.get_by_id(self.node_id)
+    #     ip = node.ip
+    #     pin  = self.pin
+    #     url = "http://" + ip + "/gpio/" + str(pin) + "/pwm"
+    #     return url
+    #
+    # def power_on(self):
+    #     """Makes a URL for making a sensor of type POWER to power on.
+    #     returns None if wrong sensor type
+    #     """
+    #     if self.sensor_type != "POWER":
+    #         return None
+    #     node = Node.get_by_id(self.node_id)
+    #     ip   = node.ip
+    #     pin  = self.pin
+    #     url  = "http://" + ip + "/gpio/" + str(pin) + "/high"
+    #     return url
+    #
+    # def power_off(self):
+    #     """Makes a URL for making a sensor of type POWER to power off.
+    #     returns None if wrong sensor type
+    #     """
+    #     if self.sensor_type != "POWER":
+    #         return None
+    #     node = Node.get_by_id(self.node_id)
+    #     ip   = node.ip
+    #     pin  = self.pin
+    #     url  = "http://" + ip + "/gpio/" + str(pin) + "/low"
+    #     return url
+    #
+    # def door_status(self):
+    #     """Makes a URL for getting the data from a type DOOR sensor.
+    #     returns None if wrong sensor type
+    #     """
+    #     if self.sensor_type != "DOOR":
+    #         return None
+    #     node = Node.get_by_id(self.node_id)
+    #     ip   = node.ip
+    #     pin  = self.pin
+    #     url = "http://" + ip + "/gpio/" + str(pin) + "/input"
+    #     return url
+    #
+    # def temp_status(self):
+    #     """Makes a URL for getting the data from a type TEMP sensor.
+    #     returns None if wrong sensor type
+    #     """
+    #     if self.sensor_type != "TEMP":
+    #         return None
+    #     node = Node.get_by_id(self.node_id)
+    #     ip   = node.ip
+    #     pin  = self.pin
+    #     url = "http://" + ip + "/gpio/" + str(pin) + "/temp"
+    #     return url
+    #
+    # def humi_status(self):
+    #     """Makes a URL for getting the data from a type HUMI sensor.
+    #     returns None if wrong sensor type
+    #     """
+    #     if self.sensor_type != "HUMI":
+    #         return None
+    #     node = Node.get_by_id(self.node_id)
+    #     ip   = node.ip
+    #     pin  = self.pin
+    #     url = "http://" + ip + "/gpio/" + str(pin) + "/humi"
+    #     return url
+    #
+    # def trigger(self):
+    #     """Makes a URL for setting a sensor of type TRIG to enter
+    #     triggered mode.
+    #     returns None if wrong sensor type
+    #     """
+    #     if self.sensor_type != "TRIG":
+    #         return None
+    #     node = Node.get_by_id(self.node_id)
+    #     ip   = node.ip
+    #     pin  = self.pin
+    #     url = "http://" + ip + "/gpio/" + str(pin) + "/trig"
+    #     return url
+    #
+    # def get_url(self):
+    #     """Makes a URL for getting data from a sensor.
+    #     URL is based on sensor_type. If sensor_type is not a
+    #     data collecting sensor, returns None
+    #     """
+    #     if self.sensor_type == "TRIG":
+    #         return self.trigger()
+    #     elif self.sensor_type == "TEMP":
+    #         return self.temp_status()
+    #     elif self.sensor_type == "DOOR":
+    #         return self.door_status()
+    #     elif self.sensor_type == "HUMI":
+    #         return self.humi_status()
+    #     return None
+    #
+    # def set_humi(self, data):
+    #     if self.sensor_type != "HUMI":
+    #         return False
+    #     self.value = str(data.get("humi"))
+    #     db_session.commit()
+    #     return True
+    #
+    # def set_temp(self, data):
+    #     if self.sensor_type != "TEMP":
+    #         return False
+    #     self.value = str((float(data.get("temp")) * 9/5.0) + 32.0)
+    #     db_session.commit()
+    #     return True
+    #
+    # def set_door(self, data):
+    #     if self.sensor_type != "DOOR":
+    #         return False
+    #     self.value = str(data.get("data"))
+    #     db_session.commit()
+    #     return True
+    #
+    # def set_value(self, data):
+    #     if self.sensor_type == "HUMI":
+    #         return self.set_humi(data)
+    #     if self.sensor_type == "TEMP":
+    #         return self.set_temp(data)
+    #     if self.sensor_type == "DOOR":
+    #         return self.set_door(data)
+    #
+    # def humi_to_web(self):
+    #     if self.sensor_type != "HUMI":
+    #         return None
+    #     d = {
+    #         "id": self.webid,
+    #         "value": str(self.value)
+    #     }
+    #     return d
+    #
+    # def temp_to_web(self):
+    #     """Parses the output of a sensor of type TEMP to work
+    #     with the web api.
+    #     returns a list of data to be sent, empty list if wrong type
+    #     """
+    #     if self.sensor_type != "TEMP":
+    #         return None
+    #     d = {
+    #         "id": self.webid,
+    #         "value": str(self.value)
+    #     }
+    #     return d
+    #
+    # def door_to_web(self):
+    #     """Parses the output of a sensor of type DOOR to work
+    #     with the web api.
+    #     returns a list of data to be sent, empty list if wrong type
+    #     """
+    #     if self.sensor_type != "DOOR":
+    #         return None
+    #     d = {
+    #         "id": self.webid,
+    #         "value": int(self.value)
+    #     }
+    #     return d
+    #
+    # def to_web(self):
+    #     """Parses the output of a sensor's data to work with
+    #     the web api. Parsing is based on sensor type
+    #     returns a list of data to send to webapi
+    #     """
+    #     if self.sensor_type == "DOOR":
+    #         return self.door_to_web()
+    #     elif self.sensor_type == "TEMP":
+    #         return self.temp_to_web()
+    #     elif self.sensor_type == "HUMI":
+    #         return self.humi_to_web()
+    #     return self.to_dict()
