@@ -802,7 +802,7 @@ class Sensor(Base):
 
     def to_dict(self):
         d = {
-            "id": self.webid,
+            "id": self.id,
             "type": self.sensor_type,
             "webid": self.webid,
             "value": self.value,

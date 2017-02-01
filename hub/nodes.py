@@ -150,9 +150,10 @@ def node_sensors(node_id):
              'node_id': result.node_id,
              'sensor_type': result.sensor_type ,
              'freindly_id': result.friendly_id,
-             'state': result.state}
+             'connection': result.state
+            }
         if result.value:
-            d.update(json.loads(result.value))
+            d['desired_state'] = json.loads(result.value)
         json_results.append(d)
 
     return json.jsonify(sensors = json_results)

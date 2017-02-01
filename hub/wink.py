@@ -2,6 +2,7 @@ from pubnub import Pubnub
 from flask import Flask, render_template, request, session, json, redirect, url_for
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
+import urllib.error
 from json import dumps
 import hub
 from .chest import Chest
@@ -15,6 +16,7 @@ global log
 
 log = Log()
 
+DEVICE_TYPES = ['air_conditioner', 'light_bulb', 'binary_switch', 'shade', 'camera', 'doorbell', 'garage_door', 'lock']
 @app.route("/wink/login", methods=['POST'])
 def login():
 
@@ -140,15 +142,39 @@ def get_all_devices(account):
     data = json.loads(response_body)
     return data
 
-def update_device_state(device_json):
-    device_type = 'light_bulbs'
-    device_id = device_json['light_bulb_id']
-    token = session["access_token"]
-    headers = {"Authorization": "Bearer " + token}
-    request = Request("https://winkapi.quirky.com/users/me/wink_devices/"+device_type+"/"+device_id, headers=headers)
-    response_body = urlopen(request).read()
-    data = json.loads(response_body)
-    return dict(data)
+@app.route("/wink/update", methods=['POST'])
+def update_device_state():
+    sensor_id = request.json.get('id')
+    desired_state = request.json.get('desired_state')
+    account = Account.get_by_name('wink')
+    device_type = ''
+    device_id = 0
+    sensor = Sensor.get_by_id(sensor_id)
+    device = json.loads(sensor.raw)
+    for k in device.keys():
+        if k.endswith("_id") and k[:-3] in DEVICE_TYPES:
+            device_type = k[:-3]+'s'
+            device_id = device[k]
+            break
+    device['desired_state'] = desired_state
+    if device_id != 0 and device_type:
+        headers = {"Authorization": "Bearer " + account.web_token,
+        "Content-Type": "application/json"}
+        values = dumps(device).encode('utf-8')
+        url = "https://winkapi.quirky.com/"+device_type+"/"+device_id
+        req = Request(url, data=values, headers=headers, method='PUT')
+        try:
+            response_body = urlopen(req).read()
+            data = json.loads(response_body)
+        except urllib.error.URLError as e:
+            print(e)
+            return 'error'
+        except ValueError as ev:
+            print(ev)
+            return 'error'
+    return 'success'
+
+
 
 
 def get_token_from_session():
