@@ -3,6 +3,7 @@
 
 import os, subprocess, stat
 from getpass import getuser
+from base64 import b64encode
 
 def systemd_setup(config):
     try:
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     dssid      = "IOT-HUB"
     config     = input("Config File["+dconfig+"]:")
     url        = input("WebAPI URL["+durl+"]:")
-    apikey     = os.urandom(32).decode("ascii")
+    apikey     = b64encode(os.urandom(32)).decode('utf-8')
     ssid       = input("Access Point SSID["+dssid+"]:")
     password   = input("Access Point Password[REQUIRED]:")
     interface  = input("Interface["+dinterface+"]:")
