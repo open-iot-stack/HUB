@@ -90,15 +90,15 @@ if __name__ == "__main__":
     dinterface = "wlan0"
     dip        = "192.168.42.1"
     dssid      = "IOT-HUB"
-    config     = raw_input("Config File["+dconfig+"]:")
-    url        = raw_input("WebAPI URL["+durl+"]:")
+    config     = input("Config File["+dconfig+"]:")
+    url        = input("WebAPI URL["+durl+"]:")
     apikey     = os.urandom(32)
-    ssid       = raw_input("Access Point SSID["+dssid+"]:")
-    password   = raw_input("Access Point Password[REQUIRED]:")
-    interface  = raw_input("Interface["+dinterface+"]:")
-    ip         = raw_input("Interface IP["+dip+"]:")
-    port       = raw_input("Port ["+dport+"]:")
-    host       = raw_input("Host ["+dhost+"]:")
+    ssid       = input("Access Point SSID["+dssid+"]:")
+    password   = input("Access Point Password[REQUIRED]:")
+    interface  = input("Interface["+dinterface+"]:")
+    ip         = input("Interface IP["+dip+"]:")
+    port       = input("Port ["+dport+"]:")
+    host       = input("Host ["+dhost+"]:")
     if apikey == "":
         print("No API key was generated...Exiting")
         exit(1)
@@ -125,7 +125,7 @@ if __name__ == "__main__":
                       "-t"                    + "\n"])
     if systemd_setup(config):
         print("Finished systemd setup")
-        run = raw_input("All set, run now and test? [y/n]:")
+        run = input("All set, run now and test? [y/n]:")
         if run.lower() in ["y", "yes"]:
             subprocess.call(['systemctl','start','iot-hub'])
     else:
