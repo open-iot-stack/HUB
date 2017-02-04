@@ -12,8 +12,10 @@ from hub.dealer import PrinterCollector
 from hub.tasks import JobUploader, Command
 from hub.models import Printer, Job, File
 from hub import app
+from hub import auth
 
 @app.route('/printers', methods=['GET'])
+@auth.login_required
 def printers_list():
     """
         Printers List
@@ -84,6 +86,7 @@ def printers_list():
     return json.jsonify(data)
 
 @app.route('/printers', methods=['POST'])
+@auth.login_required
 def add_printer():
     """
         Add Printer
@@ -159,6 +162,7 @@ def add_printer():
 
 
 @app.route('/printers/<int:id>/commands',methods=['POST'])
+@auth.login_required
 def print_action(id):
     """
         Print Action
@@ -223,6 +227,7 @@ def print_action(id):
                         + " successfully sent to the printer."}),201
 
 @app.route('/printers/<int:id>', methods=['GET'])
+@auth.login_required
 def print_status(id):
     """
         Print Status
@@ -255,6 +260,7 @@ def print_status(id):
     return json.jsonify(printer.to_web())
 
 @app.route('/printers/<int:id>/jobs', methods=['GET'])
+@auth.login_required
 def jobs_list(id):
     """
         Jobs List
@@ -323,6 +329,7 @@ def jobs_list(id):
     abort(404)
 
 @app.route('/printers/<int:id>/jobs', methods=['POST'])
+@auth.login_required
 def jobs_post(id):
     """
         Add a Job
@@ -388,6 +395,7 @@ def jobs_post(id):
                             + " has been uploaded successfully"}),201
 
 @app.route('/printers/<int:id>/jobs/current', methods=["GET"])
+@auth.login_required
 def jobs_current(id):
     """
         Jobs Current
@@ -419,6 +427,7 @@ def jobs_current(id):
 
 
 @app.route('/jobs/<int:job_id>', methods=["GET"])
+@auth.login_required
 def get_job(job_id):
     """
         Job Action
@@ -446,6 +455,7 @@ def get_job(job_id):
         abort(404)
 
 @app.route('/jobs/<int:job_id>', methods=["DELETE"])
+@auth.login_required
 def delete_job(job_id):
     """
         Delete Job Action

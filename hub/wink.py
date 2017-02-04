@@ -10,6 +10,7 @@ from hub import app
 from hub.logger import Log
 from .database import db_session
 from hub.models import Account, Node, Sensor
+from hub import auth
 import sys
 
 global log
@@ -18,6 +19,7 @@ log = Log()
 
 DEVICE_TYPES = ['air_conditioner', 'light_bulb', 'binary_switch', 'shade', 'camera', 'doorbell', 'garage_door', 'lock']
 @app.route("/wink/login", methods=['POST'])
+@auth.login_required
 def login():
 
     username = request.json.get('username')
@@ -138,6 +140,7 @@ def get_all_devices(account):
     return data
 
 @app.route("/wink/update", methods=['POST'])
+@auth.login_required
 def update_device_state():
     sensor_id = request.json.get('id')
     desired_state = request.json.get('desired_state')

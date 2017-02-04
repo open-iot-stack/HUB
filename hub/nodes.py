@@ -10,6 +10,7 @@ from hub.dealer import NodeCollector, get_temp, get_gpio
 from hub.database import db_session
 from hub.models import Sensor, Node, Printer
 from hub.tasks import Command
+from hub import auth
 
 nodes = Chest()
 
@@ -66,6 +67,7 @@ nodes = Chest()
 #         return json.jsonify({"message": str(id) + " has been activated."}),201
 
 @app.route('/nodes', methods=['GET'])
+@auth.login_required
 def nodes_list():
     """
         Get nodes
@@ -129,6 +131,7 @@ def nodes_list():
 
 
 @app.route('/nodes/<int:node_id>/sensors', methods=['GET'])
+@auth.login_required
 def node_sensors(node_id):
     """
 
@@ -215,6 +218,7 @@ def node_sensors(node_id):
 
 
 @app.route('/nodes/<int:node_id>', methods=['DELETE'])
+@auth.login_required
 def node_delete(node_id):
     """
         Delete a Node
@@ -231,6 +235,7 @@ def node_delete(node_id):
 
 
 @app.route('/sensors/<int:sensor_id>', methods=['GET'])
+@auth.login_required
 def get_sensor(sensor_id):
     """
         Get Sensor
@@ -256,6 +261,7 @@ def get_sensor(sensor_id):
 
 
 @app.route('/sensors/<int:sensor_id>', methods=['DELETE'])
+@auth.login_required
 def sensor_delete(sensor_id):
     """
         Delete a Sensor

@@ -92,4 +92,4 @@ def register_peripheral():
 
 @app.route('/')
 def index():
-    return 0
+    return '<html><h1>Welcome to the Open IoT Hub</h1></html>'

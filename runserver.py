@@ -88,30 +88,32 @@ if config != None:
 
 hub.log = Log(print_enabled=print_enabled)
 hub.log.log("Starting up HUB webserver")
-hub.Webapi = WebAPI(hub.WEB_API_URL, hub.WEB_API_KEY, hub.log)
-hub.Webapi.sign_in()
+
+#hub.Webapi = WebAPI(hub.WEB_API_URL, hub.WEB_API_KEY, hub.log)
+#hub.Webapi.sign_in()
 
 init_db()
 updates = {"nodes": []}
 node_updates = updates.get("nodes")
 
-for printer in Printer.get_all():
-    id = printer.id
-    t  = PrinterCollector(id, hub.Webapi, hub.log)
-    t.start()
-    hub.printer_listeners.add_thread(id, t)
-
-for node in Node.get_all():
-    id = node.id
-    if node.printer_id == None:
-        node_updates.append(id)
-    t  = NodeCollector(id, hub.Webapi, hub.log)
-    t.start()
-    hub.node_listeners.add_thread(id, t)
 #Start pubnub for accounts
 for account in Account.get_all():
     if account.account_name == 'wink':
         wink.subscribe_devices(account)
 
+# for printer in Printer.get_all():
+#     id = printer.id
+#     t  = PrinterCollector(id, hub.Webapi, hub.log)
+#     t.start()
+#     hub.printer_listeners.add_thread(id, t)
+#
+# for node in Node.get_all():
+#     id = node.id
+#     if node.printer_id == None:
+#         node_updates.append(id)
+#     t  = NodeCollector(id, hub.Webapi, hub.log)
+#     t.start()
+#     hub.node_listeners.add_thread(id, t)
+
 #hub.Webapi.update_nodes(updates)
-app.run(host=host, debug=debug, port=port,threaded=threaded)
+app.run(host=host, debug=debug, port=port, threaded=threaded)
