@@ -1,8 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import os
-import subprocess
+import os, subprocess, stat
 from getpass import getuser
 import hub.auth
 
@@ -14,7 +13,7 @@ def systemd_setup(config):
         return False
     new = []
     cwd = os.getcwd()
-    command = "/usr/bin/python2 " + cwd + "/runserver.py -c " + config
+    command = "/usr/bin/python3 " + cwd + "/runserver.py -c " + config
     with open(support_dir + "systemd.unit", "r") as f:
         for line in f:
             line = line.replace("<DIRECTORY>",cwd)
@@ -73,9 +72,9 @@ def initd_setup(config):
             new.append(line)
     with open(script_path, "w+") as f:
         f.writelines(new)
-    os.chmod(script_path, 0755)
+    os.chmod(script_path, stat.S_IRRWXU)
     with open("/dev/null","w") as out:
-        subprocess.call(["update-rc.d","-hub","defaults"])
+        subprocess.call(["update-rc.d","iot-hub","defaults"])
     return True
 
 if __name__ == "__main__":
@@ -90,7 +89,7 @@ if __name__ == "__main__":
     dhost      = "0.0.0.0"
     dthreaded  = "true"
     dinterface = "wlan0"
-    dip        = "192.168.0.1"
+    dip        = "192.168.42.1"
     dssid      = "IOT-HUB"
     config     = raw_input("Config File["+dconfig+"]:")
     url        = raw_input("WebAPI URL["+durl+"]:")
@@ -129,7 +128,7 @@ if __name__ == "__main__":
         print("Finished systemd setup")
         run = raw_input("All set, run now and test? [y/n]:")
         if run.lower() in ["y", "yes"]:
-            subprocess.call(['systemctl','start','stratusprint-hub'])
+            subprocess.call(['systemctl','start','iot-hub'])
     else:
         print("Installation on non-systemd linux is not supported...Exiting")
         exit(1)
