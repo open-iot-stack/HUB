@@ -92,7 +92,7 @@ if __name__ == "__main__":
     dssid      = "IOT-HUB"
     config     = input("Config File["+dconfig+"]:")
     url        = input("WebAPI URL["+durl+"]:")
-    apikey     = os.urandom(32)
+    apikey     = os.urandom(32).decode("ascii")
     ssid       = input("Access Point SSID["+dssid+"]:")
     password   = input("Access Point Password[REQUIRED]:")
     interface  = input("Interface["+dinterface+"]:")
