@@ -3,6 +3,7 @@
 
 import os, subprocess, stat
 from getpass import getuser
+import secrets
 from secrets import token_hex
 
 def systemd_setup(config):
