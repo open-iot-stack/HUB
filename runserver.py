@@ -111,8 +111,7 @@ for node in Node.get_all():
 #Start pubnub for accounts
 for account in Account.get_all():
     if account.account_name == 'wink':
-        wink.subscribe_devices(wink.refresh_token())
-
+        wink.subscribe_devices(account)
 
 #hub.Webapi.update_nodes(updates)
 app.run(host=host, debug=debug, port=port,threaded=threaded)

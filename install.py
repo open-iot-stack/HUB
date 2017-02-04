@@ -1,8 +1,10 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import os, subprocess, stat
+import os
+import subprocess
 from getpass import getuser
+import hub.auth
 
 def systemd_setup(config):
     try:
@@ -12,7 +14,7 @@ def systemd_setup(config):
         return False
     new = []
     cwd = os.getcwd()
-    command = "/usr/bin/python3 " + cwd + "/runserver.py -c " + config
+    command = "/usr/bin/python2 " + cwd + "/runserver.py -c " + config
     with open(support_dir + "systemd.unit", "r") as f:
         for line in f:
             line = line.replace("<DIRECTORY>",cwd)
@@ -71,9 +73,9 @@ def initd_setup(config):
             new.append(line)
     with open(script_path, "w+") as f:
         f.writelines(new)
-    os.chmod(script_path, stat.S_IRRWXU)
+    os.chmod(script_path, 0755)
     with open("/dev/null","w") as out:
-        subprocess.call(["update-rc.d","iot-hub","defaults"])
+        subprocess.call(["update-rc.d","-hub","defaults"])
     return True
 
 if __name__ == "__main__":
@@ -88,20 +90,20 @@ if __name__ == "__main__":
     dhost      = "0.0.0.0"
     dthreaded  = "true"
     dinterface = "wlan0"
-    dip        = "192.168.42.1"
+    dip        = "192.168.0.1"
     dssid      = "IOT-HUB"
-    config     = input("Config File["+dconfig+"]:")
-    url        = input("WebAPI URL["+durl+"]:")
-    apikey     = input("WebAPI Key[REQUIRED]:")
-    ssid       = input("Access Point SSID["+dssid+"]:")
-    password   = input("Access Point Password[REQUIRED]:")
-    interface  = input("Interface["+dinterface+"]:")
-    ip         = input("Interface IP["+dip+"]:")
-    port       = input("Port ["+dport+"]:")
-    host       = input("Host ["+dhost+"]:")
+    config     = raw_input("Config File["+dconfig+"]:")
+    url        = raw_input("WebAPI URL["+durl+"]:")
+    apikey     = token_hex([nbytes=16])
+    ssid       = raw_input("Access Point SSID["+dssid+"]:")
+    password   = raw_input("Access Point Password[REQUIRED]:")
+    interface  = raw_input("Interface["+dinterface+"]:")
+    ip         = raw_input("Interface IP["+dip+"]:")
+    port       = raw_input("Port ["+dport+"]:")
+    host       = raw_input("Host ["+dhost+"]:")
     if apikey == "":
-        print("Warning No API key was entered")
-        apikey = "NO-KEY"
+        print("No API key was generated...Exiting")
+        exit(1)
     if config == "":
         config = dconfig
     if url == "":
@@ -125,9 +127,14 @@ if __name__ == "__main__":
                       "-t"                    + "\n"])
     if systemd_setup(config):
         print("Finished systemd setup")
-        run = input("All set, run now and test? [y/n]:")
+        run = raw_input("All set, run now and test? [y/n]:")
         if run.lower() in ["y", "yes"]:
-            subprocess.call(['systemctl','start','iot-hub'])
+            subprocess.call(['systemctl','start','stratusprint-hub'])
     else:
         print("Installation on non-systemd linux is not supported...Exiting")
         exit(1)
+    #elif initd_setup(config):
+    #    print("Finished initd setup")
+    #    run = raw_input("All set, run now and test? [y/n]:")
+    #    if run.lower() in ["y", "yes"]:
+    #        subprocess.call(['service','stratusprint-hub','start'])
