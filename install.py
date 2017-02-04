@@ -3,7 +3,7 @@
 
 import os, subprocess, stat
 from getpass import getuser
-import hub.auth
+from secrets import token_hex
 
 def systemd_setup(config):
     try:
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     dssid      = "IOT-HUB"
     config     = raw_input("Config File["+dconfig+"]:")
     url        = raw_input("WebAPI URL["+durl+"]:")
-    apikey     = token_hex([nbytes=16])
+    apikey     = token_hex(32)
     ssid       = raw_input("Access Point SSID["+dssid+"]:")
     password   = raw_input("Access Point Password[REQUIRED]:")
     interface  = raw_input("Interface["+dinterface+"]:")
