@@ -1,15 +1,16 @@
 [Unit]
-Description=Ngrok tunnel manager
+Description=Share local port(s) with ngrok
+After=syslog.target network.target
 
 [Service]
+PrivateTmp=true
 Type=simple
-WorkingDirectory=<DIRECTORY>
-ExecStart=<COMMAND>
-StandardOutput=syslog
-StandardError=syslog
-
 Restart=always
-RestartSec=1
+RestartSec=1min
+StandardOutput=null
+StandardError=null
+ExecStart=/opt/ngrok/ngrok -log /opt/ngrok/ngrok.log -config /opt/ngrok/ngrok.conf start openiot
+ExecStop=/usr/bin/killall ngrok
 
 [Install]
 WantedBy=multi-user.target
