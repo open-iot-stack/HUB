@@ -30,7 +30,7 @@ def list_peripherals():
         Get list of peripherals currently registered
         ---
         tags:
-          - sensors
+          - peripherals
         responses:
           200:
             description: Returns peripherals currently registered
@@ -45,7 +45,7 @@ def get_register_peripheral():
         Get node registration information
         ---
         tags:
-          - sensors
+          - peripherals
         responses:
           200:
             description: Returns webpage of result
@@ -59,10 +59,10 @@ def get_register_peripheral():
 def register_peripheral():
     """
         Register Peripheral
-        Registers node type. Should be done before activating node.
+        Registers peripheral type. Should be done before activating node.
         ---
         tags:
-          - sensors
+          - peripherals
         responses:
           200:
             description: Returns "(id) has been registered as (type)"

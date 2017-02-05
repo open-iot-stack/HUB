@@ -11,6 +11,7 @@ import hub.printers
 import hub.nodes
 import hub.base
 import hub.wink
+import hub.nodemcu
 
 printer_listeners = Listener()
 node_listeners    = Listener()

@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import os, subprocess, stat
+import random
 from getpass import getuser
 from base64 import b64encode
 
-def systemd_setup(config):
+def systemd_setup(config, port):
     try:
         with open("/dev/null","w") as out:
             subprocess.call(['systemctl'],stdout=out)
@@ -21,6 +22,16 @@ def systemd_setup(config):
             new.append(line)
     with open("/lib/systemd/system/iot-hub.service", "w+") as f:
         f.writelines(new)
+
+    command = "ngrok http " + port
+    with open(support_dir + "systemd.unit", "r") as f:
+        for line in f:
+            line = line.replace("<DIRECTORY>",cwd)
+            line = line.replace("<COMMAND>", command)
+            new.append(line)
+    with open("/lib/systemd/system/ngrok-iot.service", "w+") as f:
+        f.writelines(new)
+
     print("Finished installing webserver, now conifiguring hostapd and dnsmasq")
     new = []
     with open(support_dir + "hostapd.conf", "r") as f:
@@ -43,6 +54,7 @@ def systemd_setup(config):
     with open("/dev/null","w") as out:
         subprocess.call(['systemctl','daemon-reload'],stdout=out)
         subprocess.call(['systemctl','enable','iot-hub.service'],stdout=out)
+        subprocess.call(['systemctl','enable','ngrok-iot.service'],stdout=out)
         subprocess.call(['systemctl','enable','dnsmasq.service'],stdout=out)
         subprocess.call(['systemctl','enable','hostapd.service'],stdout=out)
     new = []
@@ -85,7 +97,7 @@ if __name__ == "__main__":
     support_dir = "support_files/"
     dconfig    = "arguments.config"
     durl       = "https://home.nolanfoster.me/v1"
-    dport      = "5000"
+    dport      = str(random.randint(1000, 65535))
     dhost      = "0.0.0.0"
     dthreaded  = "true"
     dinterface = "wlan0"
@@ -124,7 +136,7 @@ if __name__ == "__main__":
                       "-p "     + str(port)   + "\n",
                       "--host " + str(host)   + "\n",
                       "-t"                    + "\n"])
-    if systemd_setup(config):
+    if systemd_setup(config, str(port)):
         print("Finished systemd setup")
         run = input("All set, run now and test? [y/n]:")
         if run.lower() in ["y", "yes"]:
@@ -132,7 +144,7 @@ if __name__ == "__main__":
     else:
         print("Installation on non-systemd linux is not supported...Exiting")
         exit(1)
-    #elif initd_setup(config):
+    # elif initd_setup(config):
     #    print("Finished initd setup")
     #    run = raw_input("All set, run now and test? [y/n]:")
     #    if run.lower() in ["y", "yes"]:

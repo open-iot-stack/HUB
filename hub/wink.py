@@ -16,12 +16,21 @@ import sys
 global log
 
 log = Log()
-
+WINK_NODE_ENDPOINT = '/nodes/wink'
 DEVICE_TYPES = ['air_conditioner', 'light_bulb', 'binary_switch', 'shade', 'camera', 'doorbell', 'garage_door', 'lock']
-@app.route("/wink/login", methods=['POST'])
+
+@app.route(WINK_NODE_ENDPOINT+"/login", methods=['POST'])
 @auth.login_required
 def login():
-
+    """
+        Log in to Wink
+        ---
+        tags:
+          - wink
+        responses:
+          200:
+            description: Returns success
+        """
     username = request.json.get('username')
     password = request.json.get('password')
     values = dumps({
@@ -139,9 +148,33 @@ def get_all_devices(account):
     data = json.loads(response_body)
     return data
 
-@app.route("/wink/update", methods=['POST'])
+@app.route(WINK_NODE_ENDPOINT+"/update", methods=['POST'])
 @auth.login_required
 def update_device_state():
+    """
+        Update Wink Device
+        ---
+        tags:
+          - wink
+        parameters:
+          - in: body
+            name: desired_state
+            schema:
+              id: desired_state
+              required:
+                - id
+                - powered
+              properties:
+                id:
+                  type: int
+                  description: sensor id of device
+                powered:
+                  type: boolean
+                  description: State of device (Depends on device)
+        responses:
+          200:
+            description: Returns success
+        """
     sensor_id = request.json.get('id')
     desired_state = request.json.get('desired_state')
     account = Account.get_by_name('wink')
@@ -173,15 +206,9 @@ def update_device_state():
     return 'success'
 
 
-
-
 def get_token_from_session():
     return session["access_token"]
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect('/')
 
 def subcribe_devices_to_pub_nub(sub_key, channels):
     global log
