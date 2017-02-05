@@ -22,20 +22,22 @@ def systemd_setup(config, port):
             new.append(line)
     with open("/lib/systemd/system/iot-hub.service", "w+") as f:
         f.writelines(new)
-
+    print("Finished installing iot-hub service")
+    new = []
     with open(support_dir + "systemd-ngrok.unit", "r") as f:
         for line in f:
             new.append(line)
     with open("/lib/systemd/system/ngrok-iot.service", "w+") as f:
         f.writelines(new)
 
+    new = []
     with open(support_dir + "ngrok.conf", "r") as f:
         for line in f:
             line = line.replace("<PORT>",port)
             new.append(line)
     with open("/opt/ngrok/ngrok.yml", "w+") as f:
         f.writelines(new)
-
+    print("Finished installing ngrok service")
     print("Finished installing webserver, now conifiguring hostapd and dnsmasq")
     new = []
     with open(support_dir + "hostapd.conf", "r") as f:
