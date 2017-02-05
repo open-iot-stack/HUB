@@ -23,8 +23,9 @@ def systemd_setup(config, port):
     with open("/lib/systemd/system/iot-hub.service", "w+") as f:
         f.writelines(new)
 
+    cwd = '/bin'
     command = "ngrok http " + port
-    with open(support_dir + "systemd.unit", "r") as f:
+    with open(support_dir + "systemd-ngrok.unit", "r") as f:
         for line in f:
             line = line.replace("<DIRECTORY>",cwd)
             line = line.replace("<COMMAND>", command)
